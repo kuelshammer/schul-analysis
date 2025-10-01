@@ -51,7 +51,7 @@ class GanzrationaleFunktion:
 
     def _parse_string_eingabe(self, eingabe: str) -> Tuple[str, sp.Basic]:
         """
-        Robuster Parser für verschiedene String-Formate von ganzrationalen Funktionen.
+        Vereinfachter Parser für String-Eingaben von ganzrationalen Funktionen.
 
         Unterstützt:
         - "x^2+4x-2" (Standard-Schreibweise)
@@ -64,80 +64,40 @@ class GanzrationaleFunktion:
             eingabe: String-Eingabe in verschiedenen Formaten
 
         Returns:
-            Tuple aus (bereinigter_string, sympy_ausdruck)
+            Tuple aus (original_string, sympy_ausdruck)
         """
-        import re
+        # Spezialfall: Linearfaktoren-Format
+        if self._ist_linearfaktor_format(eingabe):
+            return self._parse_linearfaktoren(eingabe)
 
-        # Prüfe auf offensichtlich ungültige Eingaben
-        if not re.match(r"^[x\d\+\-\*\^\s\(\)\.\$\/]+$", eingabe.replace(" ", "")):
-            raise ValueError(f"Ungültige Zeichen in Eingabe: '{eingabe}'")
-
-        # 1. LaTeX-Format bereinigen ($ entfernen)
-        bereinigt = eingabe.replace("$", "").strip()
-
-        # 2. Spezialfall: Linearfaktoren-Format
-        if self._ist_linearfaktor_format(bereinigt):
-            return self._parse_linearfaktoren(bereinigt)
-
-        # 3. Leerzeichen um Operatoren normalisieren
-        bereinigt = re.sub(r"\s*([+\-])\s*", r"\1", bereinigt)
-
-        # 4. Dezimalzahlen schützen (ersetze temporär)
-        dezimal_pattern = r"(\d+)\.(\d+)"
-        bereinigt = re.sub(dezimal_pattern, r"DEZIMAL_\1_DEZTRENN_\2", bereinigt)
-
-        # 5. Implizite Multiplikation behandeln (z.B. "2x" → "2*x")
-        bereinigt = re.sub(r"(\d+)([a-zA-Z])", r"\1*\2", bereinigt)
-        bereinigt = re.sub(r"([a-zA-Z])(\d)", r"\1^\2", bereinigt)  # x2 → x^2
-
-        # 6. Hochzeichen-Konvertierung (^ → **)
-        bereinigt = re.sub(r"([a-zA-Z])\^(\d+)", r"\1**\2", bereinigt)
-        bereinigt = re.sub(r"([a-zA-Z])\^([a-zA-Z])", r"\1**\2", bereinigt)
-
-        # 7. Spezialfall: x ohne Exponent → x^1
-        bereinigt = re.sub(r"(?<![a-zA-Z])(x)(?![a-zA-Z0-9_*^])", r"x**1", bereinigt)
-        bereinigt = re.sub(r"([+\-])(x)(?![a-zA-Z0-9_*^])", r"\1x**1", bereinigt)
-
-        # 8. Koeffizienten ohne x normalisieren
-        bereinigt = re.sub(r"([+\-])(\d+)(?![a-zA-Z0-9_*^])", r"\1\2*x**0", bereinigt)
-        bereinigt = re.sub(r"^(\d+)(?![a-zA-Z0-9_*^])", r"\1*x**0", bereinigt)
-
-        # 9. Dezimalzahlen wiederherstellen
-        bereinigt = re.sub(r"DEZIMAL_(\d+)_DEZTRENN_(\d+)", r"\1.\2", bereinigt)
-
-        # 10. Versuch mit sympify
+        # Für alle anderen Strings: sympify die Arbeit machen lassen
         try:
-            term_sympy = sympify(bereinigt)
-            return bereinigt, term_sympy
-        except Exception as e:
-            # Fallback: Versuch mit alternativer Verarbeitung
-            try:
-                # Nochmal bereinigen mit einfacherer Logik
-                einfache_bereinigung = (
-                    eingabe.replace("$", "").replace("^", "**").strip()
-                )
+            # Bereinige die Eingabe für bessere Kompatibilität
+            import re
 
-                # Implizite Multiplikation: Zahl gefolgt von Variable
-                einfache_bereinigung = re.sub(
-                    r"(\d)([a-zA-Z])", r"\1*\2", einfache_bereinigung
-                )
+            bereinigt = eingabe.strip().replace("$", "").replace("^", "**")
 
-                # Implizite Multiplikation: Variable gefolgt von Zahl
-                einfache_bereinigung = re.sub(
-                    r"([a-zA-Z])(\d)", r"\1^\2", einfache_bereinigung
-                )
+            # Implizite Multiplikation hinzufügen (2x -> 2*x)
+            bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)
+            # Leerzeichen um Operatoren normalisieren
+            bereinigt = re.sub(r"\s+", "", bereinigt)
 
-                # Multiplikation zwischen Klammerausdrücken
-                einfache_bereinigung = re.sub(r"\)\(", ")*(", einfache_bereinigung)
+            # sympify mit korrekter Variable
+            term_sympy = sympify(bereinigt, locals={"x": self.x})
 
-                term_sympy = sympify(einfache_bereinigung)
-                return einfache_bereinigung, term_sympy
-            except Exception as e2:
+            # Wichtig: Validiere, dass das Ergebnis wirklich ein Polynom in x ist
+            if not term_sympy.is_polynomial(self.x):
                 raise ValueError(
-                    f"Konnte '{eingabe}' nicht in gültigen mathematischen Ausdruck umwandeln. "
-                    f"Versuch 1: '{bereinigt}' → {e}. "
-                    f"Versuch 2: '{einfache_bereinigung}' → {e2}"
+                    f"Eingabe '{eingabe}' ist keine ganzrationale Funktion in x."
                 )
+
+            # Expandiere den Ausdruck für konsistente Darstellung
+            term_sympy = sp.expand(term_sympy)
+
+            return eingabe, term_sympy
+
+        except (sp.SympifyError, TypeError, ValueError) as e:
+            raise ValueError(f"Ungültiger mathematischer Ausdruck: '{eingabe}'") from e
 
     def _ist_linearfaktor_format(self, eingabe: str) -> bool:
         """Prüft, ob die Eingabe im Linearfaktoren-Format vorliegt."""
