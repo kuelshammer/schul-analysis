@@ -1,22 +1,27 @@
 """
-Schmiegkurven für das Schul-Analysis Framework.
+Schmiegkurven (Interpolationspolynome) für das Schul-Analysis Framework.
 
-Implementiert verschiedene Arten von Schmiegkurven, die durch vorgegebene Punkte
-mit optionalen Tangenten- oder Normalenbedingungen verlaufen.
+Implementiert Interpolationspolynome, die durch vorgegebene Punkte mit optionalen
+Tangenten- oder Normalenbedingungen verlaufen.
+
+Dies ist ein ergänzendes Konzept zu Taylorpolynomen:
+- Taylorpolynom: Approximation einer Funktion um einen Punkt
+- Schmiegkurve: Interpolation durch vorgegebene Punkte mit Bedingungen
+
+HINWEIS: Bei Polynomen hohen Grades und vielen Punkten kann es zu starken
+Oszillationen zwischen den Stützpunkten kommen (Runges Phänomen).
 """
+
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
 import sympy as sp
-from sympy import symbols, latex, Matrix, solve_linear_system, solve
-from typing import List, Tuple, Optional, Union, Any
+from sympy import solve, symbols
 
 from .config import config
 from .errors import (
     SchulAnalysisError,
-    UngueltigerAusdruckError,
-    EingabeSyntaxError,
-    KonfigurationsError,
 )
 from .ganzrationale import GanzrationaleFunktion
 
@@ -41,16 +46,19 @@ class KeineLoesungError(SchmiegkurvenError):
 
 class Schmiegkurve:
     """
-    Repräsentiert eine Schmiegkurve, die durch vorgegebene Punkte mit optionalen
-    Tangenten- oder Normalenbedingungen verläuft.
+    Repräsentiert ein Interpolationspolynom (Schmiegkurve), das durch vorgegebene
+    Punkte mit optionalen Tangenten- oder Normalenbedingungen verläuft.
+
+    Dies ist ein Interpolationspolynom, das im Gegensatz zu Taylorpolynomen
+    nicht eine Funktion approximiert, sondern durch Punkte mit Bedingungen verläuft.
     """
 
     def __init__(
         self,
-        punkte: List[Tuple[float, float]],
-        tangenten: Optional[List[float]] = None,
-        normalen: Optional[List[float]] = None,
-        grad: Optional[int] = None,
+        punkte: list[tuple[float, float]],
+        tangenten: list[float | None] | None = None,
+        normalen: list[float | None] | None = None,
+        grad: int | None = None,
     ):
         """
         Konstruktor für allgemeine Schmiegkurven.
@@ -77,6 +85,13 @@ class Schmiegkurve:
         # Erstelle die Schmiegkurve
         self.funktion = self._erstelle_schmiegkurve()
 
+        # Optimize for performance with lambdify
+        try:
+            x = symbols("x")
+            self.funktion_numpy = sp.lambdify(x, self.funktion, "numpy")
+        except Exception:
+            self.funktion_numpy = None
+
     def _validiere_eingaben(self):
         """Validiert die Eingabeparameter"""
         if len(self.punkte) < 1:
@@ -96,7 +111,7 @@ class Schmiegkurve:
             )
 
         # Prüfe ob ein Punkt sowohl Tangente als auch Normale hat
-        for i, (t, n) in enumerate(zip(self.tangenten, self.normalen)):
+        for i, (t, n) in enumerate(zip(self.tangenten, self.normalen, strict=False)):
             if t is not None and n is not None:
                 # Prüfe ob Tangente und Normale senkrecht stehen
                 if not np.isclose(t * n, -1, atol=1e-10):
@@ -188,11 +203,11 @@ class Schmiegkurve:
     @classmethod
     def schmiegparabel(
         cls,
-        punkt1: Tuple[float, float],
-        punkt2: Tuple[float, float],
-        punkt3: Tuple[float, float],
-        tangente1: Optional[float] = None,
-        tangente3: Optional[float] = None,
+        punkt1: tuple[float, float],
+        punkt2: tuple[float, float],
+        punkt3: tuple[float, float],
+        tangente1: float | None = None,
+        tangente3: float | None = None,
     ) -> "Schmiegkurve":
         """
         Erzeugt eine Schmiegparabel durch 3 Punkte mit optionalen Tangenten.
@@ -212,7 +227,7 @@ class Schmiegkurve:
 
     @classmethod
     def schmieggerade(
-        cls, punkt: Tuple[float, float], tangente: float
+        cls, punkt: tuple[float, float], tangente: float
     ) -> "Schmiegkurve":
         """
         Erzeugt eine Schmieggerade durch einen Punkt mit gegebener Tangente.
@@ -244,7 +259,7 @@ class Schmiegkurve:
         """Berechnet die Ableitung der Schmiegkurve"""
         return self.funktion.ableitung(ordnung)
 
-    def nullstellen(self) -> List[float]:
+    def nullstellen(self) -> list[float]:
         """Berechnet die Nullstellen der Schmiegkurve"""
         return self.funktion.nullstellen()
 
@@ -257,9 +272,9 @@ class Schmiegkurve:
     @classmethod
     def hermite_interpolation(
         cls,
-        punkte: List[Tuple[float, float]],
-        werte: List[float],
-        ableitungen: List[float],
+        punkte: list[tuple[float, float]],
+        werte: list[float],
+        ableitungen: list[float],
     ) -> "Schmiegkurve":
         """
         Erzeugt eine Schmiegkurve mittels Hermite-Interpolation.
@@ -278,14 +293,14 @@ class Schmiegkurve:
             )
 
         # Konvertiere zu (x, y) Punkten und Tangenten
-        punkte_xy = list(zip(punkte, werte))
+        punkte_xy = list(zip(punkte, werte, strict=False))
         return cls(punkte_xy, tangenten=ableitungen)
 
     @classmethod
     def schmiegkegel(
         cls,
-        punkte: List[Tuple[float, float]],
-        tangenten: Optional[List[float]] = None,
+        punkte: list[tuple[float, float]],
+        tangenten: list[float] | None = None,
         grad: int = 3,
     ) -> "Schmiegkurve":
         """
@@ -413,7 +428,7 @@ class Schmiegkurve:
 
     def zeige_schmiegkurve_plotly(
         self,
-        x_range: Tuple[float, float] = None,
+        x_range: tuple[float, float] = None,
         punkte: int = 200,
         zeige_tangenten: bool = True,
         zeige_punkte: bool = True,
@@ -529,7 +544,7 @@ class Schmiegkurve:
             return fig
 
     def zeige_konstruktion_plotly(
-        self, x_range: Tuple[float, float] = None, **kwargs
+        self, x_range: tuple[float, float] = None, **kwargs
     ) -> Any:
         """
         Zeigt detaillierte Konstruktionsinformationen mit Gleichungssystem.
@@ -554,18 +569,18 @@ class Schmiegkurve:
                 annotation_text += f"<br>N: {self.normalen[i]}"
 
             annotations.append(
-                dict(
-                    x=x_i,
-                    y=y_i,
-                    xref="x",
-                    yref="y",
-                    text=annotation_text,
-                    showarrow=True,
-                    arrowhead=2,
-                    ax=20,
-                    ay=-30,
-                    font=dict(size=10),
-                )
+                {
+                    "x": x_i,
+                    "y": y_i,
+                    "xref": "x",
+                    "yref": "y",
+                    "text": annotation_text,
+                    "showarrow": True,
+                    "arrowhead": 2,
+                    "ax": 20,
+                    "ay": -30,
+                    "font": {"size": 10},
+                }
             )
 
         fig.update_layout(annotations=annotations)
