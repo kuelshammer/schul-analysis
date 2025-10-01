@@ -18,10 +18,90 @@ from sympy import (
     Poly,
     Rational,
     gcd,
-    factor,
-    fraction,
     cancel,
 )
+from .ganzrationale import GanzrationaleFunktion
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots
+import re
+
+
+class GebrochenRationaleFunktionError(Exception):
+    """Basisklasse für gebrochen-rationale Funktionsfehler"""
+
+    pass
+
+
+class UngueltigeEingabeError(GebrochenRationaleFunktionError):
+    """Fehler bei ungültigen Eingaben"""
+
+    pass
+
+
+class DivisionDurchNullError(GebrochenRationaleFunktionError):
+    """Fehler bei Division durch Null"""
+
+    pass
+
+
+class SicherheitsError(GebrochenRationaleFunktionError):
+    """Fehler bei Sicherheitsverletzungen"""
+
+    pass
+
+
+def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
+    """Validiert, ob ein Ausdruck sicher für mathematische Auswertung ist"""
+    # Erlaubte mathematische Zeichen und Funktionen
+    erlaubte_muster = r"^[0-9+\-*/^()x\s.]+$|^[a-zA-Z_][a-zA-Z0-9_]*\s*\("
+
+    # Gefährliche Muster
+    gefaehrliche_muster = [
+        r"import\s+",
+        r"exec\s*\(",
+        r"eval\s*\(",
+        r"__.*__",
+        r"subprocess\.",
+        r"os\.",
+        r"sys\.",
+        r"open\s*\(",
+        r"file\s*\(",
+        r"input\s*\(",
+        r"globals\s*\(",
+        r"locals\s*\(",
+    ]
+
+    # Prüfe auf gefährliche Muster
+    for muster in gefaehrliche_muster:
+        if re.search(muster, ausdruck, re.IGNORECASE):
+            raise SicherheitsError(f"Gefährlicher Ausdruck erkannt: {ausdruck}")
+
+    # Prüfe auf gültiges mathematisches Format
+    if not re.match(erlaubte_muster, ausdruck.strip()):
+        raise UngueltigeEingabeError(f"Ungültiger mathematischer Ausdruck: {ausdruck}")
+
+    return True
+
+
+def _pruefe_division_durch_null(zaehler, nenner) -> None:
+    """Prüft auf Division durch Null"""
+    if hasattr(nenner, "term_sympy") and nenner.term_sympy == 0:
+        raise DivisionDurchNullError("Division durch Nullfunktion")
+    if hasattr(nenner, "__eq__") and nenner == 0:
+        raise DivisionDurchNullError("Division durch Null")
+
+
+def _validiere_konstruktor_parameter(zaehler, nenner) -> None:
+    """Validiert die Konstruktorparameter"""
+    if zaehler is None:
+        raise UngueltigeEingabeError("Zähler darf nicht None sein")
+
+    # Wenn nenner None ist, ist es ein String-Konstruktor
+    if nenner is not None:
+        _pruefe_division_durch_null(zaehler, nenner)
+
+
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -48,7 +128,24 @@ class GebrochenRationaleFunktion:
             nenner: GanzrationaleFunktion, String ("x-1") oder SymPy-Ausdruck.
                     Wenn None und zaehler ist String, wird versucht aus "(x^2+1)/(x-1)" zu parsen
         """
+        # Validiere Konstruktorparameter
+        _validiere_konstruktor_parameter(zaehler, nenner)
+
+        # Sicherheitsprüfung für String-Eingaben
+        if isinstance(zaehler, str):
+            _validiere_mathematischen_ausdruck(zaehler)
+        if isinstance(nenner, str):
+            _validiere_mathematischen_ausdruck(nenner)
+
         self.x = symbols("x")
+
+        # Cache für wiederholte Berechnungen
+        self._cache = {
+            "polstellen": None,
+            "asymptoten": None,
+            "nullstellen": None,
+            "term_str": None,
+        }
 
         # Parser für String-Eingabe im Format "(zaehler)/(nenner)"
         if isinstance(zaehler, str) and nenner is None:
@@ -77,6 +174,11 @@ class GebrochenRationaleFunktion:
 
         # Kürze die Funktion automatisch
         self._kuerzen()
+
+    def _clear_cache(self):
+        """Leert den Cache nach Änderungen an der Funktion"""
+        for key in self._cache:
+            self._cache[key] = None
 
     def _parse_string_eingabe(self, eingabe: str):
         """Parst String-Eingabe im Format '(x^2+1)/(x-1)'"""
@@ -108,30 +210,32 @@ class GebrochenRationaleFunktion:
 
     def _kuerzen(self):
         """Kürzt die Funktion durch Zähler und Nenner mit ihrem ggT"""
-        # Berechne den ggT von Zähler und Nenner
-        zaehler_poly = sp.poly(self.zaehler.term_sympy, self.x)
-        nenner_poly = sp.poly(self.nenner.term_sympy, self.x)
+        # Nutze SymPy's cancel() Funktion für robuste Kürzung
+        gekuerzter_term = sp.cancel(self.term_sympy)
 
-        # Finde den ggT
-        ggt_poly = gcd(zaehler_poly, nenner_poly)
+        # Wenn sich etwas geändert hat, extrahiere Zähler und Nenner neu
+        if gekuerzter_term != self.term_sympy:
+            self.term_sympy = gekuerzter_term
 
-        if ggt_poly != 1:
-            # Dividiere Zähler und Nenner durch den ggT
-            gekuerzter_zaehler = zaehler_poly.quo(ggt_poly)
-            gekuerzter_nenner = nenner_poly.quo(ggt_poly)
+            # Extrahiere Zähler und Nenner aus dem gekürzten Term
+            if gekuerzter_term.is_rational_function(self.x):
+                # Zerlege in Zähler und Nenner
+                zaehler_expr, nenner_expr = gekuerzter_term.as_numer_denom()
 
-            # Konvertiere zurück zu SymPy-Ausdrücken
-            self.zaehler = GanzrationaleFunktion(gekuerzter_zaehler.as_expr())
-            self.nenner = GanzrationaleFunktion(gekuerzter_nenner.as_expr())
+                # Aktualisiere Zähler und Nenner
+                self.zaehler = GanzrationaleFunktion(zaehler_expr)
+                self.nenner = GanzrationaleFunktion(nenner_expr)
 
-            # Aktualisiere den SymPy-Ausdruck
-            self.term_sympy = self.zaehler.term_sympy / self.nenner.term_sympy
+                # Cache leeren nach Änderung
+                self._clear_cache()
 
     def term(self) -> str:
         """Gibt den Term als String zurück"""
-        zaehler_str = self.zaehler.term()
-        nenner_str = self.nenner.term()
-        return f"({zaehler_str})/({nenner_str})"
+        if self._cache["term_str"] is None:
+            zaehler_str = self.zaehler.term()
+            nenner_str = self.nenner.term()
+            self._cache["term_str"] = f"({zaehler_str})/({nenner_str})"
+        return self._cache["term_str"]
 
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück"""
@@ -181,7 +285,9 @@ class GebrochenRationaleFunktion:
 
     def polstellen(self) -> List[float]:
         """Berechnet die Polstellen der Funktion (Nenner-Nullstellen)"""
-        return self.nenner.nullstellen()
+        if self._cache["polstellen"] is None:
+            self._cache["polstellen"] = self.nenner.nullstellen()
+        return self._cache["polstellen"]
 
     def definitionsluecken(self) -> List[float]:
         """Gibt die Definitionslücken zurück (Polstellen)"""
