@@ -300,6 +300,10 @@ class GanzrationaleFunktion:
         """Berechnet den Funktionswert an einer Stelle."""
         return float(self.term_sympy.subs(self.x, x_wert))
 
+    def grad(self) -> int:
+        """Gibt den Grad des Polynoms zurück"""
+        return sp.Poly(self.term_sympy, self.x).degree()
+
     def ableitung(self, ordnung: int = 1) -> "GanzrationaleFunktion":
         """Berechnet die Ableitung gegebener Ordnung."""
         abgeleitet = diff(self.term_sympy, self.x, ordnung)
@@ -1427,21 +1431,25 @@ class GanzrationaleFunktion:
         """Rechtsseitige Multiplikation: z * f"""
         return self.__mul__(other)
 
-    def __truediv__(self, other) -> "GanzrationaleFunktion":
-        """Division: f / g (nur wenn Ergebnis ganzrational)"""
+    def __truediv__(
+        self, other
+    ) -> Union["GanzrationaleFunktion", "GebrochenRationaleFunktion"]:
+        """Division: f / g"""
+        from .gebrochen_rationale import GebrochenRationaleFunktion
+
         if isinstance(other, GanzrationaleFunktion):
             if other.term_sympy == 0:
                 raise ZeroDivisionError("Division durch Nullfunktion")
 
+            # Wenn Ergebnis ein Polynom ist, gib ganzrationale Funktion zurück
             result_sympy = self.term_sympy / other.term_sympy
             result_sympy_simplified = sp.simplify(result_sympy)
 
-            if not result_sympy_simplified.is_polynomial(self.x):
-                raise TypeError(
-                    "Ergebnis ist keine ganzrationale Funktion (Division ergab gebrochen-rationale Funktion)"
-                )
-
-            return GanzrationaleFunktion(result_sympy_simplified)
+            if result_sympy_simplified.is_polynomial(self.x):
+                return GanzrationaleFunktion(result_sympy_simplified)
+            else:
+                # Ansonsten gib gebrochen-rationale Funktion zurück
+                return GebrochenRationaleFunktion(self, other)
 
         elif isinstance(other, (int, float, Rational)):
             if other == 0:
