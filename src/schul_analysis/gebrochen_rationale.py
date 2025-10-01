@@ -19,6 +19,7 @@ from sympy import (
     Rational,
     gcd,
     cancel,
+    fraction,
 )
 from .ganzrationale import GanzrationaleFunktion
 import plotly.graph_objects as go
