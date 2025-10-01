@@ -10,15 +10,30 @@ dependencies = [
 ]
 
 [dependency-groups]
+# Development tools (nur für Entwickler)
 dev = [
-    "pytest>=8.4.2",
-    "pytest-cov>=7.0.0",
-    "ruff>=0.13.2",
-    "ty>=0.0.1a21",
+    "ruff>=0.13.2",           # Linting & Formatting
+    "ty>=0.0.1a21",           # Type checking
+    "pytest>=8.4.2",         # Testing framework
+    "pytest-cov>=7.0.0",     # Test coverage
 ]
-optional = [
-    "matplotlib>=3.10.6",
-    "plotly>=6.3.0",
+
+# Documentation (nur für Dokumentationserstellung)
+docs = [
+    "sphinx>=7.4.7",         # Documentation generator
+    "sphinx-rtd-theme>=2.0.0", # Documentation theme
+]
+
+# Visualization (optional, für erweiterte Features)
+viz = [
+    "matplotlib>=3.10.6",     # Plotting library
+    "plotly>=6.3.0",         # Interactive plots
+    "numpy>=2.3.3",          # Numerical computing (oft benötigt für plots)
+]
+
+# Type checking stubs (für bessere type safety)
+types = [
+    "types-requests>=2.32.0", # Type stubs for requests
 ]
 
 [tool.ruff]
