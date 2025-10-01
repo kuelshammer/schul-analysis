@@ -6,7 +6,6 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import numpy as np
-import pandas as pd
 import marimo as mo
 from typing import Union, List, Tuple, Dict, Any
 import sympy as sp
@@ -491,6 +490,20 @@ class GanzrationaleFunktion:
         )
 
         return mo.ui.plotly(fig)
+
+    def __str__(self) -> str:
+        """String-Darstellung der Funktion"""
+        return self.term()
+
+    def __repr__(self) -> str:
+        """Repräsentation der Funktion"""
+        return f"GanzrationaleFunktion('{self.term()}')"
+
+    def __eq__(self, other) -> bool:
+        """Vergleich zweier Funktionen auf Gleichheit"""
+        if not isinstance(other, GanzrationaleFunktion):
+            return False
+        return self.term_sympy.equals(other.term_sympy)
 
     def perfekte_parabel_plotly(
         self, x_range: tuple = (-5, 5), punkte: int = 200
