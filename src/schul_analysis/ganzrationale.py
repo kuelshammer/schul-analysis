@@ -46,7 +46,7 @@ class GanzrationaleFunktion:
         else:
             raise TypeError("Eingabe muss String, Liste oder Dictionary sein")
 
-        # Koeffizienten extrahieren
+        # Koeffizienten extrahieren (als exakte SymPy-Objekte)
         self.koeffizienten = self._extrahiere_koeffizienten()
 
     def _parse_string_eingabe(self, eingabe: str) -> Tuple[str, sp.Basic]:
@@ -69,7 +69,7 @@ class GanzrationaleFunktion:
         import re
 
         # Prüfe auf offensichtlich ungültige Eingaben
-        if not re.match(r"^[x\d\+\-\*\^\s\(\)\.\$]+$", eingabe.replace(" ", "")):
+        if not re.match(r"^[x\d\+\-\*\^\s\(\)\.\$\/]+$", eingabe.replace(" ", "")):
             raise ValueError(f"Ungültige Zeichen in Eingabe: '{eingabe}'")
 
         # 1. LaTeX-Format bereinigen ($ entfernen)
@@ -173,15 +173,15 @@ class GanzrationaleFunktion:
         for koeff, vorzeichen, zahl, potenz in faktoren:
             # Koeffizient verarbeiten
             if koeff:
-                koeff_float = float(koeff)
+                koeff_int = sp.Integer(int(koeff))
             else:
-                koeff_float = 1.0
+                koeff_int = sp.Integer(1)
 
             # Vorzeichen und Zahl verarbeiten
             if vorzeichen == "+":
-                konstante = -float(zahl)  # (x+1) bedeutet (x - (-1))
+                konstante = -sp.Integer(int(zahl))  # (x+1) bedeutet (x - (-1))
             else:
-                konstante = float(zahl)  # (x-1) bedeutet (x - 1)
+                konstante = sp.Integer(int(zahl))  # (x-1) bedeutet (x - 1)
 
             # Linearfaktor erstellen
             linearfaktor = x - konstante
@@ -189,10 +189,10 @@ class GanzrationaleFunktion:
             if potenz:
                 # Mit Potenz
                 potenz_wert = int(potenz[1:])  # ^n extrahieren
-                faktor = koeff_float * linearfaktor**potenz_wert
+                faktor = koeff_int * linearfaktor**potenz_wert
             else:
                 # Ohne Potenz
-                faktor = koeff_float * linearfaktor
+                faktor = koeff_int * linearfaktor
 
             ergebnis = ergebnis * faktor
 
@@ -280,7 +280,7 @@ class GanzrationaleFunktion:
             term += k * self.x**grad
         return term
 
-    def _extrahiere_koeffizienten(self) -> List[float]:
+    def _extrahiere_koeffizienten(self) -> List[sp.Basic]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
         try:
             # Prüfe, ob der Ausdruck gültig ist
@@ -288,9 +288,7 @@ class GanzrationaleFunktion:
                 raise ValueError("Ungültiger SymPy-Ausdruck")
 
             poly = Poly(self.term_sympy, self.x)
-            return [
-                float(poly.coeff_monomial(self.x**i)) for i in range(poly.degree() + 1)
-            ]
+            return [poly.coeff_monomial(self.x**i) for i in range(poly.degree() + 1)]
         except Exception as e:
             # Fallback: Manuelle Koeffizienten-Extraktion
             koeffizienten = []
@@ -300,7 +298,7 @@ class GanzrationaleFunktion:
                 const_term = self.term_sympy.subs(self.x, 0)
                 if const_term != 0:
                     try:
-                        koeffizienten.append(float(const_term))
+                        koeffizienten.append(const_term)
                     except (TypeError, ValueError):
                         # Wenn es sich nicht um eine Zahl handelt, überspringen
                         pass
@@ -311,24 +309,24 @@ class GanzrationaleFunktion:
                         # i-te Ableitung an x=0 dividiert durch i!
                         ableitung_i = sp.diff(self.term_sympy, self.x, i)
                         wert_0 = ableitung_i.subs(self.x, 0)
-                        koeff = float(wert_0) / sp.factorial(i)
+                        koeff = wert_0 / sp.factorial(i)
 
-                        if abs(koeff) > 1e-10:  # Nur signifikante Koeffizienten
+                        if koeff != 0:  # Nur signifikante Koeffizienten
                             # Stelle sicher, dass die Liste lang genug ist
                             while len(koeffizienten) < i:
-                                koeffizienten.append(0.0)
+                                koeffizienten.append(sp.Integer(0))
                             koeffizienten.append(koeff)
                     except:
                         break
 
                 # Wenn keine Koeffizienten gefunden wurden
                 if not koeffizienten:
-                    koeffizienten = [0.0]
+                    koeffizienten = [sp.Integer(0)]
 
                 return koeffizienten
             except Exception:
                 # Wenn alles fehlschlägt, leere Liste zurückgeben
-                return [0.0]
+                return [sp.Integer(0)]
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
@@ -431,7 +429,8 @@ class GanzrationaleFunktion:
             weg += f"$$f(x) = {self.term_latex()} = 0$$\n\n"
 
             a, b = self.koeffizienten[1], self.koeffizienten[0]
-            weg += f"$$x = -\\frac{{{b}}}{{{a}}} = {-b / a}$$\n"
+            ergebnis = -b / a
+            weg += f"$$x = -\\frac{{{b}}}{{{a}}} = {ergebnis}$$\n"
 
         elif grad == 2:
             weg += "## Quadratische Funktion (Grad 2)\n\n"
@@ -456,14 +455,15 @@ class GanzrationaleFunktion:
 
             if diskriminante > 0:
                 weg += "### Zwei reelle Nullstellen\n\n"
-                x1 = (-b + np.sqrt(diskriminante)) / (2 * a)
-                x2 = (-b - np.sqrt(diskriminante)) / (2 * a)
-                weg += f"$$x_1 = \\frac{{-{b} + \\sqrt{{{diskriminante}}}}}{{{2 * a}}} = {x1:.3f}$$\n\n"
-                weg += f"$$x_2 = \\frac{{-{b} - \\sqrt{{{diskriminante}}}}}{{{2 * a}}} = {x2:.3f}$$\n\n"
+                sqrt_d = sp.sqrt(diskriminante)
+                x1 = (-b + sqrt_d) / (2 * a)
+                x2 = (-b - sqrt_d) / (2 * a)
+                weg += f"$$x_1 = \\frac{{-{b} + \\sqrt{{{diskriminante}}}}}{{{2 * a}}} = {x1}$$\n\n"
+                weg += f"$$x_2 = \\frac{{-{b} - \\sqrt{{{diskriminante}}}}}{{{2 * a}}} = {x2}$$\n\n"
             elif diskriminante == 0:
                 weg += "### Eine doppelte Nullstelle\n\n"
                 x = -b / (2 * a)
-                weg += f"$$x = \\frac{{-{b}}}{{{2 * a}}} = {x:.3f}$$\n\n"
+                weg += f"$$x = \\frac{{-{b}}}{{{2 * a}}} = {x}$$\n\n"
             else:
                 weg += "### Keine reellen Nullstellen\n\n"
                 weg += f"Da die Diskriminante D = {diskriminante} < 0 ist, gibt es keine reellen Nullstellen.\n\n"
@@ -471,7 +471,7 @@ class GanzrationaleFunktion:
                 # Quadratische Ergänzung zeigen
                 weg += "### Quadratische Ergänzung\n\n"
                 weg += f"$$f(x) = {self.term_latex()}$$\n\n"
-                weg += f"$$= {a}x^2 {b:+}x {c:+}$$\n\n"
+                weg += f"$$= {a}x^2 {b if b >= 0 else f'-{abs(b)}'}x {c if c >= 0 else f'-{abs(c)}'}$$\n\n"
                 weg += f"$$= {a}\\left(x^2 {b / a:+}x\\right) {c:+}$$\n\n"
                 weg += f"$$= {a}\\left(x^2 {b / a:+}x + \\left({b / (2 * a):.3f}\\right)^2 - \\left({b / (2 * a):.3f}\\right)^2\\right) {c:+}$$\n\n"
                 weg += f"$$= {a}\\left(\\left(x {b / (2 * a):+.3f}\\right)^2 - {b**2 / (4 * a**2):.3f}\\right) {c:+}$$\n\n"

@@ -19,7 +19,11 @@ class TestGanzrationaleFunktionKonstruktoren:
         """Test: Standard String-Konstruktor"""
         f = GanzrationaleFunktion("x^2+4x-2")
         assert f.term() == "x**2+4*x**1-2*x**0"
-        assert f.koeffizienten == [-2.0, 4.0, 1.0]
+        # Mit exakter Arithmetik: Koeffizienten sind SymPy-Objekte
+        assert len(f.koeffizienten) == 3
+        assert f.koeffizienten[0] == -2  # Konstante
+        assert f.koeffizienten[1] == 4  # x-Koeffizient
+        assert f.koeffizienten[2] == 1  # x²-Koeffizient
 
     def test_string_konstruktor_latex(self):
         """Test: LaTeX-Format String-Konstruktor"""
@@ -72,7 +76,9 @@ class TestGanzrationaleFunktionKonstruktoren:
     def test_lineare_funktion(self):
         """Test: Lineare Funktion"""
         f = GanzrationaleFunktion("x")
-        assert f.koeffizienten == [0.0, 1.0]
+        assert len(f.koeffizienten) == 2
+        assert f.koeffizienten[0] == 0  # Konstante
+        assert f.koeffizienten[1] == 1  # x-Koeffizient
         assert f.term() == "x**1"
 
     def test_null_funktion(self):
@@ -207,7 +213,8 @@ class TestGanzrationaleFunktionLösungswege:
         weg = f.nullstellen_weg()
 
         assert "Lineare Funktion" in weg
-        assert "= 0.5" in weg
+        # Mit exakter Arithmetik: Ergebnis ist 1/2
+        assert "= 1/2" in weg
 
 
 if __name__ == "__main__":
