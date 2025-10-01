@@ -269,51 +269,15 @@ class GanzrationaleFunktion:
 
     def _extrahiere_koeffizienten(self) -> List[sp.Basic]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
-        try:
-            # Prüfe, ob der Ausdruck gültig ist
-            if not hasattr(self.term_sympy, "subs"):
-                raise ValueError("Ungültiger SymPy-Ausdruck")
+        # Durch die Polynom-Validierung im Konstruktor ist dies immer möglich
+        poly = Poly(self.term_sympy, self.x)
 
-            poly = Poly(self.term_sympy, self.x)
-            return [poly.coeff_monomial(self.x**i) for i in range(poly.degree() + 1)]
-        except Exception as e:
-            # Fallback: Manuelle Koeffizienten-Extraktion
-            koeffizienten = []
+        # all_coeffs() gibt Koeffizienten von höchstem zu niedrigstem Grad zurück
+        # Wir kehren die Reihenfolge um für [c0, c1, c2, ...] Format
+        coeffs = poly.all_coeffs()
+        coeffs.reverse()
 
-            try:
-                # Konstante Term
-                const_term = self.term_sympy.subs(self.x, 0)
-                if const_term != 0:
-                    try:
-                        koeffizienten.append(const_term)
-                    except (TypeError, ValueError):
-                        # Wenn es sich nicht um eine Zahl handelt, überspringen
-                        pass
-
-                # Für höhere Grade: Ableitungen verwenden
-                for i in range(1, 10):  # Maximal Grad 10
-                    try:
-                        # i-te Ableitung an x=0 dividiert durch i!
-                        ableitung_i = sp.diff(self.term_sympy, self.x, i)
-                        wert_0 = ableitung_i.subs(self.x, 0)
-                        koeff = wert_0 / sp.factorial(i)
-
-                        if koeff != 0:  # Nur signifikante Koeffizienten
-                            # Stelle sicher, dass die Liste lang genug ist
-                            while len(koeffizienten) < i:
-                                koeffizienten.append(sp.Integer(0))
-                            koeffizienten.append(koeff)
-                    except:
-                        break
-
-                # Wenn keine Koeffizienten gefunden wurden
-                if not koeffizienten:
-                    koeffizienten = [sp.Integer(0)]
-
-                return koeffizienten
-            except Exception:
-                # Wenn alles fehlschlägt, leere Liste zurückgeben
-                return [sp.Integer(0)]
+        return coeffs
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
