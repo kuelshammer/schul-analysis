@@ -5,13 +5,15 @@ Unterstützt verschiedene Konstruktor-Formate und mathematisch korrekte
 Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
+import logging
 from typing import TYPE_CHECKING, Any, Union
+
+import numpy as np
 
 if TYPE_CHECKING:
     from .gebrochen_rationale import GebrochenRationaleFunktion
 
 import marimo as mo
-import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import sympy as sp
@@ -19,6 +21,13 @@ from plotly.subplots import make_subplots
 from sympy import Poly, Rational, diff, factor, latex, solve, symbols, sympify
 
 from .config import config
+
+# Logger instance for the module
+log = logging.getLogger(__name__)
+
+# Constants for better maintainability
+DEFAULT_TOLERANCE = 1e-9
+MAX_DERIVATIVE_ORDER_CHECK = 15
 
 
 class GanzrationaleFunktion:
@@ -456,75 +465,63 @@ class GanzrationaleFunktion:
             return []
 
     def wendepunkte(self) -> list[tuple[float, str]]:
-        """Berechnet die Wendepunkte der Funktion."""
+        """
+        Calculates the inflection points of the function.
+
+        An inflection point is a point on a curve at which the curve changes
+        from being concave to convex, or vice versa.
+
+        Algorithm:
+        1. Find roots of the second derivative (f''(x) = 0). These are candidates.
+        2. For each real-valued candidate x_c:
+           - Check the first non-zero higher-order derivative.
+           - If the order of this derivative is odd, x_c is an inflection point.
+           - If the order is even, it's a local extremum of the derivative, not an inflection point.
+
+        Returns:
+            A sorted list of tuples, where each tuple contains the x-coordinate
+            of an inflection point and the string "Wendepunkt".
+            Returns an empty list if the calculation fails for any reason.
+        """
         try:
-            # Zweite Ableitung
-            f_doppelstrich = self.ableitung(2)
+            # 1. Calculate derivatives ONCE outside the loop for efficiency.
+            f_second_deriv = self.ableitung(2)
 
-            # Kritische Punkte für Wendepunkte (f''(x) = 0)
-            kritische_punkte = solve(f_doppelstrich.term_sympy, self.x)
+            # 2. Find candidates for inflection points (where f''(x) = 0).
+            candidates = solve(f_second_deriv.term_sympy, self.x)
 
-            wendepunkte = []
+            inflection_points = []
 
-            for punkt in kritische_punkte:
-                if punkt.is_real:
-                    x_wert = float(punkt)
+            for point in candidates:
+                if not point.is_real:
+                    continue
 
-                    # Dritte Ableitung zur Überprüfung
-                    f_drittstrich = self.ableitung(3)
-                    y_wert = f_drittstrich.wert(x_wert)
+                x_val = float(point)
 
-                    # Wenn f'''(x) ≠ 0, dann ist es ein Wendepunkt
-                    if not np.isclose(y_wert, 0, atol=1e-10):
-                        wendepunkte.append((x_wert, "Wendepunkt"))
-                    else:
-                        # Spezialfall: Höhere Ableitung needed
-                        # Suche die erste nicht-Null Ableitung ungerader Ordnung
-                        for ordnung in range(5, 10, 2):  # 5, 7, 9
-                            hoeher_ableitung = self.ableitung(ordnung)
-                            wert = hoeher_ableitung.wert(x_wert)
-                            if not np.isclose(wert, 0, atol=1e-10):
-                                wendepunkte.append((x_wert, "Wendepunkt"))
-                                break
+                # 3. Check higher-order derivatives.
+                # Start with the 3rd derivative and find the first one that is not zero.
+                first_nonzero_deriv_order = 0
+                for order in range(3, MAX_DERIVATIVE_ORDER_CHECK + 1):
+                    higher_deriv = self.ableitung(order)
+                    value = higher_deriv.wert(x_val)
 
-            return sorted(wendepunkte, key=lambda x: x[0])
-        except Exception:
-            return []
+                    if not np.isclose(value, 0, atol=DEFAULT_TOLERANCE):
+                        first_nonzero_deriv_order = order
+                        break
 
-    def wendepunkte(self) -> list[tuple[float, str]]:
-        """Berechnet die Wendepunkte der Funktion."""
-        try:
-            # Zweite Ableitung
-            f_doppelstrich = self.ableitung(2)
+                # An inflection point exists if the first non-zero derivative
+                # has an ODD order.
+                if first_nonzero_deriv_order > 0 and first_nonzero_deriv_order % 2 != 0:
+                    inflection_points.append((x_val, "Wendepunkt"))
 
-            # Kritische Punkte für Wendepunkte (f''(x) = 0)
-            kritische_punkte = solve(f_doppelstrich.term_sympy, self.x)
+            return sorted(inflection_points, key=lambda p: p[0])
 
-            wendepunkte = []
-
-            for punkt in kritische_punkte:
-                if punkt.is_real:
-                    x_wert = float(punkt)
-
-                    # Dritte Ableitung zur Überprüfung
-                    f_drittstrich = self.ableitung(3)
-                    y_wert = f_drittstrich.wert(x_wert)
-
-                    # Wenn f'''(x) ≠ 0, dann ist es ein Wendepunkt
-                    if not np.isclose(y_wert, 0, atol=1e-10):
-                        wendepunkte.append((x_wert, "Wendepunkt"))
-                    else:
-                        # Spezialfall: Höhere Ableitung needed
-                        # Suche die erste nicht-Null Ableitung ungerader Ordnung
-                        for ordnung in range(5, 10, 2):  # 5, 7, 9
-                            hoeher_ableitung = self.ableitung(ordnung)
-                            wert = hoeher_ableitung.wert(x_wert)
-                            if not np.isclose(wert, 0, atol=1e-10):
-                                wendepunkte.append((x_wert, "Wendepunkt"))
-                                break
-
-            return sorted(wendepunkte, key=lambda x: x[0])
-        except Exception:
+        except (NotImplementedError, TypeError, ValueError, Exception) as e:
+            # 4. Catch specific exceptions and log them.
+            # Avoids silently failing and helps with debugging.
+            log.error(
+                f"Could not calculate inflection points for {self.term_sympy}. Reason: {e}"
+            )
             return []
 
     def _rationale_nullstellen(self) -> list[sp.Rational]:
