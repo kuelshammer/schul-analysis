@@ -9,7 +9,7 @@ import numpy as np
 import marimo as mo
 from typing import Union, List, Tuple, Dict, Any
 import sympy as sp
-from sympy import sympify, latex, solve, diff, symbols, Poly
+from sympy import sympify, latex, solve, diff, symbols, Poly, Rational, gcd, factor
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
@@ -331,27 +331,92 @@ class GanzrationaleFunktion:
 
         return neue_funktion
 
-    def nullstellen(self, real: bool = True) -> List[float]:
-        """Berechnet die Nullstellen der Funktion."""
+    def nullstellen(
+        self, real: bool = True, exakt: bool = False
+    ) -> List[Union[float, sp.Basic]]:
+        """Berechnet die Nullstellen der Funktion.
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben
+            exakt: Exakte symbolische Ergebnisse beibehalten
+
+        Returns:
+            Liste der Nullstellen als float oder symbolische Ausdrücke
+        """
         try:
+            # Für höhere Grade (≥ 3) zuerst versuchen, rationale Nullstellen zu finden
+            grad = len(self.koeffizienten) - 1
+            if grad >= 3:
+                rationale_nullstellen = self._rationale_nullstellen()
+                if rationale_nullstellen:
+                    # Lineare Faktoren abspalten
+                    linearfaktoren, rest_polynom = self._faktorisiere()
+
+                    nullstellen_liste = []
+
+                    # Gefundene rationale Nullstellen hinzufügen
+                    for nullstelle in rationale_nullstellen:
+                        if exakt:
+                            nullstellen_liste.append(nullstelle)
+                        else:
+                            nullstellen_liste.append(float(nullstelle))
+
+                    # Restpolynom lösen (kann quadratisch oder höher sein)
+                    if rest_polynom != 1 and rest_polynom.degree(self.x) > 0:
+                        rest_lösungen = solve(rest_polynom, self.x)
+
+                        for lösung in rest_lösungen:
+                            if real and not lösung.is_real:
+                                continue
+
+                            if exakt:
+                                nullstellen_liste.append(lösung)
+                            elif lösung.is_real:
+                                nullstellen_liste.append(float(lösung))
+                            else:
+                                nullstellen_liste.append(complex(lösung))
+
+                    return sorted(
+                        nullstellen_liste,
+                        key=lambda x: float(x)
+                        if hasattr(x, "is_real") and x.is_real
+                        else complex(x),
+                    )
+
+            # Für niedrigere Grade oder wenn Faktorisierung nicht funktioniert
             lösungen = solve(self.term_sympy, self.x)
-            nullstellen = []
+            nullstellen_liste = []
 
             for lösung in lösungen:
-                if real:
-                    # Nur reelle Nullstellen
-                    if lösung.is_real:
-                        nullstellen.append(float(lösung))
-                else:
-                    # Auch komplexe Nullstellen
-                    if lösung.is_real:
-                        nullstellen.append(float(lösung))
-                    else:
-                        # Komplexe Zahl in Real- und Imaginärteil aufteilen
-                        nullstellen.append(complex(lösung))
+                if real and not lösung.is_real:
+                    continue
 
-            return sorted(nullstellen)
-        except:
+                if exakt:
+                    nullstellen_liste.append(lösung)
+                elif lösung.is_real:
+                    nullstellen_liste.append(float(lösung))
+                else:
+                    nullstellen_liste.append(complex(lösung))
+
+            # Sortiere Nullstellen (reelle zuerst, dann komplexe nach Realteil)
+            reelle_nullstellen = [
+                x for x in nullstellen_liste if hasattr(x, "is_real") and x.is_real
+            ]
+            komplexe_nullstellen = [
+                x
+                for x in nullstellen_liste
+                if not hasattr(x, "is_real") or not x.is_real
+            ]
+
+            # Sortiere reelle Nullstellen
+            reelle_nullstellen.sort(key=lambda x: float(x))
+
+            # Sortiere komplexe Nullstellen nach Realteil
+            komplexe_nullstellen.sort(key=lambda x: complex(x).real)
+
+            return reelle_nullstellen + komplexe_nullstellen
+        except Exception as e:
+            print(f"Fehler bei Nullstellenberechnung: {e}")
             return []
 
     def extremstellen(self) -> List[Tuple[float, str]]:
@@ -386,10 +451,404 @@ class GanzrationaleFunktion:
         except:
             return []
 
+    def _rationale_nullstellen(self) -> List[sp.Rational]:
+        """
+        Berechnet rationale Nullstellen mit Rational Root Theorem.
+
+        Für ein Polynom a_n*x^n + ... + a_1*x + a_0 sind mögliche rationale
+        Nullstellen p/q, wobei p Teiler von a_0 und q Teiler von a_n ist.
+        """
+        if len(self.koeffizienten) <= 2:  # Linear oder konstant
+            return []
+
+        # Letzter Koeffizient (a_0) und führender Koeffizient (a_n)
+        a0 = self.koeffizienten[0]
+        an = self.koeffizienten[-1]
+
+        # Wenn a0 oder an Null sind,定理 nicht anwendbar
+        if a0 == 0 or an == 0:
+            return []
+
+        # Teiler von a0 (p) und an (q) finden
+        def finde_teiler(zahl):
+            if isinstance(zahl, Rational):
+                zaehler = int(zahl.p)
+                nenner = int(zahl.q)
+                teiler_zaehler = {
+                    t
+                    for t in range(-abs(zaehler), abs(zaehler) + 1)
+                    if t != 0 and zaehler % t == 0
+                }
+                teiler_nenner = {
+                    t for t in range(1, abs(nenner) + 1) if nenner % t == 0
+                }
+                return teiler_zaehler, teiler_nenner
+            else:
+                return {
+                    t
+                    for t in range(-abs(int(zahl)), abs(int(zahl)) + 1)
+                    if t != 0 and int(zahl) % t == 0
+                }, {1}
+
+        # Teiler für a0 und an finden
+        if isinstance(a0, Rational):
+            teiler_p_zaehler, teiler_p_nenner = finde_teiler(a0)
+            teiler_p = {
+                sp.Rational(p_z, p_n)
+                for p_z in teiler_p_zaehler
+                for p_n in teiler_p_nenner
+            }
+        else:
+            teiler_p_zaehler, _ = finde_teiler(a0)
+            teiler_p = {sp.Rational(t, 1) for t in teiler_p_zaehler}
+
+        if isinstance(an, Rational):
+            teiler_q_zaehler, teiler_q_nenner = finde_teiler(an)
+            teiler_q = {
+                sp.Rational(q_z, q_n)
+                for q_z in teiler_q_zaehler
+                for q_n in teiler_q_nenner
+            }
+        else:
+            teiler_q_zaehler, _ = finde_teiler(an)
+            teiler_q = {sp.Rational(t, 1) for t in teiler_q_zaehler}
+
+        # Mögliche rationale Nullstellen: p/q für alle p in teiler_p, q in teiler_q
+        moegliche_kandidaten = set()
+        for p in teiler_p:
+            for q in teiler_q:
+                if q != 0:
+                    kandidat = p / q
+                    moegliche_kandidaten.add(kandidat)
+
+        # Kandidaten testen
+        gefundene_nullstellen = []
+        for kandidat in sorted(moegliche_kandidaten):
+            # Substituiere kandidat in das Polynom
+            ergebnis = self.term_sympy.subs(self.x, kandidat)
+            if ergebnis == 0:
+                gefundene_nullstellen.append(kandidat)
+
+        return gefundene_nullstellen
+
+    def _faktorisiere(self) -> Tuple[List[sp.Basic], sp.Basic]:
+        """
+        Versucht, das Polynom zu faktorisieren.
+
+        Returns:
+            Tuple[List[sp.Basic], sp.Basic]: (Linearfaktoren, Restpolynom)
+        """
+        # Zuerst versuchen, das gesamte Polynom zu faktorisieren
+        faktorisiert = factor(self.term_sympy)
+
+        if faktorisiert != self.term_sympy:
+            # Erfolgreich faktorisiert
+            return [faktorisiert], sp.Integer(1)
+
+        # Wenn vollständige Faktorisierung nicht funktioniert,
+        # versuche rationale Nullstellen zu finden und abzuspalten
+        rationale_nullstellen = self._rationale_nullstellen()
+
+        if not rationale_nullstellen:
+            return [], self.term_sympy
+
+        linearfaktoren = []
+        rest_polynom = self.term_sympy
+
+        for nullstelle in rationale_nullstellen:
+            # Linearfaktor (x - nullstelle)
+            if nullstelle == 0:
+                linearfaktor = self.x
+            else:
+                linearfaktor = self.x - nullstelle
+
+            # Testen, ob dieser Faktor tatsächlich teilt
+            quotient, rest = sp.div(rest_polynom, linearfaktor)
+            if rest == 0:
+                linearfaktoren.append(linearfaktor)
+                rest_polynom = quotient
+
+        return linearfaktoren, rest_polynom
+
+    def _kubische_spezialfaelle(self) -> Tuple[bool, List[sp.Basic], str]:
+        """
+        Erkennt und löst spezielle kubische Formen.
+
+        Returns:
+            Tuple[bool, List[sp.Basic], str]: (erfolgreich, nullstellen, erkennungsmethode)
+        """
+        if len(self.koeffizienten) != 4:  # Nicht kubisch
+            return False, [], ""
+
+        a, b, c, d = (
+            self.koeffizienten[3],
+            self.koeffizienten[2],
+            self.koeffizienten[1],
+            self.koeffizienten[0],
+        )
+
+        # Spezialfall 1: x³ + px + q = 0 (fehlendes x²-Glied)
+        if b == 0:
+            try:
+                # Lösungsformel für reduzierte kubische Gleichung
+                # x³ + px + q = 0
+                p = c / a
+                q = d / a
+
+                discriminant = (q / 2) ** 2 + (p / 3) ** 3
+
+                if discriminant >= 0:
+                    # Eine reelle Nullstelle
+                    u = (-q / 2 + sp.sqrt(discriminant)) ** (sp.Rational(1, 3))
+                    v = (-q / 2 - sp.sqrt(discriminant)) ** (sp.Rational(1, 3))
+                    x1 = u + v
+
+                    # Komplexe Nullstellen berechnen
+                    omega = sp.Rational(-1, 2) + sp.sqrt(3) * sp.I / sp.Rational(2)
+                    x2 = omega * u + omega**2 * v
+                    x3 = omega**2 * u + omega * v
+
+                    return (
+                        True,
+                        [x1, x2, x3],
+                        "Reduzierte kubische Gleichung (x³ + px + q = 0)",
+                    )
+                else:
+                    # Drei reelle Nullstellen (Cardanische Formel mit trigonometrischer Lösung)
+                    # Hier vereinfacht durch Rückgriff auf SymPy
+                    return False, [], ""
+            except:
+                return False, [], ""
+
+        # Spezialfall 2: (x - a)³ = x³ - 3ax² + 3a²x - a³
+        # Prüfe, ob es sich um eine vollständige dritte Potenz handelt
+        try:
+            # Versuche, die Form zu erkennen
+            if b == -3 * a and c == 3 * a**2 and d == -(a**3):
+                x1 = a
+                return True, [x1, x1, x1], "Vollständige dritte Potenz"
+        except:
+            pass
+
+        # Spezialfall 3: Rationale Nullstelle vorhanden
+        rationale_nullstellen = self._rationale_nullstellen()
+        if rationale_nullstellen:
+            return True, rationale_nullstellen, "Rationale Nullstellen gefunden"
+
+        return False, [], ""
+
+    def _intelligente_loesungsanalyse(self) -> Dict[str, Any]:
+        """
+        Nutzt SymPy's Intelligenz zur Identifikation menschlich nachvollziehbarer Lösungswege.
+        """
+        term = self.term_sympy
+        grad = len(self.koeffizienten) - 1
+
+        analyse = {
+            "grad": grad,
+            "sympy_factor": None,
+            "sympy_roots": None,
+            "muster": [],
+            "loesungswege": [],
+            "empfohlener_weg": None,
+        }
+
+        # 1. SymPy's Faktorisierung und Nullstellen abfragen
+        try:
+            analyse["sympy_factor"] = factor(term)
+            analyse["sympy_roots"] = roots(term)
+        except:
+            pass
+
+        # 2. Muster erkennen
+        muster = []
+
+        # Muster 1: Differenz von Quadraten
+        if self._ist_differenz_von_quadraten(term):
+            muster.append("differenz_von_quadraten")
+
+        # Muster 2: Perfekte Potenzen
+        if self._ist_perfekte_potenz(analyse["sympy_factor"]):
+            muster.append("perfekte_potenz")
+
+        # Muster 3: Symmetrische Nullstellen
+        if self._ist_symmetrisch(analyse["sympy_roots"]):
+            muster.append("symmetrisch")
+
+        # Muster 4: Rationale Nullstellen
+        if self._hat_rationale_nullstellen(analyse["sympy_roots"]):
+            muster.append("rationale_nullstellen")
+
+        # Muster 5: Linearfaktoren
+        if self._ist_linearfaktorisiert(analyse["sympy_factor"]):
+            muster.append("linearfaktoren")
+
+        analyse["muster"] = muster
+
+        # 3. Lösungswege priorisieren
+        analyse["empfohlener_weg"] = self._waehle_empfohlenen_weg(muster, grad)
+
+        return analyse
+
+    def _ist_differenz_von_quadraten(self, term: sp.Basic) -> bool:
+        """Prüft, ob der Term eine Differenz von Quadraten ist."""
+        if term.is_polynomial():
+            try:
+                # Prüfe auf Form a² - b² durch Koeffizientenanalyse
+                koeffizienten = self.koeffizienten
+                grad = len(koeffizienten) - 1
+
+                # Differenz von Quadraten: x^n - a (wobei n gerade)
+                if grad % 2 == 0 and grad >= 2:
+                    # Prüfe ob nur zwei von null verschiedene Koeffizienten existieren
+                    nicht_null = [i for i, k in enumerate(koeffizienten) if k != 0]
+                    if len(nicht_null) == 2:
+                        # Form: x^n - a oder a - x^n
+                        return (nicht_null[0] == 0 and nicht_null[1] == grad) or (
+                            nicht_null[0] == grad and nicht_null[1] == 0
+                        )
+
+                # Prüfe durch Faktorisierung
+                faktorisiert = factor(term)
+                if isinstance(faktorisiert, sp.Mul):
+                    faktoren = sp.Mul.make_args(faktorisiert)
+                    if len(faktoren) == 2:
+                        f1, f2 = faktoren
+                        # Prüfe auf (a+b)(a-b) Form
+                        if (
+                            f1.is_Add
+                            and len(f1.args) == 2
+                            and f2.is_Add
+                            and len(f2.args) == 2
+                        ):
+                            # Extrahiere Terme aus beiden Faktoren
+                            f1_terme = [arg for arg in f1.args if arg.has(self.x)]
+                            f2_terme = [arg for arg in f2.args if arg.has(self.x)]
+                            if len(f1_terme) == 1 and len(f2_terme) == 1:
+                                # Prüfe ob einer negativ des anderen ist
+                                return f1_terme[0] == -f2_terme[0]
+            except:
+                pass
+        return False
+
+    def _ist_perfekte_potenz(self, faktorisiert: sp.Basic) -> bool:
+        """Prüft, ob es sich um eine perfekte Potenz handelt."""
+        if isinstance(faktorisiert, sp.Pow):
+            return True
+        return False
+
+    def _ist_symmetrisch(self, roots_dict: dict) -> bool:
+        """Prüft, ob Nullstellen symmetrisch sind."""
+        if not roots_dict:
+            return False
+
+        nullstellen = list(roots_dict.keys())
+        # Prüfe ob für jede Nullstelle a auch -a existiert (bis auf Vielfachheit)
+        for nullstelle in nullstellen:
+            if nullstelle != 0 and -nullstelle not in nullstellen:
+                return False
+        return True
+
+    def _hat_rationale_nullstellen(self, roots_dict: dict) -> bool:
+        """Prüft, ob rationale Nullstellen vorhanden sind."""
+        if not roots_dict:
+            return False
+
+        for nullstelle in roots_dict.keys():
+            if nullstelle.is_rational:
+                return True
+        return False
+
+    def _ist_linearfaktorisiert(self, faktorisiert: sp.Basic) -> bool:
+        """Prüft, ob vollständig in Linearfaktoren zerlegt."""
+        if isinstance(faktorisiert, sp.Mul):
+            faktoren = sp.Mul.make_args(faktorisiert)
+            for faktor in faktoren:
+                # Prüfe ob Linearfaktor (Grad 1)
+                try:
+                    if not (
+                        faktor.is_polynomial() and Poly(faktor, self.x).degree() == 1
+                    ):
+                        return False
+                except:
+                    return False
+            return True
+        return False
+
+    def _waehle_empfohlenen_weg(self, muster: List[str], grad: int) -> str:
+        """Wählt den empfohlenen Lösungswege."""
+        # Priorisierte Strategien nach "menschlicher Einfachheit"
+        strategie_prio = [
+            "differenz_von_quadraten",  # Sehr einfach
+            "perfekte_potenz",  # Sehr einfach
+            "symmetrisch",  # Mittel (Substitution)
+            "rationale_nullstellen",  # Mittel (Systematisch)
+            "linearfaktoren",  # Einfach
+        ]
+
+        for strategie in strategie_prio:
+            if strategie in muster:
+                return strategie
+
+        return "allgemein"
+
     def nullstellen_weg(self) -> str:
         """Gibt detaillierten Lösungsweg für Nullstellen als Markdown zurück."""
         weg = f"# Nullstellen von f(x) = {self.original_eingabe}\n\n"
         weg += f"Gegeben ist die Funktion: $$f(x) = {self.term_latex()}$$\n\n"
+
+        # Intelligente Analyse mit SymPy-Mustererkennung
+        analyse = self._intelligente_loesungsanalyse()
+        weg += "## Intelligente Mustererkennung\n\n"
+        weg += f"Erkannte Muster: {', '.join(analyse['muster']) if analyse['muster'] else 'Keine speziellen Muster'}\n"
+        weg += f"Empfohlener Lösungsweg: **{analyse['empfohlener_weg'].replace('_', ' ').title()}**\n\n"
+
+        # Spezielle Lösungswege basierend auf erkannten Mustern
+
+        # Differenz von Quadraten
+        if "differenz_von_quadraten" in analyse["muster"]:
+            weg += "## Lösungsweg: Differenz von Quadraten\n\n"
+            weg += "### Formel: a² - b² = (a+b)(a-b)\n\n"
+
+            # Zeige die Faktorisierung
+            if analyse["sympy_factor"]:
+                weg += "### Schritt 1: Anwenden der Formel\n\n"
+                weg += f"$$f(x) = {latex(analyse['sympy_factor'])}$$\n\n"
+
+                # Zeige die Nullstellen aus der Faktorisierung
+                if analyse["sympy_roots"]:
+                    weg += "### Schritt 2: Nullstellen berechnen\n\n"
+                    weg += "Setze jeden Faktor gleich null:\n\n"
+
+                    for nullstelle, vielfachheit in analyse["sympy_roots"].items():
+                        weg += f"- $$x = {nullstelle}"
+                        if vielfachheit > 1:
+                            weg += f" \\text{{ (Vielfachheit {vielfachheit})}}"
+                        weg += "$$\n"
+
+        # Perfekte Potenzen
+        elif "perfekte_potenz" in analyse["muster"]:
+            weg += "## Lösungsweg: Perfekte Potenz\n\n"
+            weg += "### Formel: (x-a)ⁿ = 0 ⇒ x = a\n\n"
+
+            if analyse["sympy_roots"]:
+                weg += "Die Funktion hat eine Nullstelle mit Vielfachheit:\n\n"
+                for nullstelle, vielfachheit in analyse["sympy_roots"].items():
+                    weg += f"- $$x = {nullstelle} \\text{{ (Vielfachheit {vielfachheit})}}$$\n"
+
+        # Symmetrische Polynome
+        elif "symmetrisch" in analyse["muster"]:
+            weg += "## Lösungsweg: Symmetrisches Polynom\n\n"
+            weg += "### Erkenntnis: Die Nullstellen sind symmetrisch\n\n"
+            weg += "Bei symmetrischen Polynomen kann oft die Substitution z = x² verwendet werden.\n\n"
+
+            if analyse["sympy_roots"]:
+                weg += "### Nullstellen:\n\n"
+                for nullstelle, vielfachheit in analyse["sympy_roots"].items():
+                    weg += f"- $$x = {nullstelle}"
+                    if vielfachheit > 1:
+                        weg += f" \\text{{ (Vielfachheit {vielfachheit})}}"
+                    weg += "$$\n"
 
         # Verschiedene Lösungswege je nach Grad
         grad = len(self.koeffizienten) - 1
@@ -452,6 +911,208 @@ class GanzrationaleFunktion:
                 weg += f"Da {a} > 0 und der Term {a}(x {float(b / (2 * a)):+.3f})² ≥ 0 ist, ergibt sich:\n\n"
                 weg += f"$$f(x) \\geq {float(c - b**2 / (4 * a)):+.3f} > 0$$\n\n"
                 weg += "Somit hat die Funktion keine reellen Nullstellen.\n"
+
+        elif grad == 3:
+            weg += "## Kubische Funktion (Grad 3)\n\n"
+
+            # Spezialfälle für kubische Funktionen überprüfen
+            erfolgreich, spezial_nullstellen, methode = self._kubische_spezialfaelle()
+
+            if erfolgreich:
+                weg += f"### Spezialfall: {methode}\n\n"
+                weg += (
+                    f"Die Funktion lässt sich als Spezialfall erkennen: {methode}\n\n"
+                )
+                weg += "Die Nullstellen sind:\n\n"
+
+                for i, nullstelle in enumerate(spezial_nullstellen, 1):
+                    if hasattr(nullstelle, "is_real") and nullstelle.is_real:
+                        weg += f"- x_{i} = {nullstelle}\n"
+                    else:
+                        weg += f"- x_{i} = {nullstelle} (komplex)\n"
+                weg += "\n"
+            else:
+                weg += "### Allgemeine kubische Gleichung\n\n"
+                weg += "Für die allgemeine kubische Gleichung verwenden wir den Rational Root Theorem:\n\n"
+
+                # Fallback auf die allgemeine Methode für höhere Grade
+                rationale_nullstellen = self._rationale_nullstellen()
+
+                if rationale_nullstellen:
+                    weg += "### Rational Root Theorem\n\n"
+                    weg += "Für rationale Nullstellen p/q gilt:\n"
+                    weg += "- p ist Teiler des absoluten Glieds (a₀)\n"
+                    weg += "- q ist Teiler des Leitkoeffizienten (aₙ)\n\n"
+
+                    a0 = self.koeffizienten[0]
+                    an = self.koeffizienten[-1]
+                    weg += f"Mit a₀ = {a0} und aₙ = {an}:\n\n"
+
+                    weg += "### Gefundene rationale Nullstellen\n\n"
+                    for nullstelle in rationale_nullstellen:
+                        weg += f"- x = {nullstelle}\n"
+                    weg += "\n"
+
+                    # Faktorisierung zeigen
+                    linearfaktoren, rest_polynom = self._faktorisiere()
+
+                    if linearfaktoren:
+                        weg += "### Faktorisierung\n\n"
+                        weg += "Das Polynom lässt sich faktorisieren als:\n\n"
+
+                        faktor_darstellung = ""
+                        for faktor in linearfaktoren:
+                            if faktor_darstellung:
+                                faktor_darstellung += " · "
+                            faktor_darstellung += f"({latex(faktor)})"
+
+                        if rest_polynom != 1:
+                            faktor_darstellung += f" · {latex(rest_polynom)}"
+
+                        weg += f"$$f(x) = {faktor_darstellung}$$\n\n"
+
+                        # Restpolynom lösen
+                        if rest_polynom != 1 and rest_polynom.degree(self.x) > 0:
+                            weg += "### Lösung des Restpolynoms\n\n"
+                            weg += f"Das Restpolynom {latex(rest_polynom)} hat die Nullstellen:\n\n"
+
+                            rest_lösungen = solve(rest_polynom, self.x)
+                            for i, lösung in enumerate(rest_lösungen, 1):
+                                if lösung.is_real:
+                                    weg += f"- x_{i} = {lösung}\n"
+                                else:
+                                    weg += f"- x_{i} = {lösung} (komplex)\n"
+
+                # Allgemeine Lösung mit SymPy
+                weg += "### Allgemeine Lösung\n\n"
+                weg += f"$$f(x) = {self.term_latex()} = 0$$\n\n"
+
+                alle_nullstellen = self.nullstellen(real=False, exakt=True)
+                weg += "Die Nullstellen sind:\n\n"
+
+                for i, nullstelle in enumerate(alle_nullstellen, 1):
+                    if hasattr(nullstelle, "is_real") and nullstelle.is_real:
+                        weg += f"- x_{i} = {nullstelle}\n"
+                    else:
+                        weg += f"- x_{i} = {nullstelle} (komplex)\n"
+
+        elif grad >= 4:
+            weg += f"## Polynom höheren Grades (Grad {grad})\n\n"
+
+            # Zuerst versuchen, rationale Nullstellen zu finden
+            rationale_nullstellen = self._rationale_nullstellen()
+
+            if rationale_nullstellen:
+                weg += "### Rational Root Theorem\n\n"
+                weg += "Für rationale Nullstellen p/q gilt:\n"
+                weg += "- p ist Teiler des absoluten Glieds (a₀)\n"
+                weg += "- q ist Teiler des Leitkoeffizienten (aₙ)\n\n"
+
+                a0 = self.koeffizienten[0]
+                an = self.koeffizienten[-1]
+                weg += f"Mit a₀ = {a0} und aₙ = {an}:\n\n"
+
+                weg += "Mögliche rationale Nullstellen: "
+                moegliche_kandidaten = set()
+
+                # Zeige mögliche Kandidaten
+                def finde_teiler_einfach(zahl):
+                    if isinstance(zahl, Rational):
+                        zaehler = abs(int(zahl.p))
+                        nenner = abs(int(zahl.q))
+                        teiler_zaehler = [
+                            t for t in range(1, zaehler + 1) if zaehler % t == 0
+                        ]
+                        teiler_nenner = [
+                            t for t in range(1, nenner + 1) if nenner % t == 0
+                        ]
+                        return teiler_zaehler, teiler_nenner
+                    else:
+                        return [
+                            t
+                            for t in range(1, abs(int(zahl)) + 1)
+                            if int(zahl) % t == 0
+                        ], [1]
+
+                if isinstance(a0, Rational):
+                    teiler_p_zaehler, teiler_p_nenner = finde_teiler_einfach(a0)
+                    teiler_p = [
+                        f"±{p_z}/{p_n}"
+                        for p_z in teiler_p_zaehler
+                        for p_n in teiler_p_nenner
+                    ]
+                else:
+                    teiler_p_zaehler, _ = finde_teiler_einfach(a0)
+                    teiler_p = [f"±{t}" for t in teiler_p_zaehler]
+
+                if isinstance(an, Rational):
+                    teiler_q_zaehler, teiler_q_nenner = finde_teiler_einfach(an)
+                    teiler_q = [
+                        f"±{q_z}/{q_n}"
+                        for q_z in teiler_q_zaehler
+                        for q_n in teiler_q_nenner
+                    ]
+                else:
+                    teiler_q_zaehler, _ = finde_teiler_einfach(an)
+                    teiler_q = [f"±{t}" for t in teiler_q_zaehler]
+
+                weg += (
+                    ", ".join(sorted(teiler_p[:5])) + "..."
+                    if len(teiler_p) > 5
+                    else ", ".join(teiler_p)
+                )
+                weg += "\n\n"
+
+                weg += "### Gefundene rationale Nullstellen\n\n"
+                for nullstelle in rationale_nullstellen:
+                    weg += f"- x = {nullstelle}\n"
+                weg += "\n"
+
+                # Faktorisierung zeigen
+                linearfaktoren, rest_polynom = self._faktorisiere()
+
+                if linearfaktoren:
+                    weg += "### Faktorisierung\n\n"
+                    weg += "Das Polynom lässt sich faktorisieren als:\n\n"
+
+                    faktor_darstellung = ""
+                    for faktor in linearfaktoren:
+                        if faktor_darstellung:
+                            faktor_darstellung += " · "
+                        faktor_darstellung += f"({latex(faktor)})"
+
+                    if rest_polynom != 1:
+                        faktor_darstellung += f" · {latex(rest_polynom)}"
+
+                    weg += f"$$f(x) = {faktor_darstellung}$$\n\n"
+
+                    # Restpolynom lösen
+                    if rest_polynom != 1 and rest_polynom.degree(self.x) > 0:
+                        weg += "### Lösung des Restpolynoms\n\n"
+                        weg += f"Das Restpolynom {latex(rest_polynom)} hat die Nullstellen:\n\n"
+
+                        rest_lösungen = solve(rest_polynom, self.x)
+                        for i, lösung in enumerate(rest_lösungen, 1):
+                            if lösung.is_real:
+                                weg += f"- x_{i} = {lösung}\n"
+                            else:
+                                weg += f"- x_{i} = {lösung} (komplex)\n"
+                else:
+                    weg += "### Keine Faktorisierung möglich\n\n"
+                    weg += "Das Polynom lässt sich nicht mit rationalen Koeffizienten faktorisieren.\n\n"
+
+            # Allgemeine Lösung mit SymPy
+            weg += "### Allgemeine Lösung\n\n"
+            weg += f"$$f(x) = {self.term_latex()} = 0$$\n\n"
+
+            alle_nullstellen = self.nullstellen(real=False, exakt=True)
+            weg += "Die Nullstellen sind:\n\n"
+
+            for i, nullstelle in enumerate(alle_nullstellen, 1):
+                if hasattr(nullstelle, "is_real") and nullstelle.is_real:
+                    weg += f"- x_{i} = {nullstelle}\n"
+                else:
+                    weg += f"- x_{i} = {nullstelle} (komplex)\n"
 
         return weg
 
