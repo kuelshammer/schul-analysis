@@ -18,7 +18,7 @@ class TestGanzrationaleFunktionKonstruktoren:
     def test_string_konstruktor_standard(self):
         """Test: Standard String-Konstruktor"""
         f = GanzrationaleFunktion("x^2+4x-2")
-        assert f.term() == "x**2+4*x**1-2*x**0"
+        assert f.term() == "x^2+4x-2"  # Neue saubere Formatierung
         # Mit exakter Arithmetik: Koeffizienten sind SymPy-Objekte
         assert len(f.koeffizienten) == 3
         assert f.koeffizienten[0] == -2  # Konstante
@@ -28,50 +28,50 @@ class TestGanzrationaleFunktionKonstruktoren:
     def test_string_konstruktor_latex(self):
         """Test: LaTeX-Format String-Konstruktor"""
         f = GanzrationaleFunktion("$x^2+4x-2$")
-        assert f.term() == "x**2+4*x**1-2*x**0"
-        assert f.koeffizienten == [-2.0, 4.0, 1.0]
+        assert f.term() == "x^2+4x-2"  # Neue saubere Formatierung
+        assert f.koeffizienten == [-2, 4, 1]  # Exakte Arithmetik
 
     def test_string_konstruktor_python_syntax(self):
         """Test: Python-Syntax String-Konstruktor"""
         f = GanzrationaleFunktion("x**2+4*x-2")
-        assert f.term() == "x**2+4*x**1-2*x**0"
-        assert f.koeffizienten == [-2.0, 4.0, 1.0]
+        assert f.term() == "x^2+4x-2"  # Neue saubere Formatierung
+        assert f.koeffizienten == [-2, 4, 1]  # Exakte Arithmetik
 
     def test_string_konstruktor_implizite_multiplikation(self):
         """Test: Implizite Multiplikation"""
         f = GanzrationaleFunktion("2x")
-        assert f.term() == "2*x**1"
-        assert f.koeffizienten == [0.0, 2.0]
+        assert f.term() == "2x"  # Neue saubere Formatierung
+        assert f.koeffizienten == [0, 2]  # Exakte Arithmetik
 
     def test_string_konstruktor_mit_leerzeichen(self):
         """Test: String mit Leerzeichen"""
         f = GanzrationaleFunktion("x^2 + 4x - 2")
-        assert f.term() == "x**2+4*x**1-2*x**0"
-        assert f.koeffizienten == [-2.0, 4.0, 1.0]
+        assert f.term() == "x^2+4x-2"  # Neue saubere Formatierung
+        assert f.koeffizienten == [-2, 4, 1]  # Exakte Arithmetik
 
     def test_liste_konstruktor(self):
         """Test: Listen-Konstruktor"""
         f = GanzrationaleFunktion([1, -4, 3])  # 1 - 4x + 3x²
-        assert f.koeffizienten == [1.0, -4.0, 3.0]
+        assert f.koeffizienten == [1, -4, 3]  # Exakte Arithmetik
         assert len(f.koeffizienten) == 3
 
     def test_dict_konstruktor(self):
         """Test: Dictionary-Konstruktor"""
         f = GanzrationaleFunktion({2: 1, 1: -4, 0: 3})  # x² - 4x + 3
-        assert f.koeffizienten == [3.0, -4.0, 1.0]
+        assert f.koeffizienten == [3, -4, 1]  # Exakte Arithmetik
         assert len(f.koeffizienten) == 3
 
     def test_dict_konstruktor_mit_luecken(self):
         """Test: Dictionary-Konstruktor mit Lücken"""
         f = GanzrationaleFunktion({3: 2, 1: -3, 0: 1})  # 2x³ - 3x + 1
-        assert f.koeffizienten == [1.0, -3.0, 0.0, 2.0]
+        assert f.koeffizienten == [1, -3, 0, 2]  # Exakte Arithmetik
         assert len(f.koeffizienten) == 4
 
     def test_konstante_funktion(self):
         """Test: Konstante Funktion"""
         f = GanzrationaleFunktion("5")
-        assert f.koeffizienten == [5.0]
-        assert f.term() == "5*x**0"
+        assert f.koeffizienten == [5]  # Exakte Arithmetik
+        assert f.term() == "5"  # Neue saubere Formatierung
 
     def test_lineare_funktion(self):
         """Test: Lineare Funktion"""
@@ -79,18 +79,18 @@ class TestGanzrationaleFunktionKonstruktoren:
         assert len(f.koeffizienten) == 2
         assert f.koeffizienten[0] == 0  # Konstante
         assert f.koeffizienten[1] == 1  # x-Koeffizient
-        assert f.term() == "x**1"
+        assert f.term() == "x"  # Neue saubere Formatierung
 
     def test_null_funktion(self):
         """Test: Null-Funktion"""
         f = GanzrationaleFunktion("0")
-        assert f.koeffizienten == [0.0]
-        assert f.term() == "0*x**0"
+        assert f.koeffizienten == [0]  # Exakte Arithmetik
+        assert f.term() == "0"  # Neue saubere Formatierung
 
     def test_ungueltige_eingabe(self):
         """Test: Ungültige Eingabe"""
         with pytest.raises(ValueError):
-            GanzrationaleFunktion("ungültig")
+            GanzrationaleFunktion("sin(x)")  # Keine ganzrationale Funktion
 
         with pytest.raises(TypeError):
             GanzrationaleFunktion(123)  # Falscher Typ
@@ -107,7 +107,7 @@ class TestGanzrationaleFunktionMethoden:
 
     def test_term_method(self):
         """Test: term() Methode"""
-        assert self.f_quad.term() == "x**2-4*x**1+3*x**0"
+        assert self.f_quad.term() == "x^2-4x+3"  # Neue saubere Formatierung
 
     def test_term_latex_method(self):
         """Test: term_latex() Methode"""
@@ -127,11 +127,11 @@ class TestGanzrationaleFunktionMethoden:
         """Test: ableitung() Methode"""
         f_strich = self.f_quad.ableitung(1)
         assert isinstance(f_strich, GanzrationaleFunktion)
-        assert f_strich.koeffizienten == [-4.0, 2.0]  # 2x - 4
+        assert f_strich.koeffizienten == [-4, 2]  # 2x - 4 (exakte Arithmetik)
 
         f_doppelstrich = self.f_quad.ableitung(2)
         assert isinstance(f_doppelstrich, GanzrationaleFunktion)
-        assert f_doppelstrich.koeffizienten == [2.0]  # 2
+        assert f_doppelstrich.koeffizienten == [2]  # 2 (exakte Arithmetik)
 
     def test_nullstellen_method(self):
         """Test: nullstellen() Methode"""
@@ -170,12 +170,12 @@ class TestGanzrationaleFunktionEdgeCases:
         """Test: Funktionen höheren Grades"""
         f = GanzrationaleFunktion("x^4-2x^3+3x^2-4x+5")
         assert len(f.koeffizienten) == 5
-        assert f.koeffizienten[4] == 1.0  # x^4 Koeffizient
+        assert f.koeffizienten[4] == 1  # x^4 Koeffizient (exakte Arithmetik)
 
     def test_negative_koeffizienten(self):
         """Test: Negative Koeffizienten"""
         f = GanzrationaleFunktion("-x^2+3x-1")
-        assert f.koeffizienten == [-1.0, 3.0, -1.0]
+        assert f.koeffizienten == [-1, 3, -1]  # Exakte Arithmetik
 
     def test_bruch_koeffizienten(self):
         """Test: Bruch-Koeffizienten"""
@@ -187,7 +187,7 @@ class TestGanzrationaleFunktionEdgeCases:
     def test_null_koeffizienten(self):
         """Test: Null-Koeffizienten"""
         f = GanzrationaleFunktion("x^2+0*x+1")
-        assert f.koeffizienten == [1.0, 0.0, 1.0]
+        assert f.koeffizienten == [1, 0, 1]  # Exakte Arithmetik
 
 
 class TestGanzrationaleFunktionLösungswege:
