@@ -21,12 +21,12 @@ class GanzrationaleFunktion:
     Konstruktor-Optionen und Visualisierungsmethoden.
     """
 
-    def __init__(self, eingabe: Union[str, List[float], Dict[int, float]]):
+    def __init__(self, eingabe: Union[str, List[float], Dict[int, float], sp.Basic]):
         """
         Konstruktor für ganzrationale Funktionen.
 
         Args:
-            eingabe: String ("x^3-2x+1"), Liste ([1, 0, -2, 1]) oder Dictionary ({3: 1, 1: -2, 0: 1})
+            eingabe: String ("x^3-2x+1"), Liste ([1, 0, -2, 1]), Dictionary ({3: 1, 1: -2, 0: 1}) oder SymPy-Ausdruck
         """
         self.x = symbols("x")
         self.original_eingabe = str(eingabe)  # Original eingabe speichern
@@ -42,8 +42,17 @@ class GanzrationaleFunktion:
             # Dictionary-Konstruktor: {3: 1, 1: -2, 0: 1} für x³ - 2x + 1
             self.term_str = self._dict_zu_string(eingabe)
             self.term_sympy = self._dict_zu_sympy(eingabe)
+        elif isinstance(eingabe, sp.Basic):
+            # SymPy-Ausdruck-Konstruktor
+            self.term_str = str(eingabe)
+            self.term_sympy = eingabe
+            # Validiere, dass es wirklich ein Polynom ist
+            if not self.term_sympy.is_polynomial(self.x):
+                raise TypeError("SymPy-Ausdruck ist kein Polynom in x")
         else:
-            raise TypeError("Eingabe muss String, Liste oder Dictionary sein")
+            raise TypeError(
+                "Eingabe muss String, Liste, Dictionary oder SymPy-Ausdruck sein"
+            )
 
         # Koeffizienten extrahieren (als exakte SymPy-Objekte)
         self.koeffizienten = self._extrahiere_koeffizienten()
@@ -280,29 +289,8 @@ class GanzrationaleFunktion:
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
-        # Use custom formatting with exact coefficients
-        terme = []
-
-        for grad, koeff in enumerate(self.koeffizienten):
-            term_str = self._format_koeffizient(koeff, grad)
-            if term_str:
-                terme.append(term_str)
-
-        if not terme:
-            return "0"
-
-        # Sort by descending degree for standard polynomial notation
-        terme.reverse()
-
-        # Join with proper signs
-        result = terme[0]
-        for term in terme[1:]:
-            if term.startswith("-"):
-                result += term  # already includes the minus sign
-            else:
-                result += "+" + term
-
-        return result
+        # Single source of truth: Use self.term_sympy directly
+        return str(self.term_sympy).replace("**", "^").replace("*", "").replace(" ", "")
 
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück."""
@@ -1375,6 +1363,152 @@ class GanzrationaleFunktion:
         if not isinstance(other, GanzrationaleFunktion):
             return False
         return self.term_sympy.equals(other.term_sympy)
+
+    def _create_from_operation(self, sympy_expr: sp.Basic) -> "GanzrationaleFunktion":
+        """
+        Factory-Methode zur Erstellung einer neuen Funktion aus einem SymPy-Ausdruck.
+        Führt Validierung durch und stellt sicher, dass das Ergebnis ein Polynom ist.
+        """
+        # Ausdruck expandieren für Standardform
+        expanded_expr = sp.expand(sympy_expr)
+
+        # Validiere, dass Ergebnis ein Polynom ist
+        if not expanded_expr.is_polynomial(self.x):
+            raise TypeError("Ergebnis ist keine ganzrationale Funktion")
+
+        # Erstelle neue Instanz mit dem validierten Ausdruck
+        return GanzrationaleFunktion(expanded_expr)
+
+    def __add__(self, other) -> "GanzrationaleFunktion":
+        """Addition: f + g"""
+        if isinstance(other, GanzrationaleFunktion):
+            result_sympy = self.term_sympy + other.term_sympy
+        elif isinstance(other, (int, float, Rational)):
+            result_sympy = self.term_sympy + other
+        else:
+            return NotImplemented
+
+        return self._create_from_operation(result_sympy)
+
+    def __radd__(self, other) -> "GanzrationaleFunktion":
+        """Rechtsseitige Addition: z + f"""
+        return self.__add__(other)
+
+    def __sub__(self, other) -> "GanzrationaleFunktion":
+        """Subtraktion: f - g"""
+        if isinstance(other, GanzrationaleFunktion):
+            result_sympy = self.term_sympy - other.term_sympy
+        elif isinstance(other, (int, float, Rational)):
+            result_sympy = self.term_sympy - other
+        else:
+            return NotImplemented
+
+        return self._create_from_operation(result_sympy)
+
+    def __rsub__(self, other) -> "GanzrationaleFunktion":
+        """Rechtsseitige Subtraktion: z - f"""
+        if isinstance(other, (int, float, Rational)):
+            result_sympy = other - self.term_sympy
+            return self._create_from_operation(result_sympy)
+        return NotImplemented
+
+    def __mul__(self, other) -> "GanzrationaleFunktion":
+        """Multiplikation: f * g"""
+        if isinstance(other, GanzrationaleFunktion):
+            result_sympy = self.term_sympy * other.term_sympy
+        elif isinstance(other, (int, float, Rational)):
+            result_sympy = self.term_sympy * other
+        else:
+            return NotImplemented
+
+        return self._create_from_operation(result_sympy)
+
+    def __rmul__(self, other) -> "GanzrationaleFunktion":
+        """Rechtsseitige Multiplikation: z * f"""
+        return self.__mul__(other)
+
+    def __truediv__(self, other) -> "GanzrationaleFunktion":
+        """Division: f / g (nur wenn Ergebnis ganzrational)"""
+        if isinstance(other, GanzrationaleFunktion):
+            if other.term_sympy == 0:
+                raise ZeroDivisionError("Division durch Nullfunktion")
+
+            result_sympy = self.term_sympy / other.term_sympy
+            result_sympy_simplified = sp.simplify(result_sympy)
+
+            if not result_sympy_simplified.is_polynomial(self.x):
+                raise TypeError(
+                    "Ergebnis ist keine ganzrationale Funktion (Division ergab gebrochen-rationale Funktion)"
+                )
+
+            return GanzrationaleFunktion(result_sympy_simplified)
+
+        elif isinstance(other, (int, float, Rational)):
+            if other == 0:
+                raise ZeroDivisionError("Division durch Null")
+
+            result_sympy = self.term_sympy / other
+            return self._create_from_operation(result_sympy)
+        else:
+            return NotImplemented
+
+    def __rtruediv__(self, other) -> "GanzrationaleFunktion":
+        """Rechtsseitige Division: z / f"""
+        if isinstance(other, (int, float, Rational)):
+            if self.term_sympy == 0:
+                raise ZeroDivisionError("Division durch Nullfunktion")
+
+            result_sympy = other / self.term_sympy
+            return self._create_from_operation(result_sympy)
+        else:
+            return NotImplemented
+
+    def __pow__(self, other) -> "GanzrationaleFunktion":
+        """Potenzierung: f ** n"""
+        if isinstance(other, int) and other >= 0:
+            if other == 0:
+                return GanzrationaleFunktion("1")
+            result_sympy = self.term_sympy**other
+            return self._create_from_operation(result_sympy)
+        else:
+            return NotImplemented
+
+    # --- In-place Operationen ---
+
+    def __iadd__(self, other) -> "GanzrationaleFunktion":
+        """In-place Addition: f += g"""
+        result = self + other
+        self.term_sympy = result.term_sympy
+        return self
+
+    def __isub__(self, other) -> "GanzrationaleFunktion":
+        """In-place Subtraktion: f -= g"""
+        result = self - other
+        self.term_sympy = result.term_sympy
+        return self
+
+    def __imul__(self, other) -> "GanzrationaleFunktion":
+        """In-place Multiplikation: f *= g"""
+        result = self * other
+        self.term_sympy = result.term_sympy
+        return self
+
+    def __itruediv__(self, other) -> "GanzrationaleFunktion":
+        """In-place Division: f /= g"""
+        result = self / other
+        self.term_sympy = result.term_sympy
+        return self
+
+    # --- Unäre Operationen ---
+
+    def __neg__(self) -> "GanzrationaleFunktion":
+        """Negation: -f"""
+        result_sympy = -self.term_sympy
+        return self._create_from_operation(result_sympy)
+
+    def __pos__(self) -> "GanzrationaleFunktion":
+        """Positiv: +f"""
+        return self._create_from_operation(self.term_sympy)
 
     def perfekte_parabel_plotly(
         self, x_range: tuple = (-5, 5), punkte: int = 200
