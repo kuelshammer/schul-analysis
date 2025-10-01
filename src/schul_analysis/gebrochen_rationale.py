@@ -230,6 +230,11 @@ class GebrochenRationaleFunktion:
                 # Cache leeren nach Änderung
                 self._clear_cache()
 
+    def kürzen(self) -> "GebrochenRationaleFunktion":
+        """Kürzt die Funktion und gibt sich selbst zurück"""
+        self._kuerzen()
+        return self
+
     def term(self) -> str:
         """Gibt den Term als String zurück"""
         if self._cache["term_str"] is None:

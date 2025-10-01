@@ -304,6 +304,12 @@ class GanzrationaleFunktion:
         """Gibt den Grad des Polynoms zurück"""
         return sp.Poly(self.term_sympy, self.x).degree()
 
+    def kürzen(self) -> "GanzrationaleFunktion":
+        """Kürzt die Funktion durch Faktorisierung"""
+        self.term_sympy = sp.factor(self.term_sympy)
+        self.term_str = str(self.term_sympy)
+        return self
+
     def ableitung(self, ordnung: int = 1) -> "GanzrationaleFunktion":
         """Berechnet die Ableitung gegebener Ordnung."""
         abgeleitet = diff(self.term_sympy, self.x, ordnung)
