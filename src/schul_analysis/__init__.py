@@ -193,6 +193,44 @@ def Schnittpunkt(f1, f2):
     return schnittpunkte
 
 
+def Extremstellen(funktion):
+    """Berechnet die Extremstellen einer Funktion
+
+    Args:
+        funktion: Eine GanzrationaleFunktion
+
+    Returns:
+        list: Liste von Tupeln (x, art) mit den Extremstellen
+
+    Beispiele:
+        >>> f = GanzrationaleFunktion("x^3-3x")
+        >>> Extremstellen(f)
+        [(-1.0, 'Maximum'), (1.0, 'Minimum')]
+    """
+    return funktion.extremstellen()
+
+
+def Wendepunkte(funktion):
+    """Berechnet die Wendepunkte einer Funktion
+
+    Args:
+        funktion: Eine GanzrationaleFunktion
+
+    Returns:
+        list: Liste von Tupeln (x, art) mit den Wendepunkten
+
+    Beispiele:
+        >>> f = GanzrationaleFunktion("x^3")
+        >>> Wendepunkte(f)
+        [(0.0, 'Wendepunkt')]
+
+        >>> g = GanzrationaleFunktion("x^4-4x^3")
+        >>> Wendepunkte(g)
+        [(0.0, 'Wendepunkt'), (2.0, 'Wendepunkt')]
+    """
+    return funktion.wendepunkte()
+
+
 def Integral(funktion, a: float, b: float) -> float:
     """Berechnet das bestimmte Integral einer Funktion von a bis b
 
@@ -726,6 +764,8 @@ __all__ = [
     "Graph",
     "Kürzen",
     "Schnittpunkt",
+    "Extremstellen",
+    "Wendepunkte",
     "Integral",
     "Grenzwert",
     "AsymptotischesVerhalten",

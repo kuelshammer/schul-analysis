@@ -455,6 +455,78 @@ class GanzrationaleFunktion:
         except Exception:
             return []
 
+    def wendepunkte(self) -> list[tuple[float, str]]:
+        """Berechnet die Wendepunkte der Funktion."""
+        try:
+            # Zweite Ableitung
+            f_doppelstrich = self.ableitung(2)
+
+            # Kritische Punkte für Wendepunkte (f''(x) = 0)
+            kritische_punkte = solve(f_doppelstrich.term_sympy, self.x)
+
+            wendepunkte = []
+
+            for punkt in kritische_punkte:
+                if punkt.is_real:
+                    x_wert = float(punkt)
+
+                    # Dritte Ableitung zur Überprüfung
+                    f_drittstrich = self.ableitung(3)
+                    y_wert = f_drittstrich.wert(x_wert)
+
+                    # Wenn f'''(x) ≠ 0, dann ist es ein Wendepunkt
+                    if not np.isclose(y_wert, 0, atol=1e-10):
+                        wendepunkte.append((x_wert, "Wendepunkt"))
+                    else:
+                        # Spezialfall: Höhere Ableitung needed
+                        # Suche die erste nicht-Null Ableitung ungerader Ordnung
+                        for ordnung in range(5, 10, 2):  # 5, 7, 9
+                            hoeher_ableitung = self.ableitung(ordnung)
+                            wert = hoeher_ableitung.wert(x_wert)
+                            if not np.isclose(wert, 0, atol=1e-10):
+                                wendepunkte.append((x_wert, "Wendepunkt"))
+                                break
+
+            return sorted(wendepunkte, key=lambda x: x[0])
+        except Exception:
+            return []
+
+    def wendepunkte(self) -> list[tuple[float, str]]:
+        """Berechnet die Wendepunkte der Funktion."""
+        try:
+            # Zweite Ableitung
+            f_doppelstrich = self.ableitung(2)
+
+            # Kritische Punkte für Wendepunkte (f''(x) = 0)
+            kritische_punkte = solve(f_doppelstrich.term_sympy, self.x)
+
+            wendepunkte = []
+
+            for punkt in kritische_punkte:
+                if punkt.is_real:
+                    x_wert = float(punkt)
+
+                    # Dritte Ableitung zur Überprüfung
+                    f_drittstrich = self.ableitung(3)
+                    y_wert = f_drittstrich.wert(x_wert)
+
+                    # Wenn f'''(x) ≠ 0, dann ist es ein Wendepunkt
+                    if not np.isclose(y_wert, 0, atol=1e-10):
+                        wendepunkte.append((x_wert, "Wendepunkt"))
+                    else:
+                        # Spezialfall: Höhere Ableitung needed
+                        # Suche die erste nicht-Null Ableitung ungerader Ordnung
+                        for ordnung in range(5, 10, 2):  # 5, 7, 9
+                            hoeher_ableitung = self.ableitung(ordnung)
+                            wert = hoeher_ableitung.wert(x_wert)
+                            if not np.isclose(wert, 0, atol=1e-10):
+                                wendepunkte.append((x_wert, "Wendepunkt"))
+                                break
+
+            return sorted(wendepunkte, key=lambda x: x[0])
+        except Exception:
+            return []
+
     def _rationale_nullstellen(self) -> list[sp.Rational]:
         """
         Berechnet rationale Nullstellen mit Rational Root Theorem.
