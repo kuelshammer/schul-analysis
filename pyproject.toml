@@ -24,11 +24,23 @@ docs = [
     "sphinx-rtd-theme>=2.0.0", # Documentation theme
 ]
 
-# Visualization (optional, für erweiterte Features)
-viz = [
-    "matplotlib>=3.10.6",     # Plotting library
-    "plotly>=6.3.0",         # Interactive plots
-    "numpy>=2.3.3",          # Numerical computing (oft benötigt für plots)
+# Plotly-based visualization (Hauptvisualisierung - mathematisch korrekt)
+viz-math = [
+    "plotly>=6.3.0",         # Interactive plots (beste Wahl für Mathematik!)
+    "numpy>=2.3.3",          # Numerical computing (required by Plotly)
+]
+
+# Altair-based visualization (Sekundär für statistische Diagramme)
+viz-stats = [
+    "altair>=5.5.0",         # Declarative visualization (secondary choice)
+    "vega-datasets>=0.9.0",  # Example datasets for Altair
+    "pandas>=2.3.3",        # Data manipulation (required by Altair)
+]
+
+# Static visualization (nur für Export/Statik)
+viz-static = [
+    "matplotlib>=3.10.6",   # Static plots (non-reactive)
+    "seaborn>=0.13.2",     # Statistical plots (non-reactive)
 ]
 
 # Type checking stubs (für bessere type safety)

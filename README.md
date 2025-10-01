@@ -9,6 +9,64 @@ Ein Python Framework für Schul-Analysis mit exakter Berechnung und Marimo-Integ
 - **Detaillierte Lösungswege** als Markdown mit LaTeX-Unterstützung
 - **Marimo-Integration** für interaktive Notebooks
 - **Pädagogische Darstellung** mit deutschen Methodennamen
+- **🔥 Mathematisch korrekte Visualisierung** mit Plotly (keine verzerrten Parabeln!)
+
+## 🔥 Visualisierungs-Strategie
+
+### Plotly (🏆 Hauptpaket für Mathematik)
+
+**Vorteile:**
+
+- ✅ **Perfekte mathematische Korrektheit** durch Aspect Ratio Control
+- ✅ **Keine verzerrten Parabeln** - `scaleanchor="y", scaleratio=1`
+- ✅ **Interaktive Funktionen**: Zoom, pan, 3D-Rotation
+- ✅ **Schul-Konventionen**: Achsen im Ursprung, Gitterlinien
+- ✅ **Marimo-Integration**: `mo.ui.plotly()`
+
+**Anwendungsbereiche:**
+
+- 🔥 Funktionsgraphen (Parabeln, Polynome)
+- 🔥 Nullstellen-Visualisierung
+- 🔥 Extremstellen-Darstellung
+- 🔥 Ableitungsvergleiche
+- 🔥 Geometrische Konstruktionen
+
+### Altair (📊 Sekundärpaket für Statistik)
+
+**Vorteile:**
+
+- ✅ **Data Selection** - interaktive Datenfilterung
+- ✅ **Statistische Diagramme**: Balken, Boxplots, Streudiagramme
+- ✅ **Datenanalyse**: Aggregation, Gruppierung
+- ✅ **Marimo-Integration**: `mo.ui.altair_chart()`
+
+**Einschränkungen:**
+
+- ❌ **Kein Aspect Ratio Control** - Parabeln werden verzerrt
+- ❌ **Nicht für mathematische Korrektheit geeignet**
+
+### Matplotlib (🖼️ Statische Exporte)
+
+**Vorteile:**
+
+- ✅ **PDF/PNG Export** für Druckmaterialien
+- ✅ **Vollständige Kontrolle** über Layout
+- ✅ **Wissenschaftliche Publikationen**
+
+**Einschränkungen:**
+
+- ❌ **Nicht reaktiv** - keine Interaktivität
+- ❌ **Keine Aspect Ratio Kontrolle**
+
+### Wann welches Paket?
+
+| Anwendung                  | Plotly     | Altair     | Matplotlib       |
+| -------------------------- | ---------- | ---------- | ---------------- |
+| **Funktionsgraphen**       | 🔥 **Ja**  | ❌ Nein    | ⚠️ Eingeschränkt |
+| **Parabel-Darstellung**    | 🔥 **Ja**  | ❌ Nein    | ❌ Nein          |
+| **Statistische Diagramme** | ⚠️ Möglich | 🔥 **Ja**  | ⚠️ Möglich       |
+| **Interaktive Analyse**    | 🔥 **Ja**  | 🔥 **Ja**  | ❌ Nein          |
+| **Druck-Export**           | ⚠️ Möglich | ⚠️ Möglich | 🔥 **Ja**        |
 
 ## Installation
 
@@ -32,7 +90,9 @@ uv sync --all-groups
 # Oder gruppenweise:
 uv sync --group dev      # Entwicklungstools (ruff, ty, pytest)
 uv sync --group docs     # Dokumentationstools (sphinx)
-uv sync --group viz      # Visualisierung (matplotlib, plotly)
+uv sync --group viz-math # Mathematische Visualisierung (Plotly) 🔥 EMPFOHLEN
+uv sync --group viz-stats # Statistische Visualisierung (Altair)
+uv sync --group viz-static # Statische Exporte (Matplotlib)
 uv sync --group types    # Type stubs
 ```
 
@@ -59,7 +119,9 @@ uv sync --no-dev
 
 ### Optional Dependencies
 
-- `viz`: matplotlib, plotly, numpy (für Visualisierungen)
+- `viz-math`: **plotly**, numpy (🔥 EMPFOHLEN für mathematisch korrekte Graphen)
+- `viz-stats`: altair, vega-datasets, pandas (für statistische Diagramme)
+- `viz-static`: matplotlib (für statische Exporte)
 - `docs`: sphinx, sphinx-rtd-theme (für Dokumentation)
 - `types`: Type stubs für bessere Type Safety
 
@@ -89,13 +151,40 @@ print(weg)  # Detaillierter Schritt-für-Schritt-Lösungsweg
 import marimo as mo
 from schul_analysis.ganzrationale import GanzrationaleFunktion
 
-f = GanzrationaleFunktion("x^2-4x+5")
+# Mathematisch korrekte Visualisierung mit Plotly (EMPFOHLEN)
+f = GanzrationaleFunktion("x^2-4x+3")
 
 # LaTeX-Darstellung in Marimo
 mo.md(f"## Funktion: $$f(x) = {f.term_latex()}$$")
 
+# 🔥 Perfekte Parabel-Darstellung mit Plotly
+mo.ui.plotly(f.perfekte_parabel_plotly())
+
 # Interaktiver Lösungsweg
 f.zeige_nullstellen_marimo(real=True)
+
+# Alternative: Statistische Visualisierung mit Altair
+f.zeige_funktion_altair()
+```
+
+### Visualisierungs-Pakete wählen
+
+**🔥 Für Mathematik (EMPFOHLEN):**
+
+```bash
+uv sync --group viz-math  # Installiert Plotly für perfekte mathematische Darstellung
+```
+
+**📊 Für Statistik:**
+
+```bash
+uv sync --group viz-stats  # Installiert Altair für statistische Diagramme
+```
+
+**🖼️ Für statische Exporte:**
+
+```bash
+uv sync --group viz-static  # Installiert Matplotlib für PDF/PNG Export
 ```
 
 ## Entwicklung
