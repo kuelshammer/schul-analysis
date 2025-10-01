@@ -32,9 +32,8 @@ class GanzrationaleFunktion:
         self.x = symbols("x")
 
         if isinstance(eingabe, str):
-            # String-Konstruktor: "x^3-2x+1"
-            self.term_str = eingabe
-            self.term_sympy = sympify(eingabe)
+            # String-Konstruktor mit robuster Verarbeitung
+            self.term_str, self.term_sympy = self._parse_string_eingabe(eingabe)
         elif isinstance(eingabe, list):
             # Listen-Konstruktor: [1, 0, -2, 1] für x³ - 2x + 1
             self.term_str = self._liste_zu_string(eingabe)
@@ -48,6 +47,73 @@ class GanzrationaleFunktion:
 
         # Koeffizienten extrahieren
         self.koeffizienten = self._extrahiere_koeffizienten()
+
+    def _parse_string_eingabe(self, eingabe: str) -> Tuple[str, sp.Expr]:
+        """
+        Robuster Parser für verschiedene String-Formate von ganzrationalen Funktionen.
+
+        Unterstützt:
+        - "x^2+4x-2" (Standard-Schreibweise)
+        - "$x^2+4x-2$" (LaTeX-Format)
+        - "x**2+4*x-2" (Python-Syntax)
+        - "2x" (implizite Multiplikation)
+        - "x^2 + 4x - 2" (mit Leerzeichen)
+
+        Args:
+            eingabe: String-Eingabe in verschiedenen Formaten
+
+        Returns:
+            Tuple aus (bereinigter_string, sympy_ausdruck)
+        """
+        import re
+
+        # 1. LaTeX-Format bereinigen ($ entfernen)
+        bereinigt = eingabe.replace("$", "").strip()
+
+        # 2. Leerzeichen um Operatoren normalisieren
+        bereinigt = re.sub(r"\s*([+\-])\s*", r"\1", bereinigt)
+
+        # 3. Implizite Multiplikation behandeln (z.B. "2x" → "2*x")
+        bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)
+        bereinigt = re.sub(r"([a-zA-Z])(\d)", r"\1^\2", bereinigt)  # x2 → x^2
+
+        # 4. Hochzeichen-Konvertierung (^ → **)
+        bereinigt = re.sub(r"([a-zA-Z])\^(\d+)", r"\1**\2", bereinigt)
+        bereinigt = re.sub(r"([a-zA-Z])\^([a-zA-Z])", r"\1**\2", bereinigt)
+
+        # 5. Spezialfall: x ohne Exponent → x^1
+        bereinigt = re.sub(r"(?<![a-zA-Z])(x)(?![a-zA-Z0-9_*^])", r"x**1", bereinigt)
+        bereinigt = re.sub(r"([+\-])(x)(?![a-zA-Z0-9_*^])", r"\1x**1", bereinigt)
+
+        # 6. Koeffizienten ohne x normalisieren
+        bereinigt = re.sub(r"([+\-])(\d+)(?![a-zA-Z0-9_*^])", r"\1\2*x**0", bereinigt)
+        bereinigt = re.sub(r"^(\d+)(?![a-zA-Z0-9_*^])", r"\1*x**0", bereinigt)
+
+        # 7. Versuch mit sympify
+        try:
+            term_sympy = sympify(bereinigt)
+            return bereinigt, term_sympy
+        except Exception as e:
+            # Fallback: Versuch mit alternativer Verarbeitung
+            try:
+                # Nochmal bereinigen mit einfacherer Logik
+                einfache_bereinigung = (
+                    eingabe.replace("$", "").replace("^", "**").strip()
+                )
+
+                # Implizite Multiplikation
+                einfache_bereinigung = re.sub(
+                    r"(\d)([a-zA-Z])", r"\1*\2", einfache_bereinigung
+                )
+
+                term_sympy = sympify(einfache_bereinigung)
+                return einfache_bereinigung, term_sympy
+            except Exception as e2:
+                raise ValueError(
+                    f"Konnte '{eingabe}' nicht in gültigen mathematischen Ausdruck umwandeln. "
+                    f"Versuch 1: '{bereinigt}' → {e}. "
+                    f"Versuch 2: '{einfache_bereinigung}' → {e2}"
+                )
 
     def _liste_zu_string(self, koeff: List[float]) -> str:
         """Wandelt Koeffizienten-Liste in Term-String um."""
@@ -124,8 +190,41 @@ class GanzrationaleFunktion:
 
     def _extrahiere_koeffizienten(self) -> List[float]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
-        poly = Poly(self.term_sympy, self.x)
-        return [float(poly.coeff(i)) for i in range(poly.degree() + 1)]
+        try:
+            poly = Poly(self.term_sympy, self.x)
+            return [
+                float(poly.coeff_monomial(self.x**i)) for i in range(poly.degree() + 1)
+            ]
+        except Exception as e:
+            # Fallback: Manuelle Koeffizienten-Extraktion
+            koeffizienten = []
+
+            # Konstante Term
+            const_term = self.term_sympy.subs(self.x, 0)
+            if const_term != 0:
+                koeffizienten.append(float(const_term))
+
+            # Für höhere Grade: Ableitungen verwenden
+            for i in range(1, 10):  # Maximal Grad 10
+                try:
+                    # i-te Ableitung an x=0 dividiert durch i!
+                    ableitung_i = sp.diff(self.term_sympy, self.x, i)
+                    wert_0 = ableitung_i.subs(self.x, 0)
+                    koeff = float(wert_0) / sp.factorial(i)
+
+                    if abs(koeff) > 1e-10:  # Nur signifikante Koeffizienten
+                        # Stelle sicher, dass die Liste lang genug ist
+                        while len(koeffizienten) < i:
+                            koeffizienten.append(0.0)
+                        koeffizienten.append(koeff)
+                except:
+                    break
+
+            # Wenn keine Koeffizienten gefunden wurden
+            if not koeffizienten:
+                koeffizienten = [0.0]
+
+            return koeffizienten
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
@@ -272,7 +371,7 @@ class GanzrationaleFunktion:
 
     def zeige_funktion_plotly(
         self, x_range: tuple = (-10, 10), punkte: int = 200
-    ) -> mo.UI:
+    ) -> Any:
         """Zeigt interaktiven Funktionsgraph mit Plotly - MATHEMATISCH KORREKT"""
         x = np.linspace(x_range[0], x_range[1], punkte)
         y = [self.wert(xi) for xi in x]
@@ -304,7 +403,7 @@ class GanzrationaleFunktion:
 
     def perfekte_parabel_plotly(
         self, x_range: tuple = (-5, 5), punkte: int = 200
-    ) -> mo.UI:
+    ) -> Any:
         """PERFEKTE Parabel-Darstellung entsprechend Schul-Konventionen"""
         # Perfekte symmetrische Datenpunkte um den Scheitelpunkt
         x = np.linspace(x_range[0], x_range[1], punkte)
@@ -390,7 +489,7 @@ class GanzrationaleFunktion:
 
     def zeige_nullstellen_plotly(
         self, real: bool = True, x_range: tuple = (-10, 10)
-    ) -> mo.UI:
+    ) -> Any:
         """Zeigt Funktion mit interaktiven Nullstellen-Markierungen - MATHEMATISCH KORREKT"""
         # Hauptfunktion
         x = np.linspace(x_range[0], x_range[1], 300)
@@ -454,7 +553,7 @@ class GanzrationaleFunktion:
 
     def zeige_ableitung_plotly(
         self, ordnung: int = 1, x_range: tuple = (-10, 10)
-    ) -> mo.UI:
+    ) -> Any:
         """Zeigt Funktion und Ableitung im Vergleich - MATHEMATISCH KORREKT"""
         # Daten generieren
         x = np.linspace(x_range[0], x_range[1], 300)
