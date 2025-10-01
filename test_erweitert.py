@@ -2,17 +2,18 @@
 Erweiterte Tests für die verbesserte GebrochenRationaleFunktion
 """
 
-import pytest
 import time
+
+import pytest
+
 from src.schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
 
 
 def test_sicherheit():
     """Teste Sicherheitsvalidierung"""
     from schul_analysis.gebrochen_rationale import (
-        SicherheitsError,
-        UngueltigeEingabeError,
         DivisionDurchNullError,
+        SicherheitsError,
     )
 
     # Teste gefährliche Ausdrücke

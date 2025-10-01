@@ -2,12 +2,14 @@
 Analyse von SymPy-Faktorisierungen zur Generierung menschlich verständlicher Lösungswege.
 """
 
+from typing import Any
+
 import sympy as sp
-from typing import List, Tuple, Dict, Any
+
 from src.schul_analysis.ganzrationale import GanzrationaleFunktion
 
 
-def analysiere_sympy_loesung(funktion: GanzrationaleFunktion) -> Dict[str, Any]:
+def analysiere_sympy_loesung(funktion: GanzrationaleFunktion) -> dict[str, Any]:
     """
     Analysiert SymPy's Lösung und extrahiert menschlich nachvollziehbare Muster.
     """
@@ -28,7 +30,7 @@ def analysiere_sympy_loesung(funktion: GanzrationaleFunktion) -> Dict[str, Any]:
     try:
         analyse["sympy_factor"] = sp.factor(term)
         analyse["sympy_roots"] = sp.roots(term)
-    except:
+    except Exception:
         pass
 
     # 2. Muster erkennen
@@ -97,7 +99,7 @@ def _ist_differenz_von_quadraten(term: sp.Basic) -> bool:
                     ):
                         # Prüfe ob (a+b)(a-b) Form
                         return True
-        except:
+        except Exception:
             pass
     return False
 
@@ -209,7 +211,7 @@ def _generiere_linearfaktoren_weg(term: sp.Basic, analyse: dict) -> dict:
     }
 
 
-def _waehle_empfohlenen_weg(wege: List[dict], muster: List[str]) -> str:
+def _waehle_empfohlenen_weg(wege: list[dict], muster: list[str]) -> str:
     """Wählt den empfohlenen Lösungswege basierend auf Schwierigkeit."""
     # Priorität: einfach → mittel → komplex
     schwierigkeit_prio = {"einfach": 1, "mittel": 2, "komplex": 3}

@@ -2,9 +2,10 @@
 Unit Tests für die GanzrationaleFunktion Klasse
 """
 
-import pytest
-import sys
 import os
+import sys
+
+import pytest
 
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))

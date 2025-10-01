@@ -40,7 +40,7 @@ def test_konstruktoren():
 
             # Test ob es eine ganzrationale Funktion ist
             if result.is_polynomial(x):
-                print(f"    → Polynomial: Ja")
+                print("    → Polynomial: Ja")
 
                 # Koeffizienten extrahieren
                 from sympy import Poly
@@ -49,10 +49,10 @@ def test_konstruktoren():
                     poly = Poly(result, x)
                     coeffs = [float(poly.coeff(i)) for i in range(poly.degree() + 1)]
                     print(f"    → Koeffizienten: {coeffs}")
-                except:
-                    print(f"    → Koeffizienten: Fehler bei Extraktion")
+                except Exception:
+                    print("    → Koeffizienten: Fehler bei Extraktion")
             else:
-                print(f"    → Polynomial: Nein")
+                print("    → Polynomial: Nein")
 
         except Exception as e:
             print(f"    → SymPy-Fehler: {e}")
@@ -76,19 +76,19 @@ def test_liste_vs_dict():
     # Beispiel: x^2 - 4x + 3
     print("1. Listen-Konstruktor:")
     liste_funktion = [1, -4, 3]  # 1*x^2 - 4*x^1 + 3*x^0
-    print(f"   [1, -4, 3] → 1x² - 4x + 3")
+    print("   [1, -4, 3] → 1x² - 4x + 3")
 
     print("\n2. Dictionary-Konstruktor:")
     dict_funktion = {2: 1, 1: -4, 0: 3}  # x^2 - 4x + 3
-    print(f"   {{2: 1, 1: -4, 0: 3}} → 1x² - 4x + 3")
+    print("   {2: 1, 1: -4, 0: 3} → 1x² - 4x + 3")
 
     print("\n3. Alternative Dictionary-Konstruktor:")
     dict_funktion2 = {0: 3, 1: -4, 2: 1}  # Reihenfolge egal
-    print(f"   {{0: 3, 1: -4, 2: 1}} → 3 - 4x + x²")
+    print("   {0: 3, 1: -4, 2: 1} → 3 - 4x + x²")
 
     print("\n4. Dictionary mit Lücken:")
     dict_funktion3 = {3: 2, 1: -3, 0: 1}  # 2x^3 - 3x + 1
-    print(f"   {{3: 2, 1: -3, 0: 1}} → 2x³ - 3x + 1")
+    print("   {3: 2, 1: -3, 0: 1} → 2x³ - 3x + 1")
 
 
 def test_edge_cases():

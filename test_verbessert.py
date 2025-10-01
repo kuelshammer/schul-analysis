@@ -7,8 +7,9 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis.ganzrationale import GanzrationaleFunktion
 import sympy as sp
+
+from schul_analysis.ganzrationale import GanzrationaleFunktion
 
 
 def test_verbesserte_faktorisierung():

@@ -5,48 +5,31 @@ Unterstützt verschiedene Konstruktor-Formate und mathematisch korrekte
 Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
+import re
+
 import numpy as np
-import marimo as mo
-from typing import Union, List, Tuple, Dict, Any
+import plotly.graph_objects as go
 import sympy as sp
 from sympy import (
-    sympify,
-    latex,
-    solve,
-    diff,
-    symbols,
-    Poly,
     Rational,
-    gcd,
-    cancel,
     fraction,
+    latex,
+    symbols,
+)
+
+from .errors import (
+    DivisionDurchNullError,
+    EingabeSyntaxError,
+    SicherheitsError,
+    UngueltigerAusdruckError,
 )
 from .ganzrationale import GanzrationaleFunktion
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-import re
 
 
 class GebrochenRationaleFunktionError(Exception):
     """Basisklasse für gebrochen-rationale Funktionsfehler"""
 
     pass
-
-
-class UngueltigeEingabeError(GebrochenRationaleFunktionError):
-    """Fehler bei ungültigen Eingaben"""
-
-    pass
-
-
-class DivisionDurchNullError(GebrochenRationaleFunktionError):
-    """Fehler bei Division durch Null"""
-
-    pass
-
-
-class SicherheitsError(GebrochenRationaleFunktionError):
     """Fehler bei Sicherheitsverletzungen"""
 
     pass
@@ -80,12 +63,12 @@ def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
 
     # Prüfe auf gültiges mathematisches Format
     if not re.match(erlaubte_muster, ausdruck.strip()):
-        raise UngueltigeEingabeError(f"Ungültiger mathematischer Ausdruck: {ausdruck}")
+        raise UngueltigerAusdruckError(ausdruck, "Ungültiger mathematischer Ausdruck")
 
     return True
 
 
-def _pruefe_division_durch_null(zaehler, nenner) -> None:
+def _pruefe_division_durch_null(_zaehler, nenner) -> None:
     """Prüft auf Division durch Null"""
     if hasattr(nenner, "term_sympy") and nenner.term_sympy == 0:
         raise DivisionDurchNullError("Division durch Nullfunktion")
@@ -96,18 +79,11 @@ def _pruefe_division_durch_null(zaehler, nenner) -> None:
 def _validiere_konstruktor_parameter(zaehler, nenner) -> None:
     """Validiert die Konstruktorparameter"""
     if zaehler is None:
-        raise UngueltigeEingabeError("Zähler darf nicht None sein")
+        raise UngueltigerAusdruckError("None", "Zähler darf nicht None sein")
 
     # Wenn nenner None ist, ist es ein String-Konstruktor
     if nenner is not None:
         _pruefe_division_durch_null(zaehler, nenner)
-
-
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly.subplots import make_subplots
-
-from .ganzrationale import GanzrationaleFunktion
 
 
 class GebrochenRationaleFunktion:
@@ -118,8 +94,8 @@ class GebrochenRationaleFunktion:
 
     def __init__(
         self,
-        zaehler: Union[GanzrationaleFunktion, str, sp.Basic],
-        nenner: Union[GanzrationaleFunktion, str, sp.Basic, None] = None,
+        zaehler: GanzrationaleFunktion | str | sp.Basic,
+        nenner: GanzrationaleFunktion | str | sp.Basic | None = None,
     ):
         """
         Konstruktor für gebrochen-rationale Funktionen.
@@ -168,7 +144,9 @@ class GebrochenRationaleFunktion:
 
         # Validiere, dass Nenner nicht Null ist
         if self.nenner.term_sympy == 0:
-            raise ValueError("Nenner darf nicht die Nullfunktion sein")
+            raise UngueltigerAusdruckError(
+                "Nullfunktion", "Nenner darf nicht die Nullfunktion sein"
+            )
 
         # Erstelle SymPy-Ausdruck für die gesamte Funktion
         self.term_sympy = self.zaehler.term_sympy / self.nenner.term_sympy
@@ -186,7 +164,7 @@ class GebrochenRationaleFunktion:
         eingabe = eingabe.strip()
 
         if "/" not in eingabe:
-            raise ValueError("String muss im Format '(zaehler)/(nenner)' vorliegen")
+            raise EingabeSyntaxError(eingabe, "(zaehler)/(nenner)")
 
         # Trenne Zaehler und Nenner
         teile = eingabe.split("/", 1)
@@ -197,7 +175,7 @@ class GebrochenRationaleFunktion:
         self.nenner = GanzrationaleFunktion(nenner_str)
 
     def _convert_to_ganzrationale(
-        self, eingabe: Union[GanzrationaleFunktion, sp.Basic]
+        self, eingabe: GanzrationaleFunktion | sp.Basic
     ) -> GanzrationaleFunktion:
         """Konvertiert Eingabe zu GanzrationaleFunktion"""
         if isinstance(eingabe, GanzrationaleFunktion):
@@ -270,7 +248,7 @@ class GebrochenRationaleFunktion:
         """Prüft, ob x_wert eine Polstelle ist"""
         return abs(self.nenner.term_sympy.subs(self.x, x_wert)) < 1e-10
 
-    def nullstellen(self) -> List[float]:
+    def nullstellen(self) -> list[float]:
         """
         Berechnet die Nullstellen der Funktion (Zähler-Nullstellen).
 
@@ -289,13 +267,13 @@ class GebrochenRationaleFunktion:
 
         return eigentliche_nullstellen
 
-    def polstellen(self) -> List[float]:
+    def polstellen(self) -> list[float]:
         """Berechnet die Polstellen der Funktion (Nenner-Nullstellen)"""
         if self._cache["polstellen"] is None:
             self._cache["polstellen"] = self.nenner.nullstellen()
         return self._cache["polstellen"]
 
-    def definitionsluecken(self) -> List[float]:
+    def definitionsluecken(self) -> list[float]:
         """Gibt die Definitionslücken zurück (Polstellen)"""
         return self.polstellen()
 
@@ -547,7 +525,7 @@ class GebrochenRationaleFunktion:
                 y=y_werte,
                 mode="lines",
                 name=f"f(x) = {self.term()}",
-                line=dict(color="blue", width=3),
+                line={"color": "blue", "width": 3},
             )
         )
 
@@ -567,7 +545,7 @@ class GebrochenRationaleFunktion:
                             x=[ps] * len(y_asymptote_range),
                             y=y_asymptote_range,
                             mode="lines",
-                            line=dict(color="red", width=2, dash="dash"),
+                            line={"color": "red", "width": 2, "dash": "dash"},
                             name=f"Polstelle x={ps:.2f}",
                             showlegend=False,
                         )
@@ -597,7 +575,7 @@ class GebrochenRationaleFunktion:
                             x=x_asymptote,
                             y=y_asymptote,
                             mode="lines",
-                            line=dict(color="green", width=2, dash="dash"),
+                            line={"color": "green", "width": 2, "dash": "dash"},
                             name=f"Asymptote: y = {asymptote['steigung']:.2f}x + {asymptote['y_offset']:.2f}",
                             showlegend=False,
                         )
@@ -611,13 +589,13 @@ class GebrochenRationaleFunktion:
             showlegend=True,
             width=800,
             height=600,
-            xaxis=dict(showgrid=True, zeroline=True),
-            yaxis=dict(showgrid=True, zeroline=True),
+            xaxis={"showgrid": True, "zeroline": True},
+            yaxis={"showgrid": True, "zeroline": True},
         )
 
         return fig
 
-    def _berechne_asymptoten(self) -> List[Dict]:
+    def _berechne_asymptoten(self) -> list[dict]:
         """
         Berechnet horizontale und schiefe Asymptoten.
 

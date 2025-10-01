@@ -7,8 +7,9 @@ import sys
 
 sys.path.insert(0, "src")
 
+
 from schul_analysis.ganzrationale import GanzrationaleFunktion
-import sympy as sp
+from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
 
 
 def test_arithmetische_operationen():
@@ -103,13 +104,15 @@ def test_arithmetische_operationen():
     print(f"f / g = {ergebnis.term()}")
     assert ergebnis.term() == "x+1", f"Erwartet: x+1, erhalten: {ergebnis.term()}"
 
-    # Funktion / Funktion (nicht exakt teilbar - sollte Fehler werfen)
-    try:
-        ergebnis = g / h
-        print("FEHLER: g / h sollte TypeError werfen!")
-        assert False, "g / h sollte TypeError werfen"
-    except TypeError as e:
-        print(f"g / h = TypeError: {e} (erwartet)")
+    # Funktion / Funktion (nicht exakt teilbar - sollte gebrochen-rationale Funktion ergeben)
+    ergebnis = g / h
+    print(f"g / h = {ergebnis.term()}")
+    assert isinstance(ergebnis, GebrochenRationaleFunktion), (
+        "Sollte GebrochenRationaleFunktion sein"
+    )
+    assert ergebnis.term() == "1/(x-1)" or ergebnis.term() == "(1)/(x-1)", (
+        f"Erwartet: 1/(x-1), erhalten: {ergebnis.term()}"
+    )
 
     # Funktion / Zahl
     ergebnis = f / 2

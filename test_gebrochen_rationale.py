@@ -2,16 +2,17 @@
 Comprehensive Tests für GebrochenRationaleFunktion Klasse
 """
 
-import sys
 import os
+import sys
+
 import pytest
 
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
+
 from schul_analysis.ganzrationale import GanzrationaleFunktion
-from sympy import Rational
+from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
 
 
 class TestGebrochenRationaleFunktionKonstruktoren:

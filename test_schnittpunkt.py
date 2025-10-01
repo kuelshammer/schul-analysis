@@ -96,7 +96,7 @@ def test_mathematische_genauigkeit():
     print(f"  Erwartet: {erwartet}")
 
     # Überprüfe, ob die Punkte ungefähr übereinstimmen (wegen Fließkomma-Genauigkeit)
-    for (x1, y1), (x2, y2) in zip(schnittpunkte, erwartet):
+    for (x1, y1), (x2, y2) in zip(schnittpunkte, erwartet, strict=False):
         assert abs(x1 - x2) < 1e-10, f"x-Koordinate stimmt nicht überein: {x1} != {x2}"
         assert abs(y1 - y2) < 1e-10, f"y-Koordinate stimmt nicht überein: {y1} != {y2}"
 

@@ -5,14 +5,20 @@ Unterstützt verschiedene Konstruktor-Formate und mathematisch korrekte
 Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
-import numpy as np
+from typing import TYPE_CHECKING, Any, Union
+
+if TYPE_CHECKING:
+    from .gebrochen_rationale import GebrochenRationaleFunktion
+
 import marimo as mo
-from typing import Union, List, Tuple, Dict, Any
-import sympy as sp
-from sympy import sympify, latex, solve, diff, symbols, Poly, Rational, gcd, factor
-import plotly.graph_objects as go
+import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
+import sympy as sp
 from plotly.subplots import make_subplots
+from sympy import Poly, Rational, diff, factor, latex, solve, symbols, sympify
+
+from .config import config
 
 
 class GanzrationaleFunktion:
@@ -21,7 +27,7 @@ class GanzrationaleFunktion:
     Konstruktor-Optionen und Visualisierungsmethoden.
     """
 
-    def __init__(self, eingabe: Union[str, List[float], Dict[int, float], sp.Basic]):
+    def __init__(self, eingabe: str | list[float] | dict[int, float] | sp.Basic):
         """
         Konstruktor für ganzrationale Funktionen.
 
@@ -57,7 +63,7 @@ class GanzrationaleFunktion:
         # Koeffizienten extrahieren (als exakte SymPy-Objekte)
         self.koeffizienten = self._extrahiere_koeffizienten()
 
-    def _parse_string_eingabe(self, eingabe: str) -> Tuple[str, sp.Basic]:
+    def _parse_string_eingabe(self, eingabe: str) -> tuple[str, sp.Basic]:
         """
         Vereinfachter Parser für String-Eingaben von ganzrationalen Funktionen.
 
@@ -203,14 +209,14 @@ class GanzrationaleFunktion:
 
         return "+".join(terme).replace("+-", "-")
 
-    def _liste_zu_sympy(self, koeff: List[float]) -> sp.Basic:
+    def _liste_zu_sympy(self, koeff: list[float]) -> sp.Basic:
         """Wandelt Koeffizienten-Liste in SymPy-Ausdruck um."""
         term = 0
         for i, k in enumerate(koeff):
             term += k * self.x**i
         return term
 
-    def _dict_zu_string(self, koeff: Dict[int, float]) -> str:
+    def _dict_zu_string(self, koeff: dict[int, float]) -> str:
         """Wandelt Koeffizienten-Dictionary in Term-String um."""
         # Sortiere nach absteigendem Grad
         sortierte_koeff = sorted(koeff.items(), key=lambda x: -x[0])
@@ -268,14 +274,14 @@ class GanzrationaleFunktion:
         else:
             return f"{koeff}x^{grad}"
 
-    def _dict_zu_sympy(self, koeff: Dict[int, float]) -> sp.Basic:
+    def _dict_zu_sympy(self, koeff: dict[int, float]) -> sp.Basic:
         """Wandelt Koeffizienten-Dictionary in SymPy-Ausdruck um."""
         term = 0
         for grad, k in koeff.items():
             term += k * self.x**grad
         return term
 
-    def _extrahiere_koeffizienten(self) -> List[sp.Basic]:
+    def _extrahiere_koeffizienten(self) -> list[sp.Basic]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
         # Durch die Polynom-Validierung im Konstruktor ist dies immer möglich
         poly = Poly(self.term_sympy, self.x)
@@ -331,7 +337,7 @@ class GanzrationaleFunktion:
 
     def nullstellen(
         self, real: bool = True, exakt: bool = False
-    ) -> List[Union[float, sp.Basic]]:
+    ) -> list[float | sp.Basic]:
         """Berechnet die Nullstellen der Funktion.
 
         Args:
@@ -417,7 +423,7 @@ class GanzrationaleFunktion:
             print(f"Fehler bei Nullstellenberechnung: {e}")
             return []
 
-    def extremstellen(self) -> List[Tuple[float, str]]:
+    def extremstellen(self) -> list[tuple[float, str]]:
         """Berechnet die Extremstellen der Funktion."""
         try:
             # Erste Ableitung
@@ -446,10 +452,10 @@ class GanzrationaleFunktion:
                     extremstellen.append((x_wert, art))
 
             return sorted(extremstellen, key=lambda x: x[0])
-        except:
+        except Exception:
             return []
 
-    def _rationale_nullstellen(self) -> List[sp.Rational]:
+    def _rationale_nullstellen(self) -> list[sp.Rational]:
         """
         Berechnet rationale Nullstellen mit Rational Root Theorem.
 
@@ -529,7 +535,7 @@ class GanzrationaleFunktion:
 
         return gefundene_nullstellen
 
-    def _faktorisiere(self) -> Tuple[List[sp.Basic], sp.Basic]:
+    def _faktorisiere(self) -> tuple[list[sp.Basic], sp.Basic]:
         """
         Versucht, das Polynom zu faktorisieren.
 
@@ -568,7 +574,7 @@ class GanzrationaleFunktion:
 
         return linearfaktoren, rest_polynom
 
-    def _kubische_spezialfaelle(self) -> Tuple[bool, List[sp.Basic], str]:
+    def _kubische_spezialfaelle(self) -> tuple[bool, list[sp.Basic], str]:
         """
         Erkennt und löst spezielle kubische Formen.
 
@@ -615,7 +621,7 @@ class GanzrationaleFunktion:
                     # Drei reelle Nullstellen (Cardanische Formel mit trigonometrischer Lösung)
                     # Hier vereinfacht durch Rückgriff auf SymPy
                     return False, [], ""
-            except:
+            except Exception:
                 return False, [], ""
 
         # Spezialfall 2: (x - a)³ = x³ - 3ax² + 3a²x - a³
@@ -625,7 +631,7 @@ class GanzrationaleFunktion:
             if b == -3 * a and c == 3 * a**2 and d == -(a**3):
                 x1 = a
                 return True, [x1, x1, x1], "Vollständige dritte Potenz"
-        except:
+        except Exception:
             pass
 
         # Spezialfall 3: Rationale Nullstelle vorhanden
@@ -635,7 +641,7 @@ class GanzrationaleFunktion:
 
         return False, [], ""
 
-    def _intelligente_loesungsanalyse(self) -> Dict[str, Any]:
+    def _intelligente_loesungsanalyse(self) -> dict[str, Any]:
         """
         Nutzt SymPy's Intelligenz zur Identifikation menschlich nachvollziehbarer Lösungswege.
         """
@@ -654,8 +660,8 @@ class GanzrationaleFunktion:
         # 1. SymPy's Faktorisierung und Nullstellen abfragen
         try:
             analyse["sympy_factor"] = factor(term)
-            analyse["sympy_roots"] = roots(term)
-        except:
+            analyse["sympy_roots"] = sp.roots(term)
+        except Exception:
             pass
 
         # 2. Muster-Liste initialisieren
@@ -736,7 +742,7 @@ class GanzrationaleFunktion:
                             if len(f1_terme) == 1 and len(f2_terme) == 1:
                                 # Prüfe ob einer negativ des anderen ist
                                 return f1_terme[0] == -f2_terme[0]
-            except:
+            except Exception:
                 pass
         return False
 
@@ -779,12 +785,12 @@ class GanzrationaleFunktion:
                         faktor.is_polynomial() and Poly(faktor, self.x).degree() == 1
                     ):
                         return False
-                except:
+                except Exception:
                     return False
             return True
         return False
 
-    def _waehle_empfohlenen_weg(self, muster: List[str], grad: int) -> str:
+    def _waehle_empfohlenen_weg(self, muster: list[str], grad: int) -> str:
         """Wählt den empfohlenen Lösungswege."""
         # Priorisierte Strategien nach "menschlicher Einfachheit"
         strategie_prio = [
@@ -803,7 +809,7 @@ class GanzrationaleFunktion:
 
     def _analysiere_partielle_faktorisierung(
         self, faktorisiert: sp.Basic
-    ) -> Dict[str, List[Tuple[str, sp.Basic]]]:
+    ) -> dict[str, list[tuple[str, sp.Basic]]]:
         """
         Analysiert partielle Faktorisierungen und klassifiziert Faktoren.
 
@@ -890,10 +896,10 @@ class GanzrationaleFunktion:
                     else:
                         komplexe_faktoren.append((TYP_HOCH_GRAD, faktor))
 
-            except (sp.PolynomialError, sp.CoercionFailed) as e:
+            except (sp.PolynomialError, sp.CoercionFailed):
                 # Spezifische SymPy-Fehler behandeln
                 komplexe_faktoren.append(("fehler_polynom", faktor))
-            except Exception as e:
+            except Exception:
                 # Unerwartete Fehler - in echter Anwendung hier logging verwenden
                 # import logging
                 # logging.warning(f"Unerwarteter Fehler bei Faktor {faktor}: {e}")
@@ -904,7 +910,7 @@ class GanzrationaleFunktion:
             "komplexe_faktoren": komplexe_faktoren,
         }
 
-    def _berechne_lineare_nullstelle(self, faktor: sp.Basic) -> List[sp.Expr]:
+    def _berechne_lineare_nullstelle(self, faktor: sp.Basic) -> list[sp.Expr]:
         """Berechnet Nullstelle für linearen Faktor."""
         try:
             a, b = Poly(faktor, self.x).all_coeffs()
@@ -914,7 +920,7 @@ class GanzrationaleFunktion:
         except (ValueError, TypeError, IndexError):
             return []
 
-    def _berechne_quadratische_nullstellen(self, faktor: sp.Basic) -> List[sp.Expr]:
+    def _berechne_quadratische_nullstellen(self, faktor: sp.Basic) -> list[sp.Expr]:
         """Berechnet reelle Nullstellen für quadratischen Faktor."""
         try:
             a, b, c = Poly(faktor, self.x).all_coeffs()
@@ -924,7 +930,7 @@ class GanzrationaleFunktion:
             if diskriminante >= 0:
                 x1 = (-b + sp.sqrt(diskriminante)) / (2 * a)
                 x2 = (-b - sp.sqrt(diskriminante)) / (2 * a)
-                return sorted(list(set([x1, x2])))
+                return sorted({x1, x2})
             return []
         except (ValueError, TypeError, IndexError):
             return []
@@ -1034,7 +1040,7 @@ class GanzrationaleFunktion:
                                     weg += f"   - Nullstellen: $${formatted_nullstellen}$$\n"
                             else:
                                 weg += "   - Dieser Faktor hat keine reellen Nullstellen.\n"
-                        except Exception as e:
+                        except Exception:
                             weg += (
                                 "   - Konnte Nullstellen nicht automatisch berechnen.\n"
                             )
@@ -1085,7 +1091,7 @@ class GanzrationaleFunktion:
             diskriminante = b**2 - 4 * a * c
 
             weg += "### Mitternachtsformel\n\n"
-            weg += f"$$x = \\frac{{-b \\pm \\sqrt{{b^2 - 4ac}}}}{{2a}}$$\n\n"
+            weg += "$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$\n\n"
             weg += f"Mit a = {a}, b = {b}, c = {c}:\n\n"
             weg += f"$$x = \\frac{{-{b} \\pm \\sqrt{{{b}^2 - 4 \\cdot {a} \\cdot {c}}}}}{{2 \\cdot {a}}}$$\n\n"
             weg += (
@@ -1221,7 +1227,6 @@ class GanzrationaleFunktion:
                 weg += f"Mit a₀ = {a0} und aₙ = {an}:\n\n"
 
                 weg += "Mögliche rationale Nullstellen: "
-                moegliche_kandidaten = set()
 
                 # Zeige mögliche Kandidaten
                 def finde_teiler_einfach(zahl):
@@ -1255,14 +1260,8 @@ class GanzrationaleFunktion:
 
                 if isinstance(an, Rational):
                     teiler_q_zaehler, teiler_q_nenner = finde_teiler_einfach(an)
-                    teiler_q = [
-                        f"±{q_z}/{q_n}"
-                        for q_z in teiler_q_zaehler
-                        for q_n in teiler_q_nenner
-                    ]
                 else:
                     teiler_q_zaehler, _ = finde_teiler_einfach(an)
-                    teiler_q = [f"±{t}" for t in teiler_q_zaehler]
 
                 weg += (
                     ", ".join(sorted(teiler_p[:5])) + "..."
@@ -1328,10 +1327,11 @@ class GanzrationaleFunktion:
     # 🔥 PLOTLY VISUALISIERUNGSMETHODEN 🔥
     # ============================================
 
-    def zeige_funktion_plotly(
-        self, x_range: tuple = (-10, 10), punkte: int = 200
-    ) -> Any:
+    def zeige_funktion_plotly(self, x_range: tuple = None, punkte: int = 200) -> Any:
         """Zeigt interaktiven Funktionsgraph mit Plotly - MATHEMATISCH KORREKT"""
+        if x_range is None:
+            x_range = config.DEFAULT_PLOT_RANGE
+
         x = np.linspace(x_range[0], x_range[1], punkte)
         y = [self.wert(xi) for xi in x]
 
@@ -1344,18 +1344,17 @@ class GanzrationaleFunktion:
 
         # 🔥 PERFECT MATHEMATICAL CONFIGURATION 🔥
         fig.update_layout(
-            xaxis=dict(
-                scaleanchor="y",  # 1:1 Aspect Ratio
-                scaleratio=1,  # Keine Verzerrung!
-                zeroline=True,  # Achse im Ursprung
-                showgrid=True,  # Gitterlinien
-                range=x_range,  # Dynamischer Bereich
-                title="x",
-            ),
-            yaxis=dict(zeroline=True, showgrid=True, title=f"f(x) = {self.term()}"),
+            **config.get_plot_config(),
+            xaxis={
+                **config.get_axis_config(mathematical_mode=True),
+                "range": x_range,
+                "title": "x",
+            },
+            yaxis={
+                **config.get_axis_config(mathematical_mode=False),
+                "title": f"f(x) = {self.term()}",
+            },
             showlegend=False,
-            width=600,
-            height=400,
         )
 
         return mo.ui.plotly(fig)
@@ -1541,7 +1540,7 @@ class GanzrationaleFunktion:
                 y=y,
                 mode="lines",
                 name=f"f(x) = {self.term()}",
-                line=dict(color="blue", width=3),
+                line={"color": "blue", "width": 3},
             )
         )
 
@@ -1559,53 +1558,53 @@ class GanzrationaleFunktion:
                         y=[s_y],
                         mode="markers",
                         name="Scheitelpunkt",
-                        marker=dict(size=15, color="red", symbol="diamond"),
+                        marker={"size": 15, "color": "red", "symbol": "diamond"},
                         text=[f"S({s_x:.2f}|{s_y:.2f})"],
                         hovertemplate="%{text}<extra></extra>",
                     )
                 )
-        except:
+        except Exception:
             pass
 
         # 🔥 ABSOLUT PERFEKTE MATHEMATISCHE KONFIGURATION 🔥
         fig.update_layout(
             title=f"Parabel: f(x) = {self.term()}",
-            xaxis=dict(
-                scaleanchor="y",  # 🔥 1:1 Aspect Ratio - KEINE VERZERRUNG!
-                scaleratio=1,  # 🔥 Perfekte Kreisverwandtschaft!
-                zeroline=True,  # 🔥 Achse im Ursprung sichtbar
-                zerolinewidth=2,  # 🔥 Deutliche Null-Linie
-                zerolinecolor="black",  # 🔥 Schwarze Achse
-                showgrid=True,  # 🔥 Gitterlinien helfen beim Ablesen
-                gridwidth=1,  # 🔥 Dünne Gitterlinien
-                gridcolor="lightgray",  # 🔥 Dezentes Gitter
-                range=x_range,  # 🔥 Symmetrischer Bereich
-                title="x",  # 🔥 Achsenbeschriftung
-                ticks="outside",  # 🔥 Ticks außerhalb
-                tickwidth=2,  # 🔥 Deutliche Ticks
-                showline=True,  # 🔥 Achsenlinie sichtbar
-                linewidth=2,  # 🔥 Deutliche Achsenlinie
-            ),
-            yaxis=dict(
-                zeroline=True,
-                zerolinewidth=2,
-                zerolinecolor="black",
-                showgrid=True,
-                gridwidth=1,
-                gridcolor="lightgray",
-                title=f"f(x) = {self.term()}",
-                ticks="outside",
-                tickwidth=2,
-                showline=True,
-                linewidth=2,
-                scaleanchor="x",  # 🔥 Bidirektionale Verzerrungs-Verhinderung!
-            ),
+            xaxis={
+                "scaleanchor": "y",  # 🔥 1:1 Aspect Ratio - KEINE VERZERRUNG!
+                "scaleratio": 1,  # 🔥 Perfekte Kreisverwandtschaft!
+                "zeroline": True,  # 🔥 Achse im Ursprung sichtbar
+                "zerolinewidth": 2,  # 🔥 Deutliche Null-Linie
+                "zerolinecolor": "black",  # 🔥 Schwarze Achse
+                "showgrid": True,  # 🔥 Gitterlinien helfen beim Ablesen
+                "gridwidth": 1,  # 🔥 Dünne Gitterlinien
+                "gridcolor": "lightgray",  # 🔥 Dezentes Gitter
+                "range": x_range,  # 🔥 Symmetrischer Bereich
+                "title": "x",  # 🔥 Achsenbeschriftung
+                "ticks": "outside",  # 🔥 Ticks außerhalb
+                "tickwidth": 2,  # 🔥 Deutliche Ticks
+                "showline": True,  # 🔥 Achsenlinie sichtbar
+                "linewidth": 2,  # 🔥 Deutliche Achsenlinie
+            },
+            yaxis={
+                "zeroline": True,
+                "zerolinewidth": 2,
+                "zerolinecolor": "black",
+                "showgrid": True,
+                "gridwidth": 1,
+                "gridcolor": "lightgray",
+                "title": f"f(x) = {self.term()}",
+                "ticks": "outside",
+                "tickwidth": 2,
+                "showline": True,
+                "linewidth": 2,
+                "scaleanchor": "x",  # 🔥 Bidirektionale Verzerrungs-Verhinderung!
+            },
             plot_bgcolor="white",  # 🔥 Weißer Hintergrund für Schule
             paper_bgcolor="white",
             showlegend=True,
             width=700,
             height=500,
-            font=dict(size=14),  # 🔥 Gute Lesbarkeit
+            font={"size": 14},  # 🔥 Gute Lesbarkeit
         )
 
         return mo.ui.plotly(fig)
@@ -1628,7 +1627,7 @@ class GanzrationaleFunktion:
                 y=y,
                 mode="lines",
                 name=f"f(x) = {self.term()}",
-                line=dict(color="blue", width=2),
+                line={"color": "blue", "width": 2},
             )
         )
 
@@ -1645,7 +1644,7 @@ class GanzrationaleFunktion:
                     y=ns_y,
                     mode="markers",
                     name="Nullstellen",
-                    marker=dict(size=12, color="red", symbol="circle"),
+                    marker={"size": 12, "color": "red", "symbol": "circle"},
                     text=ns_labels,
                     hovertemplate="%{text}<extra></extra>",
                 )
@@ -1658,15 +1657,19 @@ class GanzrationaleFunktion:
         # 🔥 PERFECT MATHEMATICAL CONFIGURATION 🔥
         fig.update_layout(
             title=title,
-            xaxis=dict(
-                scaleanchor="y",  # 1:1 Aspect Ratio
-                scaleratio=1,  # Keine Verzerrung!
-                zeroline=True,  # Achse im Ursprung
-                showgrid=True,  # Gitterlinien
-                range=x_range,
-                title="x",
-            ),
-            yaxis=dict(zeroline=True, showgrid=True, title=f"f(x) = {self.term()}"),
+            xaxis={
+                "scaleanchor": "y",  # 1:1 Aspect Ratio
+                "scaleratio": 1,  # Keine Verzerrung!
+                "zeroline": True,  # Achse im Ursprung
+                "showgrid": True,  # Gitterlinien
+                "range": x_range,
+                "title": "x",
+            },
+            yaxis={
+                "zeroline": True,
+                "showgrid": True,
+                "title": f"f(x) = {self.term()}",
+            },
             showlegend=True,
             width=600,
             height=400,
@@ -1702,7 +1705,7 @@ class GanzrationaleFunktion:
         # Originalfunktion
         fig.add_trace(
             go.Scatter(
-                x=x, y=y_orig, mode="lines", name="f(x)", line=dict(color="blue")
+                x=x, y=y_orig, mode="lines", name="f(x)", line={"color": "blue"}
             ),
             row=1,
             col=1,
@@ -1715,7 +1718,7 @@ class GanzrationaleFunktion:
                 y=y_abl,
                 mode="lines",
                 name=f"f^{ordnung}(x)",
-                line=dict(color="red"),
+                line={"color": "red"},
             ),
             row=2,
             col=1,
@@ -1726,24 +1729,24 @@ class GanzrationaleFunktion:
             title=f"Funktion vs. {ordnung}. Ableitung",
             height=600,
             showlegend=False,
-            xaxis=dict(
-                scaleanchor="y",  # 1:1 Aspect Ratio
-                scaleratio=1,  # Keine Verzerrung!
-                zeroline=True,
-                showgrid=True,
-                range=x_range,
-                title="x",
-            ),
-            xaxis2=dict(
-                scaleanchor="y2",  # 1:1 Aspect Ratio für zweite Achse
-                scaleratio=1,
-                zeroline=True,
-                showgrid=True,
-                range=x_range,
-                title="x",
-            ),
-            yaxis=dict(zeroline=True, showgrid=True, title="f(x)"),
-            yaxis2=dict(zeroline=True, showgrid=True, title=f"f^{ordnung}(x)"),
+            xaxis={
+                "scaleanchor": "y",  # 1:1 Aspect Ratio
+                "scaleratio": 1,  # Keine Verzerrung!
+                "zeroline": True,
+                "showgrid": True,
+                "range": x_range,
+                "title": "x",
+            },
+            xaxis2={
+                "scaleanchor": "y2",  # 1:1 Aspect Ratio für zweite Achse
+                "scaleratio": 1,
+                "zeroline": True,
+                "showgrid": True,
+                "range": x_range,
+                "title": "x",
+            },
+            yaxis={"zeroline": True, "showgrid": True, "title": "f(x)"},
+            yaxis2={"zeroline": True, "showgrid": True, "title": f"f^{ordnung}(x)"},
         )
 
         return mo.ui.plotly(fig)

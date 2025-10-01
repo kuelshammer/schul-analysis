@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Demonstrate precision improvement with exact arithmetic."""
 
-from schul_analysis.ganzrationale import GanzrationaleFunktion
 import sympy as sp
+
+from schul_analysis.ganzrationale import GanzrationaleFunktion
 
 
 def demonstrate_precision():

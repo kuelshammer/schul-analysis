@@ -34,7 +34,7 @@ def test_verbesserter_konstruktor():
 
         try:
             f = GanzrationaleFunktion(eingabe)
-            print(f"✅ Erfolgreich!")
+            print("✅ Erfolgreich!")
             print(f"   Original: {f.term_str}")
             print(f"   LaTeX: {f.term_latex()}")
             print(f"   Koeffizienten: {f.koeffizienten}")

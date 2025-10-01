@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Test exact arithmetic implementation."""
 
-from schul_analysis.ganzrationale import GanzrationaleFunktion
 import sympy as sp
+
+from schul_analysis.ganzrationale import GanzrationaleFunktion
 
 
 def test_exact_arithmetic():
