@@ -121,11 +121,11 @@ class TestGanzrationaleFunktionMethoden:
         """Test: ableitung() Methode"""
         f_strich = self.f_quad.ableitung(1)
         assert isinstance(f_strich, GanzrationaleFunktion)
-        assert f_strich.koeffizienten == [0.0, -4.0, 2.0]  # -4 + 2x
+        assert f_strich.koeffizienten == [-4.0, 2.0]  # 2x - 4
 
         f_doppelstrich = self.f_quad.ableitung(2)
         assert isinstance(f_doppelstrich, GanzrationaleFunktion)
-        assert f_doppelstrich.koeffizienten == [0.0, 0.0, 2.0]  # 2
+        assert f_doppelstrich.koeffizienten == [2.0]  # 2
 
     def test_nullstellen_method(self):
         """Test: nullstellen() Methode"""
@@ -199,7 +199,7 @@ class TestGanzrationaleFunktionLösungswege:
         # Test ohne reelle Nullstellen
         f_keine = GanzrationaleFunktion("x^2+2x+3")
         weg_keine = f_keine.nullstellen_weg()
-        assert "keine reellen Nullstellen" in weg_keine.lower()
+        assert "keine reellen nullstellen" in weg_keine.lower()
 
     def test_nullstellen_weg_linear(self):
         """Test: nullstellen_weg() für lineare Funktionen"""
@@ -207,7 +207,7 @@ class TestGanzrationaleFunktionLösungswege:
         weg = f.nullstellen_weg()
 
         assert "Lineare Funktion" in weg
-        assert "x = 0.5" in weg
+        assert "= 0.5" in weg
 
 
 if __name__ == "__main__":

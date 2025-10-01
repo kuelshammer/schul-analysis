@@ -30,6 +30,7 @@ class GanzrationaleFunktion:
             eingabe: String ("x^3-2x+1"), Liste ([1, 0, -2, 1]) oder Dictionary ({3: 1, 1: -2, 0: 1})
         """
         self.x = symbols("x")
+        self.original_eingabe = str(eingabe)  # Original eingabe speichern
 
         if isinstance(eingabe, str):
             # String-Konstruktor mit robuster Verarbeitung
@@ -48,7 +49,7 @@ class GanzrationaleFunktion:
         # Koeffizienten extrahieren
         self.koeffizienten = self._extrahiere_koeffizienten()
 
-    def _parse_string_eingabe(self, eingabe: str) -> Tuple[str, sp.Expr]:
+    def _parse_string_eingabe(self, eingabe: str) -> Tuple[str, sp.Basic]:
         """
         Robuster Parser für verschiedene String-Formate von ganzrationalen Funktionen.
 
@@ -67,29 +68,44 @@ class GanzrationaleFunktion:
         """
         import re
 
+        # Prüfe auf offensichtlich ungültige Eingaben
+        if not re.match(r"^[x\d\+\-\*\^\s\(\)\.\$]+$", eingabe.replace(" ", "")):
+            raise ValueError(f"Ungültige Zeichen in Eingabe: '{eingabe}'")
+
         # 1. LaTeX-Format bereinigen ($ entfernen)
         bereinigt = eingabe.replace("$", "").strip()
 
-        # 2. Leerzeichen um Operatoren normalisieren
+        # 2. Spezialfall: Linearfaktoren-Format
+        if self._ist_linearfaktor_format(bereinigt):
+            return self._parse_linearfaktoren(bereinigt)
+
+        # 3. Leerzeichen um Operatoren normalisieren
         bereinigt = re.sub(r"\s*([+\-])\s*", r"\1", bereinigt)
 
-        # 3. Implizite Multiplikation behandeln (z.B. "2x" → "2*x")
-        bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)
+        # 4. Dezimalzahlen schützen (ersetze temporär)
+        dezimal_pattern = r"(\d+)\.(\d+)"
+        bereinigt = re.sub(dezimal_pattern, r"DEZIMAL_\1_DEZTRENN_\2", bereinigt)
+
+        # 5. Implizite Multiplikation behandeln (z.B. "2x" → "2*x")
+        bereinigt = re.sub(r"(\d+)([a-zA-Z])", r"\1*\2", bereinigt)
         bereinigt = re.sub(r"([a-zA-Z])(\d)", r"\1^\2", bereinigt)  # x2 → x^2
 
-        # 4. Hochzeichen-Konvertierung (^ → **)
+        # 6. Hochzeichen-Konvertierung (^ → **)
         bereinigt = re.sub(r"([a-zA-Z])\^(\d+)", r"\1**\2", bereinigt)
         bereinigt = re.sub(r"([a-zA-Z])\^([a-zA-Z])", r"\1**\2", bereinigt)
 
-        # 5. Spezialfall: x ohne Exponent → x^1
+        # 7. Spezialfall: x ohne Exponent → x^1
         bereinigt = re.sub(r"(?<![a-zA-Z])(x)(?![a-zA-Z0-9_*^])", r"x**1", bereinigt)
         bereinigt = re.sub(r"([+\-])(x)(?![a-zA-Z0-9_*^])", r"\1x**1", bereinigt)
 
-        # 6. Koeffizienten ohne x normalisieren
+        # 8. Koeffizienten ohne x normalisieren
         bereinigt = re.sub(r"([+\-])(\d+)(?![a-zA-Z0-9_*^])", r"\1\2*x**0", bereinigt)
         bereinigt = re.sub(r"^(\d+)(?![a-zA-Z0-9_*^])", r"\1*x**0", bereinigt)
 
-        # 7. Versuch mit sympify
+        # 9. Dezimalzahlen wiederherstellen
+        bereinigt = re.sub(r"DEZIMAL_(\d+)_DEZTRENN_(\d+)", r"\1.\2", bereinigt)
+
+        # 10. Versuch mit sympify
         try:
             term_sympy = sympify(bereinigt)
             return bereinigt, term_sympy
@@ -115,7 +131,72 @@ class GanzrationaleFunktion:
                     f"Versuch 2: '{einfache_bereinigung}' → {e2}"
                 )
 
-    def _liste_zu_string(self, koeff: List[float]) -> str:
+    def _ist_linearfaktor_format(self, eingabe: str) -> bool:
+        """Prüft, ob die Eingabe im Linearfaktoren-Format vorliegt."""
+        import re
+
+        # Pattern für Linearfaktoren: (x±a), (x±b), etc.
+        # Auch mit Potenzen: (x±a)^n
+        # Auch mit Koeffizienten: k(x±a)
+        pattern = r"^\d*\(x[+\-]\d+\)(\^\d+)?(\(x[+\-]\d+\)(\^\d+)?)*$"
+
+        return bool(re.match(pattern, eingabe.replace(" ", "")))
+
+    def _parse_linearfaktoren(self, eingabe: str) -> tuple[str, sp.Basic]:
+        """Parst Linearfaktoren in expandierte Form."""
+        import re
+
+        # Leerzeichen entfernen
+        bereinigt = eingabe.replace(" ", "")
+
+        # Extrahiere alle Faktoren
+        faktoren = re.findall(r"(\d*)\(x([+\-])(\d+)\)(\^\d+)?", bereinigt)
+
+        if not faktoren:
+            raise ValueError(f"Ungültiges Linearfaktoren-Format: '{eingabe}'")
+
+        # Baue den Ausdruck direkt mit SymPy zusammen
+        x = self.x
+        ergebnis = 1
+
+        for koeff, vorzeichen, zahl, potenz in faktoren:
+            # Koeffizient verarbeiten
+            if koeff:
+                koeff_float = float(koeff)
+            else:
+                koeff_float = 1.0
+
+            # Vorzeichen und Zahl verarbeiten
+            if vorzeichen == "+":
+                konstante = float(zahl)
+            else:
+                konstante = -float(zahl)
+
+            # Linearfaktor erstellen
+            linearfaktor = x - konstante
+
+            if potenz:
+                # Mit Potenz
+                potenz_wert = int(potenz[1:])  # ^n extrahieren
+                faktor = koeff_float * linearfaktor**potenz_wert
+            else:
+                # Ohne Potenz
+                faktor = koeff_float * linearfaktor
+
+            ergebnis = ergebnis * faktor
+
+        try:
+            # Expandiere zu Standardform
+            term_expanded = sp.expand(ergebnis)
+            term_string = str(ergebnis)
+
+            return term_string, term_expanded
+        except Exception as e:
+            raise ValueError(
+                f"Konnte Linearfaktoren '{eingabe}' nicht verarbeiten: {e}"
+            )
+
+    def _liste_zu_string(self, koeff: list[float]) -> str:
         """Wandelt Koeffizienten-Liste in Term-String um."""
         terme = []
         for i, k in enumerate(koeff):
@@ -143,7 +224,7 @@ class GanzrationaleFunktion:
 
         return "+".join(terme).replace("+-", "-")
 
-    def _liste_zu_sympy(self, koeff: List[float]) -> sp.Expr:
+    def _liste_zu_sympy(self, koeff: List[float]) -> sp.Basic:
         """Wandelt Koeffizienten-Liste in SymPy-Ausdruck um."""
         term = 0
         for i, k in enumerate(koeff):
@@ -181,7 +262,7 @@ class GanzrationaleFunktion:
 
         return "+".join(terme).replace("+-", "-")
 
-    def _dict_zu_sympy(self, koeff: Dict[int, float]) -> sp.Expr:
+    def _dict_zu_sympy(self, koeff: Dict[int, float]) -> sp.Basic:
         """Wandelt Koeffizienten-Dictionary in SymPy-Ausdruck um."""
         term = 0
         for grad, k in koeff.items():
@@ -191,6 +272,10 @@ class GanzrationaleFunktion:
     def _extrahiere_koeffizienten(self) -> List[float]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
         try:
+            # Prüfe, ob der Ausdruck gültig ist
+            if not hasattr(self.term_sympy, "subs"):
+                raise ValueError("Ungültiger SymPy-Ausdruck")
+
             poly = Poly(self.term_sympy, self.x)
             return [
                 float(poly.coeff_monomial(self.x**i)) for i in range(poly.degree() + 1)
@@ -199,32 +284,40 @@ class GanzrationaleFunktion:
             # Fallback: Manuelle Koeffizienten-Extraktion
             koeffizienten = []
 
-            # Konstante Term
-            const_term = self.term_sympy.subs(self.x, 0)
-            if const_term != 0:
-                koeffizienten.append(float(const_term))
+            try:
+                # Konstante Term
+                const_term = self.term_sympy.subs(self.x, 0)
+                if const_term != 0:
+                    try:
+                        koeffizienten.append(float(const_term))
+                    except (TypeError, ValueError):
+                        # Wenn es sich nicht um eine Zahl handelt, überspringen
+                        pass
 
-            # Für höhere Grade: Ableitungen verwenden
-            for i in range(1, 10):  # Maximal Grad 10
-                try:
-                    # i-te Ableitung an x=0 dividiert durch i!
-                    ableitung_i = sp.diff(self.term_sympy, self.x, i)
-                    wert_0 = ableitung_i.subs(self.x, 0)
-                    koeff = float(wert_0) / sp.factorial(i)
+                # Für höhere Grade: Ableitungen verwenden
+                for i in range(1, 10):  # Maximal Grad 10
+                    try:
+                        # i-te Ableitung an x=0 dividiert durch i!
+                        ableitung_i = sp.diff(self.term_sympy, self.x, i)
+                        wert_0 = ableitung_i.subs(self.x, 0)
+                        koeff = float(wert_0) / sp.factorial(i)
 
-                    if abs(koeff) > 1e-10:  # Nur signifikante Koeffizienten
-                        # Stelle sicher, dass die Liste lang genug ist
-                        while len(koeffizienten) < i:
-                            koeffizienten.append(0.0)
-                        koeffizienten.append(koeff)
-                except:
-                    break
+                        if abs(koeff) > 1e-10:  # Nur signifikante Koeffizienten
+                            # Stelle sicher, dass die Liste lang genug ist
+                            while len(koeffizienten) < i:
+                                koeffizienten.append(0.0)
+                            koeffizienten.append(koeff)
+                    except:
+                        break
 
-            # Wenn keine Koeffizienten gefunden wurden
-            if not koeffizienten:
-                koeffizienten = [0.0]
+                # Wenn keine Koeffizienten gefunden wurden
+                if not koeffizienten:
+                    koeffizienten = [0.0]
 
-            return koeffizienten
+                return koeffizienten
+            except Exception:
+                # Wenn alles fehlschlägt, leere Liste zurückgeben
+                return [0.0]
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
@@ -241,7 +334,21 @@ class GanzrationaleFunktion:
     def ableitung(self, ordnung: int = 1) -> "GanzrationaleFunktion":
         """Berechnet die Ableitung gegebener Ordnung."""
         abgeleitet = diff(self.term_sympy, self.x, ordnung)
-        return GanzrationaleFunktion(str(abgeleitet))
+
+        # Erstelle neue Funktion direkt mit dem abgeleiteten Ausdruck
+        neue_funktion = GanzrationaleFunktion.__new__(GanzrationaleFunktion)
+        neue_funktion.x = self.x
+        neue_funktion.term_sympy = abgeleitet
+        neue_funktion.term_str = str(abgeleitet)
+        neue_funktion.koeffizienten = neue_funktion._extrahiere_koeffizienten()
+
+        # Stelle sicher, dass die Koeffizientenliste die richtige Länge hat
+        # (füge führende Nullen hinzu, wenn nötig)
+        erwartete_laenge = max(0, len(self.koeffizienten) - ordnung)
+        while len(neue_funktion.koeffizienten) < erwartete_laenge:
+            neue_funktion.koeffizienten.insert(0, 0.0)
+
+        return neue_funktion
 
     def nullstellen(self, real: bool = True) -> List[float]:
         """Berechnet die Nullstellen der Funktion."""
@@ -300,7 +407,7 @@ class GanzrationaleFunktion:
 
     def nullstellen_weg(self) -> str:
         """Gibt detaillierten Lösungsweg für Nullstellen als Markdown zurück."""
-        weg = f"# Nullstellen von f(x) = {self.term()}\n\n"
+        weg = f"# Nullstellen von f(x) = {self.original_eingabe}\n\n"
         weg += f"Gegeben ist die Funktion: $$f(x) = {self.term_latex()}$$\n\n"
 
         # Verschiedene Lösungswege je nach Grad
