@@ -138,7 +138,9 @@ class GanzrationaleFunktion:
         # Pattern für Linearfaktoren: (x±a), (x±b), etc.
         # Auch mit Potenzen: (x±a)^n
         # Auch mit Koeffizienten: k(x±a)
-        pattern = r"^\d*\(x[+\-]\d+\)(\^\d+)?(\(x[+\-]\d+\)(\^\d+)?)*$"
+        # Auch mit expliziten Multiplikationszeichen: (x±a)*(x±b)
+        # Auch mit impliziten Multiplikationszeichen: (x±a)(x±b)
+        pattern = r"^(\d*\(x[+\-]\d+\)(\^\d+)?[*]*)*\d*\(x[+\-]\d+\)(\^\d+)?$"
 
         return bool(re.match(pattern, eingabe.replace(" ", "")))
 
@@ -149,7 +151,8 @@ class GanzrationaleFunktion:
         # Leerzeichen entfernen
         bereinigt = eingabe.replace(" ", "")
 
-        # Extrahiere alle Faktoren
+        # Entferne explizite Multiplikationszeichen und extrahiere alle Faktoren
+        bereinigt = bereinigt.replace("*", "")
         faktoren = re.findall(r"(\d*)\(x([+\-])(\d+)\)(\^\d+)?", bereinigt)
 
         if not faktoren:
@@ -168,9 +171,9 @@ class GanzrationaleFunktion:
 
             # Vorzeichen und Zahl verarbeiten
             if vorzeichen == "+":
-                konstante = float(zahl)
+                konstante = -float(zahl)  # (x+1) bedeutet (x - (-1))
             else:
-                konstante = -float(zahl)
+                konstante = float(zahl)  # (x-1) bedeutet (x - 1)
 
             # Linearfaktor erstellen
             linearfaktor = x - konstante
