@@ -117,10 +117,18 @@ class GanzrationaleFunktion:
                     eingabe.replace("$", "").replace("^", "**").strip()
                 )
 
-                # Implizite Multiplikation
+                # Implizite Multiplikation: Zahl gefolgt von Variable
                 einfache_bereinigung = re.sub(
                     r"(\d)([a-zA-Z])", r"\1*\2", einfache_bereinigung
                 )
+
+                # Implizite Multiplikation: Variable gefolgt von Zahl
+                einfache_bereinigung = re.sub(
+                    r"([a-zA-Z])(\d)", r"\1^\2", einfache_bereinigung
+                )
+
+                # Multiplikation zwischen Klammerausdrücken
+                einfache_bereinigung = re.sub(r"\)\(", ")*(", einfache_bereinigung)
 
                 term_sympy = sympify(einfache_bereinigung)
                 return einfache_bereinigung, term_sympy
