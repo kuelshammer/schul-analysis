@@ -660,8 +660,19 @@ class GanzrationaleFunktion:
         except:
             pass
 
-        # 2. Muster erkennen
+        # 2. Muster-Liste initialisieren
         muster = []
+
+        # 3. Partielle Faktorisierung analysieren
+        if analyse["sympy_factor"] and isinstance(analyse["sympy_factor"], sp.Mul):
+            partial_analysis = self._analysiere_partielle_faktorisierung(
+                analyse["sympy_factor"]
+            )
+            if partial_analysis["einfache_faktoren"]:
+                analyse["partielle_faktorisierung"] = partial_analysis
+                muster.append("partielle_faktorisierung")
+
+        # 4. Weitere Muster erkennen
 
         # Muster 1: Differenz von Quadraten
         if self._ist_differenz_von_quadraten(term):
@@ -792,6 +803,134 @@ class GanzrationaleFunktion:
 
         return "allgemein"
 
+    def _analysiere_partielle_faktorisierung(
+        self, faktorisiert: sp.Basic
+    ) -> Dict[str, List[Tuple[str, sp.Basic]]]:
+        """
+        Analysiert partielle Faktorisierungen und klassifiziert Faktoren.
+
+        Returns:
+            Dict mit 'einfache_faktoren' und 'komplexe_faktoren'
+        """
+        if not isinstance(faktorisiert, sp.Mul):
+            return {
+                "einfache_faktoren": [],
+                "komplexe_faktoren": [("unbekannt", faktorisiert)],
+            }
+
+        faktoren = sp.Mul.make_args(faktorisiert)
+        einfache_faktoren = []
+        komplexe_faktoren = []
+
+        # Konstanten für Faktor-Typen
+        TYP_LINEAR = "linear"
+        TYP_QUADRATISCH_REELL = "quadratisch_reell"
+        TYP_QUADRATISCH_KOMPLEX = "quadratisch_komplex"
+        TYP_PERFEKTE_POTENZ = "perfekte_potenz"
+        TYP_DIFFERENZ_QUADRATEN = "differenz_quadraten"
+        TYP_HOCH_GRAD = "hoch_grad"
+        TYP_NICHT_POLYNOM = "nicht_polynom"
+        TYP_UNBEKANNT = "unbekannt"
+
+        for faktor in faktoren:
+            try:
+                # Prüfe auf Konstanten
+                if faktor.is_constant():
+                    continue
+
+                # Prüfe, ob es überhaupt ein Polynom in unserer Variable ist
+                if not isinstance(faktor, sp.Expr) or self.x not in faktor.free_symbols:
+                    komplexe_faktoren.append((TYP_NICHT_POLYNOM, faktor))
+                    continue
+
+                if not faktor.is_polynomial(self.x):
+                    komplexe_faktoren.append((TYP_NICHT_POLYNOM, faktor))
+                    continue
+
+                # Poly-Objekt einmal erstellen und wiederverwenden
+                try:
+                    poly_faktor = Poly(faktor, self.x)
+                except (sp.PolynomialError, sp.CoercionFailed):
+                    komplexe_faktoren.append((TYP_NICHT_POLYNOM, faktor))
+                    continue
+
+                grad = poly_faktor.degree()
+
+                if grad == 1:
+                    # Linearfaktor - immer einfach
+                    einfache_faktoren.append((TYP_LINEAR, faktor))
+                elif grad == 2:
+                    # Quadratischer Faktor - prüfe auf reelle Nullstellen
+                    try:
+                        coeffs = poly_faktor.all_coeffs()
+                        # Koeffizienten sicher extrahieren
+                        if len(coeffs) == 3:
+                            a, b, c = coeffs
+                        elif len(coeffs) == 2:
+                            a, b = coeffs
+                            c = 0
+                        else:
+                            raise ValueError("Unerwartete Anzahl von Koeffizienten")
+
+                        if a == 0:  # Eigentlich linear
+                            komplexe_faktoren.append((TYP_HOCH_GRAD, faktor))
+                            continue
+
+                        diskriminante = b**2 - 4 * a * c
+                        if diskriminante >= 0:
+                            einfache_faktoren.append((TYP_QUADRATISCH_REELL, faktor))
+                        else:
+                            komplexe_faktoren.append((TYP_QUADRATISCH_KOMPLEX, faktor))
+                    except (IndexError, ValueError, TypeError):
+                        komplexe_faktoren.append((TYP_QUADRATISCH_KOMPLEX, faktor))
+                else:
+                    # Höhergradiger Faktor - prüfe auf spezielle Formen
+                    if self._ist_perfekte_potenz(faktor):
+                        einfache_faktoren.append((TYP_PERFEKTE_POTENZ, faktor))
+                    elif self._ist_differenz_von_quadraten(faktor):
+                        einfache_faktoren.append((TYP_DIFFERENZ_QUADRATEN, faktor))
+                    else:
+                        komplexe_faktoren.append((TYP_HOCH_GRAD, faktor))
+
+            except (sp.PolynomialError, sp.CoercionFailed) as e:
+                # Spezifische SymPy-Fehler behandeln
+                komplexe_faktoren.append(("fehler_polynom", faktor))
+            except Exception as e:
+                # Unerwartete Fehler - in echter Anwendung hier logging verwenden
+                # import logging
+                # logging.warning(f"Unerwarteter Fehler bei Faktor {faktor}: {e}")
+                komplexe_faktoren.append((TYP_UNBEKANNT, faktor))
+
+        return {
+            "einfache_faktoren": einfache_faktoren,
+            "komplexe_faktoren": komplexe_faktoren,
+        }
+
+    def _berechne_lineare_nullstelle(self, faktor: sp.Basic) -> List[sp.Expr]:
+        """Berechnet Nullstelle für linearen Faktor."""
+        try:
+            a, b = Poly(faktor, self.x).all_coeffs()
+            if a == 0:
+                return []
+            return [-b / a]
+        except (ValueError, TypeError, IndexError):
+            return []
+
+    def _berechne_quadratische_nullstellen(self, faktor: sp.Basic) -> List[sp.Expr]:
+        """Berechnet reelle Nullstellen für quadratischen Faktor."""
+        try:
+            a, b, c = Poly(faktor, self.x).all_coeffs()
+            if a == 0:
+                return []
+            diskriminante = b**2 - 4 * a * c
+            if diskriminante >= 0:
+                x1 = (-b + sp.sqrt(diskriminante)) / (2 * a)
+                x2 = (-b - sp.sqrt(diskriminante)) / (2 * a)
+                return sorted(list(set([x1, x2])))
+            return []
+        except (ValueError, TypeError, IndexError):
+            return []
+
     def nullstellen_weg(self) -> str:
         """Gibt detaillierten Lösungsweg für Nullstellen als Markdown zurück."""
         weg = f"# Nullstellen von f(x) = {self.original_eingabe}\n\n"
@@ -844,6 +983,77 @@ class GanzrationaleFunktion:
 
             if analyse["sympy_roots"]:
                 weg += "### Nullstellen:\n\n"
+                for nullstelle, vielfachheit in analyse["sympy_roots"].items():
+                    weg += f"- $$x = {nullstelle}"
+                    if vielfachheit > 1:
+                        weg += f" \\text{{ (Vielfachheit {vielfachheit})}}"
+                    weg += "$$\n"
+
+        # Partielle Faktorisierung
+        elif (
+            "partielle_faktorisierung" in analyse["muster"]
+            and "partielle_faktorisierung" in analyse
+        ):
+            weg += "## Lösungsweg: Partielle Faktorisierung\n\n"
+            weg += "### Erkenntnis: Die Funktion lässt sich teilweise faktorisieren\n\n"
+            weg += "Einige Faktoren sind einfach zu lösen, während andere komplexer bleiben.\n\n"
+
+            partial = analyse["partielle_faktorisierung"]
+
+            # Konstanten für Faktor-Typen (müssen mit der Analyse-Methode übereinstimmen)
+            TYP_LINEAR = "linear"
+            TYP_QUADRATISCH_REELL = "quadratisch_reell"
+
+            # Mapping von Faktor-Typ zu Berechnungsfunktion
+            faktor_loeser = {
+                TYP_LINEAR: self._berechne_lineare_nullstelle,
+                TYP_QUADRATISCH_REELL: self._berechne_quadratische_nullstellen,
+            }
+
+            if partial["einfache_faktoren"]:
+                weg += "### Einfach lösbare Faktoren:\n\n"
+                for typ, faktor in partial["einfache_faktoren"]:
+                    weg += (
+                        f"**{typ.replace('_', ' ').title()}**: $${sp.latex(faktor)}$$\n"
+                    )
+
+                    # Verwende das Mapping für die Berechnung
+                    loeser_func = faktor_loeser.get(typ)
+                    if loeser_func:
+                        try:
+                            nullstellen = loeser_func(faktor)
+                            if nullstellen:
+                                # Formatiere die Nullstellen mit LaTeX
+                                if len(nullstellen) == 1:
+                                    weg += f"   - Nullstelle: $$x = {sp.latex(nullstellen[0])}$$\n"
+                                else:
+                                    formatted_nullstellen = ", \\quad ".join(
+                                        [
+                                            f"x_{i + 1} = {sp.latex(n)}"
+                                            for i, n in enumerate(nullstellen)
+                                        ]
+                                    )
+                                    weg += f"   - Nullstellen: $${formatted_nullstellen}$$\n"
+                            else:
+                                weg += "   - Dieser Faktor hat keine reellen Nullstellen.\n"
+                        except Exception as e:
+                            weg += (
+                                "   - Konnte Nullstellen nicht automatisch berechnen.\n"
+                            )
+                    else:
+                        weg += "   - Kein spezifisches Lösungsverfahren für diesen Faktortyp.\n"
+
+            if partial["komplexe_faktoren"]:
+                weg += "### Komplexe Faktoren:\n\n"
+                for typ, faktor in partial["komplexe_faktoren"]:
+                    weg += (
+                        f"**{typ.replace('_', ' ').title()}**: $${sp.latex(faktor)}$$\n"
+                    )
+                    weg += "   - Dieser Faktor erfordert fortgeschrittenere Methoden.\n"
+
+            # Zusammenfassung aller gefundenen Nullstellen
+            if analyse["sympy_roots"]:
+                weg += "### Alle Nullstellen der Funktion:\n\n"
                 for nullstelle, vielfachheit in analyse["sympy_roots"].items():
                     weg += f"- $$x = {nullstelle}"
                     if vielfachheit > 1:
