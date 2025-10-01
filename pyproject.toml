@@ -1,0 +1,22 @@
+[project]
+name = "schul-analysis"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "marimo>=0.16.3",
+    "sympy>=1.14.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "ruff>=0.13.2",
+]
+optional = [
+    "matplotlib>=3.10.6",
+    "plotly>=6.3.0",
+]
