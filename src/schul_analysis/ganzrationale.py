@@ -273,6 +273,33 @@ class GanzrationaleFunktion:
 
         return "+".join(terme).replace("+-", "-")
 
+    def _format_koeffizient(self, koeff: sp.Basic, grad: int) -> str:
+        """Formatiert einen Koeffizienten für saubere Ausgabe."""
+        if koeff == 0:
+            return ""
+
+        # Special cases for grade 0 (constant term)
+        if grad == 0:
+            return str(koeff)
+
+        # Handle coefficient 1 and -1
+        if koeff == 1:
+            if grad == 1:
+                return "x"
+            else:
+                return f"x^{grad}"
+        elif koeff == -1:
+            if grad == 1:
+                return "-x"
+            else:
+                return f"-x^{grad}"
+
+        # Handle general case
+        if grad == 1:
+            return f"{koeff}x"
+        else:
+            return f"{koeff}x^{grad}"
+
     def _dict_zu_sympy(self, koeff: Dict[int, float]) -> sp.Basic:
         """Wandelt Koeffizienten-Dictionary in SymPy-Ausdruck um."""
         term = 0
@@ -330,7 +357,29 @@ class GanzrationaleFunktion:
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
-        return self.term_str
+        # Use custom formatting with exact coefficients
+        terme = []
+
+        for grad, koeff in enumerate(self.koeffizienten):
+            term_str = self._format_koeffizient(koeff, grad)
+            if term_str:
+                terme.append(term_str)
+
+        if not terme:
+            return "0"
+
+        # Sort by descending degree for standard polynomial notation
+        terme.reverse()
+
+        # Join with proper signs
+        result = terme[0]
+        for term in terme[1:]:
+            if term.startswith("-"):
+                result += term  # already includes the minus sign
+            else:
+                result += "+" + term
+
+        return result
 
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück."""
