@@ -358,23 +358,29 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
                     )
                 )
 
-    # Layout-Optionen
+    # Layout-Optionen - explizite Range-Setzung für sofortige Wirkung
     fig.update_layout(
         **config.get_plot_config(),
         title=titel or f"Funktion: f(x) = {funktion.term()}",
         xaxis={
             **config.get_axis_config(mathematical_mode=True),
-            "range": [x_min, x_max],
+            "range": [float(x_min), float(x_max)],  # Explizite Konvertierung zu float
             "title": "x",
+            "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
         },
         yaxis={
             **config.get_axis_config(mathematical_mode=False),
-            "range": [y_min, y_max],
+            "range": [float(y_min), float(y_max)],  # Explizite Konvertierung zu float
             "title": "f(x)",
+            "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
         },
         showlegend=True,
         hovermode="x unified",
     )
+
+    # Zusätzliche Sicherheit: Erzwinge Range-Update
+    fig.update_xaxes(range=[float(x_min), float(x_max)])
+    fig.update_yaxes(range=[float(y_min), float(y_max)])
 
     return fig
 
