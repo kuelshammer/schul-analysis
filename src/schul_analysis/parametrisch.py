@@ -5,8 +5,8 @@ Dieses Modul ermöglicht die Arbeit mit parametrischen Funktionen wie
 f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 """
 
+from abc import ABC
 from dataclasses import dataclass
-from typing import Union
 
 import sympy as sp
 
@@ -14,7 +14,42 @@ from .ganzrationale import GanzrationaleFunktion
 
 
 @dataclass
-class Variable:
+class SymbolischeGroesse(ABC):
+    """
+    Abstrakte Basisklasse für symbolische Größen (Variable und Parameter)
+
+    Args:
+        name: Name der symbolischen Größe (z.B. "x" oder "a")
+    """
+
+    name: str
+
+    def __post_init__(self):
+        """Erstellt ein SymPy-Symbol bei der Initialisierung"""
+        self._symbol = sp.Symbol(self.name)
+
+    @property
+    def symbol(self) -> sp.Symbol:
+        """Gibt das SymPy-Symbol zurück"""
+        return self._symbol
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}('{self.name}')"
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, self.__class__):
+            return self.name == other.name
+        return False
+
+    def __hash__(self) -> int:
+        return hash(self.name)
+
+
+@dataclass
+class Variable(SymbolischeGroesse):
     """
     Repräsentiert eine symbolische Variable (z.B. x, y, t)
 
@@ -26,34 +61,11 @@ class Variable:
         >>> t = Variable("t")
     """
 
-    name: str
-
-    def __post_init__(self):
-        """Erstellt ein SymPy-Symbol bei der Initialisierung"""
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self) -> sp.Symbol:
-        """Gibt das SymPy-Symbol zurück"""
-        return self._symbol
-
-    def __repr__(self) -> str:
-        return f"Variable('{self.name}')"
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, Variable):
-            return self.name == other.name
-        return False
-
-    def __hash__(self) -> int:
-        return hash(self.name)
+    pass
 
 
 @dataclass
-class Parameter:
+class Parameter(SymbolischeGroesse):
     """
     Repräsentiert einen symbolischen Parameter (z.B. a, b, c)
 
@@ -65,30 +77,7 @@ class Parameter:
         >>> b = Parameter("b")
     """
 
-    name: str
-
-    def __post_init__(self):
-        """Erstellt ein SymPy-Symbol bei der Initialisierung"""
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self) -> sp.Symbol:
-        """Gibt das SymPy-Symbol zurück"""
-        return self._symbol
-
-    def __repr__(self) -> str:
-        return f"Parameter('{self.name}')"
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, Parameter):
-            return self.name == other.name
-        return False
-
-    def __hash__(self) -> int:
-        return hash(self.name)
+    pass
 
 
 class ParametrischeFunktion:
@@ -97,15 +86,38 @@ class ParametrischeFunktion:
 
     Diese Klasse kann Funktionen wie f_a(x) = a x² + x verarbeiten und
     sowohl symbolische als auch numerische Berechnungen durchführen.
+    Perfekt für den Mathematikunterricht zur Untersuchung von Funktionen
+    mit variablen Parametern.
 
     Args:
-        koeffizienten: Liste der Koeffizienten (können Parameter oder Zahlen enthalten)
+        term_sympy: SymPy-Ausdruck der Funktion
         variablen: Liste der Variablen (normalerweise nur [x])
+        parameter: Liste der Parameter
 
     Beispiele:
+        # Einfache quadratische Funktion
         >>> x = Variable("x")
         >>> a = Parameter("a")
         >>> f = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
+        >>> print(f.term())
+        a + x
+
+        # Funktion mit mehreren Parametern
+        >>> b = Parameter("b")
+        >>> c = Parameter("c")
+        >>> g = ParametrischeFunktion.from_string("a*x^2 + b*x + c", a, b, c, x)
+        >>> print(g.term())
+        c + bx + ax^2
+
+        # Ableitung bilden
+        >>> g_strich = g.ableitung()
+        >>> print(g_strich.term())
+        2.0ax + b
+
+        # Konkrete Werte einsetzen
+        >>> g_konkret = g.mit_wert(a=2, b=3, c=1)
+        >>> print(g_konkret.term())
+        1.0 + 3.0x + 2.0x^2
     """
 
     def __init__(
@@ -118,22 +130,27 @@ class ParametrischeFunktion:
         Initialisiert eine parametrische Funktion
 
         Args:
-            eingabe: Entweder Koeffizienten-Liste oder Term-String
+            eingabe: Entweder Koeffizienten-Liste [c0, c1, c2, ...] für c0 + c1*x + c2*x² + ...
+                     oder Term-String wie "a*x^2 + b*x + c"
             variablen: Liste der Variablen oder einzelne Variable (bei String-Eingabe)
             *args: Zusätzliche Parameter/Variable (bei String-Eingabe)
 
         Beispiele:
-            # Koeffizienten-Liste
-            f = ParametrischeFunktion([0, 1, a], [x])
+            # Koeffizienten-Liste: 2 + 3x + x²
+            f = ParametrischeFunktion([2, 3, 1], [x])
 
             # String-Eingabe mit Liste
             f = ParametrischeFunktion("a*x^2 + x", [x, a])
 
             # String-Eingabe mit einzelnen Objekten
             f = ParametrischeFunktion("a*x^2 + x", x, a)
+
+        Hinweis für Lehrer:
+            Die Koeffizienten-Liste beginnt mit dem konstanten Term (Grad 0),
+            dann der lineare Term (Grad 1), dann quadratisch (Grad 2), etc.
         """
         if isinstance(eingabe, str):
-            # String-Eingabe - verwende die term() Klassenmethode
+            # String-Eingabe - verwende die from_string Klassenmethode
             if variablen is None:
                 variablen = []
             elif isinstance(variablen, Variable):
@@ -141,41 +158,26 @@ class ParametrischeFunktion:
                 variablen = [variablen]
 
             alle_args = list(variablen) + list(args)
-            string_funktion = ParametrischeFunktion.from_string(eingabe, *alle_args)
-            self.koeffizienten = string_funktion.koeffizienten
+            string_funktion = self.from_string(eingabe, *alle_args)
+            self._term_sympy = string_funktion._term_sympy
             self.variablen = string_funktion.variablen
+            self.parameter_objekte = string_funktion.parameter_objekte
         else:
             # Koeffizienten-Liste (traditionelle Eingabe)
-            self.koeffizienten = eingabe
+            self.koeffizienten_liste = eingabe
             self.variablen = variablen
+            self.parameter_objekte = [k for k in eingabe if isinstance(k, Parameter)]
+            # Erzeuge Sympy-Term aus Koeffizienten
+            self._term_sympy = self._erzeuge_term_aus_koeffizienten()
 
-        self._term_sympy = None
-        self._parameternamen = set()
-        self._variablennamen = set()
+        # Parameter- und Variablennamen extrahieren
+        self._parameternamen = {p.name for p in self.parameter_objekte}
+        self._variablennamen = {v.name for v in self.variablen}
 
-        # Parameter und Variablen extrahieren
-        self._extrahiere_symbolische_objekte()
+        # Cache für Koeffizienten
+        self._koeffizienten_cache = None
 
-    def _extrahiere_symbolische_objekte(self):
-        """Extrahiert alle Parameter und Variablen aus den Koeffizienten"""
-        self._parameternamen = set()
-        self._variablennamen = set()
-
-        for var in self.variablen:
-            self._variablennamen.add(var.name)
-
-        for koeff in self.koeffizienten:
-            if isinstance(koeff, Parameter):
-                self._parameternamen.add(koeff.name)
-
-    @property
-    def term_sympy(self) -> sp.Expr:
-        """Erzeugt den SymPy-Term der Funktion"""
-        if self._term_sympy is None:
-            self._term_sympy = self._erzeuge_term()
-        return self._term_sympy
-
-    def _erzeuge_term(self) -> sp.Expr:
+    def _erzeuge_term_aus_koeffizienten(self) -> sp.Expr:
         """Erzeugt den SymPy-Term aus den Koeffizienten und Variablen"""
         if not self.variablen:
             raise ValueError("Mindestens eine Variable erforderlich")
@@ -185,7 +187,7 @@ class ParametrischeFunktion:
             x = self.variablen[0].symbol
             term = 0
 
-            for i, koeff in enumerate(self.koeffizienten):
+            for i, koeff in enumerate(self.koeffizienten_liste):
                 if isinstance(koeff, Parameter):
                     koeff_symbol = koeff.symbol
                 else:
@@ -204,8 +206,58 @@ class ParametrischeFunktion:
             return term
         else:
             # Mehrere Variablen - komplexerer Fall
-            # Dies würde eine allgemeine Implementation erfordern
             raise NotImplementedError("Mehrere Variablen noch nicht implementiert")
+
+    @property
+    def koeffizienten(self) -> list:
+        """Gibt die Koeffizienten als Liste zurück (gecached)"""
+        if self._koeffizienten_cache is None:
+            self._koeffizienten_cache = self._extrahiere_koeffizienten_aus_sympy()
+        return self._koeffizienten_cache
+
+    def _extrahiere_koeffizienten_aus_sympy(self) -> list:
+        """Extrahiert Koeffizienten aus dem Sympy-Term"""
+        if not self.variablen:
+            raise ValueError("Mindestens eine Variable erforderlich")
+
+        variable_symbol = self.variablen[0].symbol
+
+        try:
+            # Verwende sympy.Poly für robuste Koeffizienten-Extraktion
+            poly = sp.Poly(self._term_sympy, variable_symbol)
+            # Koeffizienten von höchstem zu niedrigstem Grad
+            koeffizienten_sympy = poly.all_coeffs()
+            # Umkehren für [c0, c1, c2, ...] Format
+            koeffizienten_sympy.reverse()
+
+            # Konvertiere Sympy-Koeffizienten zurück zu Parameter/Float
+            finale_koeffizienten = []
+            parameter_dict = {p.name: p for p in self.parameter_objekte}
+
+            for koeff in koeffizienten_sympy:
+                if koeff.is_number:
+                    finale_koeffizienten.append(float(koeff))
+                elif koeff.is_symbol and koeff.name in parameter_dict:
+                    finale_koeffizienten.append(parameter_dict[koeff.name])
+                else:
+                    # Komplexerer Ausdruck - für jetzt als Fehler behandeln
+                    raise ValueError(
+                        f"Komplexer Koeffizient nicht unterstützt: {koeff}"
+                    )
+
+            # Fülle mit Nullen auf, um die Liste zu vervollständigen
+            grad = len(koeffizienten_sympy) - 1
+            while len(finale_koeffizienten) <= grad:
+                finale_koeffizienten.append(0.0)
+
+            return finale_koeffizienten
+        except Exception as e:
+            raise ValueError(f"Konnte Koeffizienten nicht extrahieren: {e}")
+
+    @property
+    def term_sympy(self) -> sp.Expr:
+        """Gibt den SymPy-Term der Funktion zurück"""
+        return self._term_sympy
 
     @classmethod
     def from_string(
@@ -245,14 +297,16 @@ class ParametrischeFunktion:
         except Exception as e:
             raise ValueError(f"Konnte Term '{term_string}' nicht parsen: {e}")
 
-        # Erweitere das Symbol-Mapping für die Koeffizienten-Extraktion
-        for param in parameter_objekte:
-            symbol_mapping[param.name] = param.symbol
+        # Erstelle neue ParametrischeFunktion direkt mit Sympy-Term
+        neue_funktion = cls.__new__(cls)
+        neue_funktion._term_sympy = term_sympy
+        neue_funktion.variablen = variablen
+        neue_funktion.parameter_objekte = parameter_objekte
+        neue_funktion._parameternamen = {p.name for p in parameter_objekte}
+        neue_funktion._variablennamen = {v.name for v in variablen}
+        neue_funktion._koeffizienten_cache = None
 
-        # Extrahiere Koeffizienten aus dem geparsten Term
-        return cls._extrahiere_koeffizienten_aus_term(
-            term_sympy, variablen[0], parameter_objekte
-        )
+        return neue_funktion
 
     @classmethod
     def _extrahiere_koeffizienten_aus_term(
@@ -328,42 +382,9 @@ class ParametrischeFunktion:
 
     def term(self) -> str:
         """Gibt den Term als lesbaren String zurück"""
-        if len(self.variablen) != 1:
-            return str(self.term_sympy)
-
-        var_name = self.variablen[0].name
-        termbestandteile = []
-
-        for i, koeff in enumerate(self.koeffizienten):
-            if koeff == 0:
-                continue
-
-            if isinstance(koeff, Parameter):
-                koeff_str = koeff.name
-            else:
-                koeff_str = str(koeff)
-
-            if i == 0:
-                # Konstanter Term
-                termbestandteile.append(koeff_str)
-            elif i == 1:
-                # Linearer Term
-                if koeff == 1:
-                    termbestandteile.append(var_name)
-                elif koeff == -1:
-                    termbestandteile.append(f"-{var_name}")
-                else:
-                    termbestandteile.append(f"{koeff_str}{var_name}")
-            else:
-                # Höhere Potenzen
-                if koeff == 1:
-                    termbestandteile.append(f"{var_name}^{i}")
-                elif koeff == -1:
-                    termbestandteile.append(f"-{var_name}^{i}")
-                else:
-                    termbestandteile.append(f"{koeff_str}{var_name}^{i}")
-
-        return " + ".join(termbestandteile).replace(" + -", " - ")
+        # Verwende direkt den Sympy-Term für die Darstellung
+        # Das ist robuster als die Koeffizienten-Extraktion
+        return str(self.term_sympy)
 
     def mit_wert(self, **werte) -> "GanzrationaleFunktion":
         """
@@ -381,26 +402,45 @@ class ParametrischeFunktion:
         # Import hier, um zyklische Abhängigkeiten zu vermeiden
         from .ganzrationale import GanzrationaleFunktion
 
-        # Ersetze Parameter durch konkrete Werte
-        konkrete_koeffizienten = []
+        # Prüfe, ob alle benötigten Parameter angegeben wurden
+        fehlende_parameter = []
+        for param in self.parameter_objekte:
+            if param.name not in werte:
+                fehlende_parameter.append(param.name)
 
-        for koeff in self.koeffizienten:
-            if isinstance(koeff, Parameter):
-                if koeff.name in werte:
-                    konkrete_koeffizienten.append(werte[koeff.name])
-                else:
-                    raise ValueError(
-                        f"Parameter '{koeff.name}' nicht in werten angegeben"
-                    )
-            else:
-                konkrete_koeffizienten.append(koeff)
+        if fehlende_parameter:
+            raise ValueError(
+                f"Es fehlen Parameter-Werte für: {', '.join(fehlende_parameter)}. "
+                f"Bitte gib Werte für alle Parameter an: {', '.join(self._parameternamen)}"
+            )
 
-        # Erstelle konkrete Funktion
+        # Ersetze Parameter durch konkrete Werte im Sympy-Term
+        substitutions = {}
+        for param_name, wert in werte.items():
+            if param_name in self._parameternamen:
+                substitutions[sp.Symbol(param_name)] = wert
+
+        konkreter_term = self.term_sympy.subs(substitutions)
+
+        # Extrahiere Koeffizienten aus dem konkreten Term
+        try:
+            variable_symbol = self.variablen[0].symbol
+            poly = sp.Poly(konkreter_term, variable_symbol)
+            koeffizienten_sympy = poly.all_coeffs()
+            koeffizienten_sympy.reverse()  # [c0, c1, c2, ...]
+
+            # Konvertiere zu float
+            konkrete_koeffizienten = [float(k) for k in koeffizienten_sympy]
+
+        except Exception:
+            # Fallback: Konstante Funktion
+            konkrete_koeffizienten = [float(konkreter_term)]
+
         return GanzrationaleFunktion(konkrete_koeffizienten)
 
     def löse_für_x(
         self,
-        parameter_wert: float,
+        parameter_wert: float | dict[str, float],
         ziel_wert: float = 0,
         real: bool = True,
         runden=None,
@@ -408,7 +448,7 @@ class ParametrischeFunktion:
         """Löst f_c(x) = ziel_wert für konkreten Parameterwert c
 
         Args:
-            parameter_wert: Wert für den Parameter
+            parameter_wert: Wert für den Parameter (float) oder Dict mit mehreren Parametern
             ziel_wert: Zielwert der Gleichung (Standard 0)
             real: Nur reelle Lösungen zurückgeben (Standard True)
             runden: Anzahl Nachkommastellen für Rundung (None = exakt)
@@ -424,20 +464,35 @@ class ParametrischeFunktion:
             >>> f.löse_für_x(-1, 0)    # Löst -x² + x = 0
         """
         try:
-            # Finde Parameter-Namen automatisch
-            parameter_objekte = [
-                k for k in self.koeffizienten if isinstance(k, Parameter)
-            ]
-            if not parameter_objekte:
-                raise ValueError("Keine Parameter in der Funktion gefunden")
+            # Konvertiere parameter_wert zu Dictionary
+            if isinstance(parameter_wert, (int, float)):
+                if not self.parameter_objekte:
+                    raise ValueError("Die Funktion hat keine Parameter")
+                parameter_dict = {self.parameter_objekte[0].name: parameter_wert}
+            elif isinstance(parameter_wert, dict):
+                parameter_dict = parameter_wert
+            else:
+                raise ValueError(
+                    "parameter_wert muss eine Zahl oder ein Dictionary sein"
+                )
 
             # Erzeuge konkrete Funktion und löse Gleichung
-            param_name = parameter_objekte[0].name
-            f_konkret = self.mit_wert(**{param_name: parameter_wert})
+            f_konkret = self.mit_wert(**parameter_dict)
             return f_konkret.löse_gleichung(ziel_wert, real, runden)
+        except ValueError as e:
+            # Schülerfreundliche Fehlermeldung
+            if "Es fehlen Parameter-Werte" in str(e):
+                raise e
+            else:
+                raise ValueError(
+                    f"Konnte die Gleichung nicht lösen: {str(e)}. "
+                    f"Bitte prüfe deine Parameterwerte und versuche es erneut."
+                )
         except Exception as e:
-            print(f"Fehler bei löse_für_x mit parameter_wert={parameter_wert}: {e}")
-            return []
+            raise ValueError(
+                f"Ein unerwarteter Fehler ist aufgetreten: {str(e)}. "
+                f"Bitte prüfe deine Eingabe und versuche es erneut."
+            )
 
     def löse_für_parameter(
         self, x_wert: float | str | sp.Expr, ziel_wert: float = 0
@@ -507,21 +562,32 @@ class ParametrischeFunktion:
         Beispiele:
             >>> x = Variable("x")
             >>> a = Parameter("a")
-            >>> f = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
-            >>> f_strich = f.ableitung()  # 2*a*x + 1
+            >>> b = Parameter("b")
+            >>> f = ParametrischeFunktion([a, b, 0], [x])  # ax² + bx
+            >>> f_strich = f.ableitung()  # 2ax + b
+            >>> f_strich_strich = f.ableitung(2)  # 2a
+
+        Didaktischer Hinweis:
+            Diese Methode ist besonders nützlich, um Schülern zu zeigen,
+            wie sich die Koeffizienten einer Funktion beim Ableiten verändern.
+            Bei quadratischen Funktionen wird linear, bei linearen wird konstant.
         """
         if ordnung <= 0:
             return self
 
         # Berechne Ableitung mit SymPy
-        abgeleitet = sp.diff(self.term_sympy, self.variablen[0].symbol, ordnung)
+        abgeleitet_sympy = sp.diff(self.term_sympy, self.variablen[0].symbol, ordnung)
 
-        # Konvertiere zurück zur Koeffizienten-Darstellung
-        # Dies ist eine Vereinfachung - in der Praxis müsste man
-        # den abgeleiteten Term analysieren
-        raise NotImplementedError(
-            "Symbolische Ableitung noch nicht vollständig implementiert"
-        )
+        # Erstelle neue ParametrischeFunktion mit dem abgeleiteten Term
+        neue_funktion = self.__class__.__new__(self.__class__)
+        neue_funktion._term_sympy = abgeleitet_sympy
+        neue_funktion.variablen = self.variablen.copy()
+        neue_funktion.parameter_objekte = self.parameter_objekte.copy()
+        neue_funktion._parameternamen = self._parameternamen.copy()
+        neue_funktion._variablennamen = self._variablennamen.copy()
+        neue_funktion._koeffizienten_cache = None
+
+        return neue_funktion
 
     def nullstellen(self) -> list[sp.Expr | tuple[sp.Expr, str]]:
         """
@@ -548,7 +614,6 @@ class ParametrischeFunktion:
                     # Prüfe auf Division durch Parameter
                     if loesung.has(sp.Symbol):
                         # Finde alle Nenner mit Parametern
-                        nenner = []
                         for symbol in loesung.free_symbols:
                             if symbol.name in self._parameternamen:
                                 # Füge Bedingung "Parameter ≠ 0" hinzu
@@ -622,7 +687,7 @@ class ParametrischeFunktion:
                             )
                         else:
                             extremstellen_mit_bedingungen.append((loesung, art))
-                    except:
+                    except Exception:
                         extremstellen_mit_bedingungen.append((loesung, "Extremstelle"))
 
             return extremstellen_mit_bedingungen
@@ -670,7 +735,7 @@ class ParametrischeFunktion:
                             )
                         else:
                             wendepunkte_mit_bedingungen.append((loesung, y_wert, art))
-                    except:
+                    except Exception:
                         wendepunkte_mit_bedingungen.append((loesung, 0, "Wendepunkt"))
 
             return wendepunkte_mit_bedingungen
@@ -687,3 +752,28 @@ def create_variable(name: str) -> Variable:
 def create_parameter(name: str) -> Parameter:
     """Erstellt einen Parameter (Convenience-Funktion)"""
     return Parameter(name)
+
+
+# Didaktische Exception-Klassen
+class SchulAnalysisError(Exception):
+    """Basis-Exception für das Schul-Analysis Framework"""
+
+    pass
+
+
+class ParameterFehler(SchulAnalysisError):
+    """Exception für Parameter-bezogene Fehler"""
+
+    pass
+
+
+class EingabeFehler(SchulAnalysisError):
+    """Exception für Eingabefehler"""
+
+    pass
+
+
+class BerechnungsFehler(SchulAnalysisError):
+    """Exception für Berechnungsfehler"""
+
+    pass
