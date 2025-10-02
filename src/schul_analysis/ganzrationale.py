@@ -30,6 +30,28 @@ DEFAULT_TOLERANCE = 1e-9
 MAX_DERIVATIVE_ORDER_CHECK = 15
 
 
+def _runde_wert(wert, runden=None):
+    """Hilfsfunktion zum Rundung von SymPy-Werten
+
+    Args:
+        wert: SymPy-Ausdruck oder numerischer Wert
+        runden: Anzahl Nachkommastellen (None = exakt, int = gerundet)
+
+    Returns:
+        Exakter Wert (wenn runden=None) oder gerundeter float-Wert
+    """
+    if runden is None:
+        return wert  # Behalte SymPy-Objekt bei
+
+    try:
+        # Konvertiere zu float und runde
+        float_wert = float(wert)
+        return round(float_wert, runden)
+    except (TypeError, ValueError):
+        # Bei Konvertierungsfehler, gebe Original zurück
+        return wert
+
+
 class GanzrationaleFunktion:
     """
     Repräsentiert eine ganzrationale Funktion (Polynom) mit verschiedenen
@@ -344,15 +366,15 @@ class GanzrationaleFunktion:
 
         return neue_funktion
 
-    def nullstellen(self, real: bool = True, exakt: bool = True) -> list[sp.Basic]:
+    def nullstellen(self, real: bool = True, runden=None) -> list[sp.Basic]:
         """Berechnet die Nullstellen der Funktion.
 
         Args:
             real: Nur reelle Nullstellen zurückgeben
-            exakt: Exakte symbolische Ergebnisse beibehalten (Standard: True)
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
         Returns:
-            Liste der Nullstellen als exakte symbolische Ausdrücke oder Zahlen
+            Liste der Nullstellen als exakte symbolische Ausdrücke oder gerundete Zahlen
         """
         try:
             # Für höhere Grade (≥ 3) zuerst versuchen, rationale Nullstellen zu finden
@@ -367,10 +389,7 @@ class GanzrationaleFunktion:
 
                     # Gefundene rationale Nullstellen hinzufügen
                     for nullstelle in rationale_nullstellen:
-                        if exakt:
-                            nullstellen_liste.append(nullstelle)
-                        else:
-                            nullstellen_liste.append(float(nullstelle))
+                        nullstellen_liste.append(_runde_wert(nullstelle, runden))
 
                     # Restpolynom lösen (kann quadratisch oder höher sein)
                     if rest_polynom != 1 and rest_polynom.degree(self.x) > 0:
@@ -380,12 +399,18 @@ class GanzrationaleFunktion:
                             if real and not lösung.is_real:
                                 continue
 
-                            if exakt:
-                                nullstellen_liste.append(lösung)
-                            elif lösung.is_real:
-                                nullstellen_liste.append(float(lösung))
+                            if lösung.is_real:
+                                nullstellen_liste.append(_runde_wert(lösung, runden))
                             else:
-                                nullstellen_liste.append(complex(lösung))
+                                # Komplexe Zahlen werden immer zu floats konvertiert
+                                komplex_wert = complex(lösung)
+                                if runden is not None:
+                                    # Runde Real- und Imaginärteil
+                                    komplex_wert = complex(
+                                        round(komplex_wert.real, runden),
+                                        round(komplex_wert.imag, runden),
+                                    )
+                                nullstellen_liste.append(komplex_wert)
 
                     # Sortiere Nullstellen (reelle zuerst, dann komplexe nach Realteil)
                     reelle_nullstellen = [
@@ -415,12 +440,18 @@ class GanzrationaleFunktion:
                 if real and not lösung.is_real:
                     continue
 
-                if exakt:
-                    nullstellen_liste.append(lösung)
-                elif lösung.is_real:
-                    nullstellen_liste.append(float(lösung))
+                if lösung.is_real:
+                    nullstellen_liste.append(_runde_wert(lösung, runden))
                 else:
-                    nullstellen_liste.append(complex(lösung))
+                    # Komplexe Zahlen werden immer zu floats konvertiert
+                    komplex_wert = complex(lösung)
+                    if runden is not None:
+                        # Runde Real- und Imaginärteil
+                        komplex_wert = complex(
+                            round(komplex_wert.real, runden),
+                            round(komplex_wert.imag, runden),
+                        )
+                    nullstellen_liste.append(komplex_wert)
 
             # Sortiere Nullstellen (reelle zuerst, dann komplexe nach Realteil)
             reelle_nullstellen = [
@@ -479,14 +510,21 @@ class GanzrationaleFunktion:
             return "Unbestimmbar"
 
     def extremstellen(
-        self, typ: bool = True
+        self, typ: bool = True, runden=None
     ) -> list[sp.Basic] | list[tuple[sp.Basic, str]]:
         """Berechnet die Extremstellen der Funktion.
 
         Args:
             typ: Wenn True, liefert (x_wert, art) Tupel. Wenn False, nur x_werte.
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
         """
         stationäre_stellen = self._berechne_stationäre_stellen()
+
+        # Wende Rundung an wenn nötig
+        if runden is not None:
+            stationäre_stellen = [
+                _runde_wert(stelle, runden) for stelle in stationäre_stellen
+            ]
 
         if not typ:
             return stationäre_stellen
@@ -559,14 +597,19 @@ class GanzrationaleFunktion:
             return "Unbestimmbar"
 
     def wendestellen(
-        self, typ: bool = True
+        self, typ: bool = True, runden=None
     ) -> list[sp.Basic] | list[tuple[sp.Basic, str]]:
         """Berechnet die Wendestellen der Funktion.
 
         Args:
             typ: Wenn True, liefert (x_wert, krümmungsänderung) Tupel. Wenn False, nur x_werte.
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
         """
         wendestellen = self._berechne_wendestellen()
+
+        # Wende Rundung an wenn nötig
+        if runden is not None:
+            wendestellen = [_runde_wert(stelle, runden) for stelle in wendestellen]
 
         if not typ:
             return wendestellen
@@ -580,20 +623,22 @@ class GanzrationaleFunktion:
         return klassifizierte_wendestellen
 
     def extrempunkte(
-        self, typ: bool = True
+        self, typ: bool = True, runden=None
     ) -> list[tuple[sp.Basic, sp.Basic]] | list[tuple[sp.Basic, sp.Basic, str]]:
         """Berechnet die Extrempunkte (x, y-Koordinaten).
 
         Args:
             typ: Wenn True, liefert (x, y, art) Tupel. Wenn False, nur (x, y) Tupel.
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
         """
         # Hole x-Koordinaten
-        extremstellen = self.extremstellen(typ=False)
+        extremstellen = self.extremstellen(typ=False, runden=runden)
 
         # Berechne y-Koordinaten
         punkte = []
         for x_wert in extremstellen:
             y_wert = self.wert(float(x_wert))
+            y_wert = _runde_wert(y_wert, runden)
             punkte.append((x_wert, y_wert))
 
         if not typ:
@@ -608,20 +653,22 @@ class GanzrationaleFunktion:
         return klassifizierte_punkte
 
     def wendepunkte(
-        self, typ: bool = True
+        self, typ: bool = True, runden=None
     ) -> list[tuple[sp.Basic, sp.Basic]] | list[tuple[sp.Basic, sp.Basic, str]]:
         """Berechnet die Wendepunkte (x, y-Koordinaten).
 
         Args:
             typ: Wenn True, liefert (x, y, krümmungsänderung) Tupel. Wenn False, nur (x, y) Tupel.
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
         """
         # Hole x-Koordinaten
-        wendestellen = self.wendestellen(typ=False)
+        wendestellen = self.wendestellen(typ=False, runden=runden)
 
         # Berechne y-Koordinaten
         punkte = []
         for x_wert in wendestellen:
             y_wert = self.wert(float(x_wert))
+            y_wert = _runde_wert(y_wert, runden)
             punkte.append((x_wert, y_wert))
 
         if not typ:

@@ -14,11 +14,12 @@ from .taylorpolynom import Taylorpolynom
 # ====================
 
 
-def Nullstellen(funktion) -> list:
+def Nullstellen(funktion, runden=None) -> list:
     """Berechnet die Nullstellen einer Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion oder GebrochenRationaleFunktion
+        runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
     Returns:
         list: Liste der Nullstellen
@@ -26,13 +27,17 @@ def Nullstellen(funktion) -> list:
     Beispiele:
         >>> f = GanzrationaleFunktion("x^2-4")
         >>> Nullstellen(f)
+        [-2, 2]
+        >>> Nullstellen(f, runden=2)
         [-2.0, 2.0]
 
         >>> g = GebrochenRationaleFunktion("(x^2-1)/(x-2)")
         >>> Nullstellen(g)
+        [-1, 1]
+        >>> Nullstellen(g, runden=0)
         [-1.0, 1.0]
     """
-    return funktion.nullstellen()
+    return funktion.nullstellen(runden=runden)
 
 
 def Polstellen(funktion) -> list:
@@ -193,13 +198,14 @@ def Schnittpunkt(f1, f2):
     return schnittpunkte
 
 
-def Extremstellen(funktion, typ: bool = True):
+def Extremstellen(funktion, typ: bool = True, runden=None):
     """Berechnet die Extremstellen einer Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion
         typ: Wenn True (Standard), werden die Extremstellen klassifiziert.
              Wenn False, werden nur die x-Werte zurückgegeben.
+        runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
     Returns:
         list: Liste von Tupeln (x, art) mit den Extremstellen (typ=True)
@@ -211,17 +217,20 @@ def Extremstellen(funktion, typ: bool = True):
         [(-1, 'Maximum'), (1, 'Minimum')]
         >>> Extremstellen(f, typ=False)
         [-1, 1]
+        >>> Extremstellen(f, runden=2)
+        [(-1.0, 'Maximum'), (1.0, 'Minimum')]
     """
-    return funktion.extremstellen(typ=typ)
+    return funktion.extremstellen(typ=typ, runden=runden)
 
 
-def Wendestellen(funktion, typ: bool = True):
+def Wendestellen(funktion, typ: bool = True, runden=None):
     """Berechnet die Wendestellen einer Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion
         typ: Wenn True (Standard), werden die Wendestellen klassifiziert.
              Wenn False, werden nur die x-Werte zurückgegeben.
+        runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
     Returns:
         list: Liste von Tupeln (x, art) mit den Wendestellen (typ=True)
@@ -233,6 +242,8 @@ def Wendestellen(funktion, typ: bool = True):
         [(0, 'L→R')]
         >>> Wendestellen(f, typ=False)
         [0]
+        >>> Wendestellen(f, runden=3)
+        [(0.0, 'L→R')]
 
         >>> g = GanzrationaleFunktion("x^4-4x^3")
         >>> Wendestellen(g)
@@ -240,16 +251,17 @@ def Wendestellen(funktion, typ: bool = True):
         >>> Wendestellen(g, typ=False)
         [0, 2]
     """
-    return funktion.wendestellen(typ=typ)
+    return funktion.wendestellen(typ=typ, runden=runden)
 
 
-def Extrempunkte(funktion, typ: bool = True):
+def Extrempunkte(funktion, typ: bool = True, runden=None):
     """Berechnet die Extrempunkte einer Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion
         typ: Wenn True (Standard), werden die Extrempunkte klassifiziert.
              Wenn False, werden nur die Koordinaten zurückgegeben.
+        runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
     Returns:
         list: Liste von Tupeln (x, y, art) mit den Extrempunkten (typ=True)
@@ -261,8 +273,10 @@ def Extrempunkte(funktion, typ: bool = True):
         [(-1, 2.0, 'Maximum'), (1, -2.0, 'Minimum')]
         >>> Extrempunkte(f, typ=False)
         [(-1, 2.0), (1, -2.0)]
+        >>> Extrempunkte(f, runden=4)
+        [(-1.0, 2.0, 'Maximum'), (1.0, -2.0, 'Minimum')]
     """
-    return funktion.extrempunkte(typ=typ)
+    return funktion.extrempunkte(typ=typ, runden=runden)
 
 
 def Wendepunkte(funktion):
