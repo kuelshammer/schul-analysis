@@ -344,17 +344,15 @@ class GanzrationaleFunktion:
 
         return neue_funktion
 
-    def nullstellen(
-        self, real: bool = True, exakt: bool = False
-    ) -> list[float | sp.Basic]:
+    def nullstellen(self, real: bool = True, exakt: bool = True) -> list[sp.Basic]:
         """Berechnet die Nullstellen der Funktion.
 
         Args:
             real: Nur reelle Nullstellen zurückgeben
-            exakt: Exakte symbolische Ergebnisse beibehalten
+            exakt: Exakte symbolische Ergebnisse beibehalten (Standard: True)
 
         Returns:
-            Liste der Nullstellen als float oder symbolische Ausdrücke
+            Liste der Nullstellen als exakte symbolische Ausdrücke oder Zahlen
         """
         try:
             # Für höhere Grade (≥ 3) zuerst versuchen, rationale Nullstellen zu finden
@@ -389,12 +387,25 @@ class GanzrationaleFunktion:
                             else:
                                 nullstellen_liste.append(complex(lösung))
 
-                    return sorted(
-                        nullstellen_liste,
-                        key=lambda x: float(x)
+                    # Sortiere Nullstellen (reelle zuerst, dann komplexe nach Realteil)
+                    reelle_nullstellen = [
+                        x
+                        for x in nullstellen_liste
                         if hasattr(x, "is_real") and x.is_real
-                        else complex(x),
-                    )
+                    ]
+                    komplexe_nullstellen = [
+                        x
+                        for x in nullstellen_liste
+                        if not hasattr(x, "is_real") or not x.is_real
+                    ]
+
+                    # Sortiere reelle Nullstellen
+                    reelle_nullstellen.sort(key=lambda x: float(x))
+
+                    # Sortiere komplexe Nullstellen nach Realteil
+                    komplexe_nullstellen.sort(key=lambda x: complex(x).real)
+
+                    return reelle_nullstellen + komplexe_nullstellen
 
             # Für niedrigere Grade oder wenn Faktorisierung nicht funktioniert
             lösungen = solve(self.term_sympy, self.x)
@@ -1434,7 +1445,7 @@ class GanzrationaleFunktion:
 
     def __repr__(self) -> str:
         """Repräsentation der Funktion"""
-        return f"GanzrationaleFunktion('{self.term()}')"
+        return self.term()
 
     def __eq__(self, other) -> bool:
         """Vergleich zweier Funktionen auf Gleichheit"""

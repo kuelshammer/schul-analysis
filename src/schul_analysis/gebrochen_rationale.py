@@ -279,7 +279,7 @@ class GebrochenRationaleFunktion:
 
     def __str__(self) -> str:
         """String-Repräsentation"""
-        return f"GebrochenRationaleFunktion('{self.term()}')"
+        return self.term()
 
     def __repr__(self) -> str:
         """Repräsentation für debugging"""
