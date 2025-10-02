@@ -391,29 +391,58 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
                     )
                 )
 
-    # Layout-Optionen - explizite Range-Setzung für sofortige Wirkung
-    fig.update_layout(
-        **config.get_plot_config(),
-        title=titel or f"Funktion: f(x) = {funktion.term()}",
-        xaxis={
-            **config.get_axis_config(mathematical_mode=True),
-            "range": [float(x_min), float(x_max)],  # Explizite Konvertierung zu float
-            "title": "x",
-            "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
-        },
-        yaxis={
-            **config.get_axis_config(mathematical_mode=False),
-            "range": [float(y_min), float(y_max)],  # Explizite Konvertierung zu float
-            "title": "f(x)",
-            "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
-        },
-        showlegend=True,
-        hovermode="x unified",
+    # 🔥 MARIMO-KOMPATIBLE KONFIGURATION 🔥
+    layout_config = config.get_plot_config()
+    layout_config.update(
+        {
+            "title": titel or f"Funktion: f(x) = {funktion.term()}",
+            "xaxis": {
+                **config.get_axis_config(mathematical_mode=True),
+                "range": [
+                    float(x_min),
+                    float(x_max),
+                ],  # Explizite Konvertierung zu float
+                "title": "x",
+                "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
+                # Marimo-spezifische Parameter um Überschreibung zu verhindern
+                "uirevision": True,  # Verhindert dass Marimo die Layout-Einstellungen zurücksetzt
+                "constraintoward": "center",  # Zentriert den Bereich
+                "fixedrange": False,  # Erlaubt Zoom aber behält ursprünglichen Bereich
+            },
+            "yaxis": {
+                **config.get_axis_config(mathematical_mode=False),
+                "range": [
+                    float(y_min),
+                    float(y_max),
+                ],  # Explizite Konvertierung zu float
+                "title": "f(x)",
+                "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
+                # Marimo-spezifische Parameter um Überschreibung zu verhindern
+                "uirevision": True,  # Verhindert dass Marimo die Layout-Einstellungen zurücksetzt
+                "constraintoward": "center",  # Zentriert den Bereich
+                "fixedrange": False,  # Erlaubt Zoom aber behält ursprünglichen Bereich
+            },
+            "showlegend": True,
+            "hovermode": "x unified",
+            # Globale Marimo-Kompatibilitätseinstellungen
+            "uirevision": True,  # Verhindert dass Marimo das gesamte Layout zurücksetzt
+        }
     )
 
-    # Zusätzliche Sicherheit: Erzwinge Range-Update
-    fig.update_xaxes(range=[float(x_min), float(x_max)])
-    fig.update_yaxes(range=[float(y_min), float(y_max)])
+    fig.update_layout(layout_config)
+
+    # 🔥 MHRFACHE SICHERHEITSMASSNAHMEN FÜR MARIMO 🔥
+    # Erzwinge Range-Update mit verschiedenen Methoden
+    fig.update_xaxes(
+        range=[float(x_min), float(x_max)], autorange=False, constraintoward="center"
+    )
+    fig.update_yaxes(
+        range=[float(y_min), float(y_max)], autorange=False, constraintoward="center"
+    )
+
+    # Zusätzliche Sicherheitsmaßnahme: Setze die Ranges nochmal explizit
+    fig.layout.xaxis.range = [float(x_min), float(x_max)]
+    fig.layout.yaxis.range = [float(y_min), float(y_max)]
 
     return fig
 

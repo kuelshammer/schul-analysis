@@ -1564,37 +1564,44 @@ class GanzrationaleFunktion:
     # 🔥 PLOTLY VISUALISIERUNGSMETHODEN 🔥
     # ============================================
 
+    def graph(self, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs) -> Any:
+        """Einheitliche Methode zur Darstellung der Funktion mit Plotly
+
+        Args:
+            x_min: Untere x-Grenze (Standard: None = automatisch)
+            x_max: Obere x-Grenze (Standard: None = automatisch)
+            y_min: Untere y-Grenze (Standard: None = automatisch)
+            y_max: Obere y-Grenze (Standard: None = automatisch)
+            **kwargs: Zusätzliche Parameter für die Plotly-Darstellung
+
+        Returns:
+            Marimo UI Plotly Objekt für interaktive Darstellung
+        """
+        from . import Graph
+
+        # Verwende die zentrale Graph-Funktion für intelligente Skalierung
+        fig = Graph(self, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
+
+        # Marimo-spezifisches Wrapping für optimale Darstellung
+        return mo.ui.plotly(fig)
+
     def zeige_funktion_plotly(self, x_range: tuple = None, punkte: int = 200) -> Any:
-        """Zeigt interaktiven Funktionsgraph mit Plotly - MATHEMATISCH KORREKT"""
+        """[DEPRECATED] Zeigt interaktiven Funktionsgraph mit Plotly - MATHEMATISCH KORREKT
+        Bitte verwende stattdessen f.graph() für konsistente API.
+        """
+        import warnings
+
+        warnings.warn(
+            "zeige_funktion_plotly() is deprecated. Use f.graph() instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if x_range is None:
             x_range = config.DEFAULT_PLOT_RANGE
 
-        x = np.linspace(x_range[0], x_range[1], punkte)
-        y = [self.wert(xi) for xi in x]
-
-        fig = px.line(
-            x=x,
-            y=y,
-            title=f"Funktionsgraph: f(x) = {self.term()}",
-            labels={"x": "x", "y": f"f(x) = {self.term()}"},
-        )
-
-        # 🔥 PERFECT MATHEMATICAL CONFIGURATION 🔥
-        fig.update_layout(
-            **config.get_plot_config(),
-            xaxis={
-                **config.get_axis_config(mathematical_mode=True),
-                "range": x_range,
-                "title": "x",
-            },
-            yaxis={
-                **config.get_axis_config(mathematical_mode=False),
-                "title": f"f(x) = {self.term()}",
-            },
-            showlegend=False,
-        )
-
-        return mo.ui.plotly(fig)
+        # Verwende die neue graph() Methode
+        return self.graph(x_min=x_range[0], x_max=x_range[1])
 
     def __str__(self) -> str:
         """String-Darstellung der Funktion"""

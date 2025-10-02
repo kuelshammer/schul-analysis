@@ -6,6 +6,7 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import re
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects as go
@@ -476,6 +477,24 @@ class GebrochenRationaleFunktion:
         """Positiv: +f"""
         return self
 
+    def graph(self, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs) -> Any:
+        """Einheitliche Methode zur Darstellung der Funktion mit Plotly
+
+        Args:
+            x_min: Untere x-Grenze (Standard: None = automatisch)
+            x_max: Obere x-Grenze (Standard: None = automatisch)
+            y_min: Untere y-Grenze (Standard: None = automatisch)
+            y_max: Obere y-Grenze (Standard: None = automatisch)
+            **kwargs: Zusätzliche Parameter für die Plotly-Darstellung
+
+        Returns:
+            Plotly-Figur für die Darstellung
+        """
+        from . import Graph
+
+        # Verwende die zentrale Graph-Funktion für intelligente Skalierung
+        return Graph(self, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
+
     def plotly(
         self,
         x_range: tuple = (-5, 5),
@@ -483,121 +502,28 @@ class GebrochenRationaleFunktion:
         zeige_polstellen: bool = True,
         zeige_asymptoten: bool = True,
     ) -> go.Figure:
-        """
-        Erzeugt eine Plotly-Visualisierung der gebrochen-rationalen Funktion.
+        """[DEPRECATED] Erzeugt eine Plotly-Visualisierung der gebrochen-rationalen Funktion.
+        Bitte verwende stattdessen f.graph() für konsistente API.
 
         Args:
             x_range: Tupel (xmin, xmax) für den x-Bereich
-            punkte: Anzahl der zu berechnenden Punkte
+            punkte: Anzahl der zu berechneten Punkte
             zeige_polstellen: Ob vertikale Asymptoten bei Polstellen eingezeichnet werden sollen
             zeige_asymptoten: Ob horizontale/schiefe Asymptoten eingezeichnet werden sollen
 
         Returns:
             Plotly Figure-Objekt
         """
-        xmin, xmax = x_range
+        import warnings
 
-        # Erstelle x-Werte für die Berechnung
-        x_werte = np.linspace(xmin, xmax, punkte)
-        y_werte = []
-        gueltige_x = []
-
-        # Berechne Funktionswerte, vermeide Polstellen
-        polstellen = self.polstellen()
-
-        for x in x_werte:
-            try:
-                # Prüfe, ob x nahe einer Polstelle ist
-                ist_nahe_polstelle = any(abs(x - ps) < 0.1 for ps in polstellen)
-                if ist_nahe_polstelle:
-                    continue
-
-                y = self.wert(x)
-                y_werte.append(y)
-                gueltige_x.append(x)
-            except ValueError:
-                # Überspringe Polstellen
-                continue
-
-        # Erstelle die Figur
-        fig = go.Figure()
-
-        # Hauptkurve
-        fig.add_trace(
-            go.Scatter(
-                x=gueltige_x,
-                y=y_werte,
-                mode="lines",
-                name=f"f(x) = {self.term()}",
-                line={"color": "blue", "width": 3},
-            )
+        warnings.warn(
+            "plotly() is deprecated. Use f.graph() instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
 
-        # Füge Polstellen als vertikale Asymptoten hinzu
-        if zeige_polstellen:
-            for ps in polstellen:
-                if xmin <= ps <= xmax:
-                    # Berechne y-Werte für die Asymptote
-                    y_asymptote_range = np.linspace(
-                        min(y_werte) if y_werte else -10,
-                        max(y_werte) if y_werte else 10,
-                        100,
-                    )
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[ps] * len(y_asymptote_range),
-                            y=y_asymptote_range,
-                            mode="lines",
-                            line={"color": "red", "width": 2, "dash": "dash"},
-                            name=f"Polstelle x={ps:.2f}",
-                            showlegend=False,
-                        )
-                    )
-
-        # Füge horizontale/schiefe Asymptoten hinzu
-        if zeige_asymptoten:
-            asymptoten = self._berechne_asymptoten()
-            for asymptote in asymptoten:
-                if asymptote["typ"] == "horizontal":
-                    y_const = asymptote["y"]
-                    fig.add_hline(
-                        y=y_const,
-                        line_dash="dash",
-                        line_color="green",
-                        annotation_text=f"y = {y_const:.2f}",
-                    )
-                elif asymptote["typ"] == "schief":
-                    # Berechne Punkte für die schiefe Asymptote
-                    x_asymptote = np.linspace(xmin, xmax, 100)
-                    y_asymptote = (
-                        asymptote["steigung"] * x_asymptote + asymptote["y_offset"]
-                    )
-
-                    fig.add_trace(
-                        go.Scatter(
-                            x=x_asymptote,
-                            y=y_asymptote,
-                            mode="lines",
-                            line={"color": "green", "width": 2, "dash": "dash"},
-                            name=f"Asymptote: y = {asymptote['steigung']:.2f}x + {asymptote['y_offset']:.2f}",
-                            showlegend=False,
-                        )
-                    )
-
-        # Layout-Optionen
-        fig.update_layout(
-            title=f"Gebrochen-rationale Funktion: {self.term()}",
-            xaxis_title="x",
-            yaxis_title="f(x)",
-            showlegend=True,
-            width=800,
-            height=600,
-            xaxis={"showgrid": True, "zeroline": True},
-            yaxis={"showgrid": True, "zeroline": True},
-        )
-
-        return fig
+        # Verwende die neue graph() Methode
+        return self.graph(x_min=x_range[0], x_max=x_range[1])
 
     def _berechne_asymptoten(self) -> list[dict]:
         """
