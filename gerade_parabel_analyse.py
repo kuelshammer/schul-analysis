@@ -12,8 +12,8 @@ def _():
 
 @app.cell
 def _():
-    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen, Extrempunkte, Graph, Wendepunkte
-    return GanzrationaleFunktion, Graph, Wendepunkte
+    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen, Extrempunkte, Graph, Wendepunkte, a, x, ParametrischeFunktion
+    return GanzrationaleFunktion, Graph, ParametrischeFunktion, Wendepunkte
 
 
 @app.cell
@@ -41,7 +41,8 @@ def _(GanzrationaleFunktion):
 
 
 @app.cell
-def _():
+def _(ParametrischeFunktion):
+    h = ParametrischeFunktion()
     return
 
 

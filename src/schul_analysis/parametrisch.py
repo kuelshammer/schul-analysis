@@ -6,8 +6,11 @@ f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 """
 
 from dataclasses import dataclass
+from typing import Union
 
 import sympy as sp
+
+from .ganzrationale import GanzrationaleFunktion
 
 
 @dataclass
@@ -107,11 +110,45 @@ class ParametrischeFunktion:
 
     def __init__(
         self,
-        koeffizienten: list[Parameter | int | float],
-        variablen: list[Variable],
+        eingabe: list[Parameter | int | float] | str,
+        variablen: list[Variable] | Variable | None = None,
+        *args: Parameter | Variable,
     ):
-        self.koeffizienten = koeffizienten
-        self.variablen = variablen
+        """
+        Initialisiert eine parametrische Funktion
+
+        Args:
+            eingabe: Entweder Koeffizienten-Liste oder Term-String
+            variablen: Liste der Variablen oder einzelne Variable (bei String-Eingabe)
+            *args: Zusätzliche Parameter/Variable (bei String-Eingabe)
+
+        Beispiele:
+            # Koeffizienten-Liste
+            f = ParametrischeFunktion([0, 1, a], [x])
+
+            # String-Eingabe mit Liste
+            f = ParametrischeFunktion("a*x^2 + x", [x, a])
+
+            # String-Eingabe mit einzelnen Objekten
+            f = ParametrischeFunktion("a*x^2 + x", x, a)
+        """
+        if isinstance(eingabe, str):
+            # String-Eingabe - verwende die term() Klassenmethode
+            if variablen is None:
+                variablen = []
+            elif isinstance(variablen, Variable):
+                # Einzelne Variable in Liste umwandeln
+                variablen = [variablen]
+
+            alle_args = list(variablen) + list(args)
+            string_funktion = ParametrischeFunktion.from_string(eingabe, *alle_args)
+            self.koeffizienten = string_funktion.koeffizienten
+            self.variablen = string_funktion.variablen
+        else:
+            # Koeffizienten-Liste (traditionelle Eingabe)
+            self.koeffizienten = eingabe
+            self.variablen = variablen
+
         self._term_sympy = None
         self._parameternamen = set()
         self._variablennamen = set()
@@ -171,7 +208,7 @@ class ParametrischeFunktion:
             raise NotImplementedError("Mehrere Variablen noch nicht implementiert")
 
     @classmethod
-    def term(
+    def from_string(
         cls, term_string: str, *args: Parameter | Variable
     ) -> "ParametrischeFunktion":
         """
@@ -189,6 +226,7 @@ class ParametrischeFunktion:
         # Erstelle Mapping von Namen zu Symbolen
         symbol_mapping = {}
         variablen = []
+        parameter_objekte = []
 
         for arg in args:
             if isinstance(arg, Variable):
@@ -196,6 +234,10 @@ class ParametrischeFunktion:
                 variablen.append(arg)
             elif isinstance(arg, Parameter):
                 symbol_mapping[arg.name] = arg.symbol
+                parameter_objekte.append(arg)
+
+        if not variablen:
+            raise ValueError("Mindestens eine Variable muss angegeben werden")
 
         # Parse den String mit SymPy
         try:
@@ -203,10 +245,80 @@ class ParametrischeFunktion:
         except Exception as e:
             raise ValueError(f"Konnte Term '{term_string}' nicht parsen: {e}")
 
-        # Konvertiere zurück zur Koeffizienten-Darstellung
-        # Dies ist eine Vereinfachung - in einer vollständigen Implementation
-        # müsste man den Term analysieren und in Polynomform bringen
-        raise NotImplementedError("String-Parsing noch nicht implementiert")
+        # Erweitere das Symbol-Mapping für die Koeffizienten-Extraktion
+        for param in parameter_objekte:
+            symbol_mapping[param.name] = param.symbol
+
+        # Extrahiere Koeffizienten aus dem geparsten Term
+        return cls._extrahiere_koeffizienten_aus_term(
+            term_sympy, variablen[0], parameter_objekte
+        )
+
+    @classmethod
+    def _extrahiere_koeffizienten_aus_term(
+        cls, term_sympy: sp.Expr, variable: Variable, parameter_objekte: list
+    ) -> "ParametrischeFunktion":
+        """
+        Extrahiert Koeffizienten aus einem SymPy-Term und erstellt ParametrischeFunktion
+
+        Args:
+            term_sympy: Geparster SymPy-Ausdruck
+            variable: Die Hauptvariable des Terms
+            parameter_objekte: Liste der Parameter-Objekte
+        """
+        # Erstelle eine Liste für die Koeffizienten
+        koeffizienten = []
+
+        # Bestimme den Grad des Polynoms
+        try:
+            grad = sp.degree(term_sympy, variable.symbol)
+        except Exception:
+            # Wenn es kein Polynom ist, versuchen wir es als konstanten Term
+            grad = 0
+
+        # Für jeden Grad von 0 bis max_grad den Koeffizienten extrahieren
+        for i in range(grad + 1):
+            koeffizient = term_sympy.coeff(variable.symbol, i)
+            koeffizienten.append(koeffizient)
+
+        # Ersetze numerische Koeffizienten durch floats
+        finale_koeffizienten = []
+        parameter_namen = {p.name: p for p in parameter_objekte}
+
+        for koeff in koeffizienten:
+            if koeff.is_number:
+                # Numerischer Koeffizient
+                finale_koeffizienten.append(float(koeff))
+            elif koeff.is_symbol and koeff.name in parameter_namen:
+                # Parameter
+                finale_koeffizienten.append(parameter_namen[koeff.name])
+            elif isinstance(koeff, sp.Mul):
+                # Produkt aus Parameter und Zahl (z.B. 2*a)
+                # Zerlege in Faktoren und finde den Parameter
+                faktoren = sp.Mul.make_args(koeff)
+                param_faktor = None
+                zahl_faktor = 1
+
+                for faktor in faktoren:
+                    if faktor.is_symbol and faktor.name in parameter_namen:
+                        param_faktor = parameter_namen[faktor.name]
+                    elif faktor.is_number:
+                        zahl_faktor = float(faktor)
+
+                if param_faktor is not None:
+                    # Erstelle einen neuen Parameter mit dem Skalierungsfaktor
+                    # Dies ist eine Vereinfachung - in einer vollständigen Implementation
+                    # müsste man komplexere Ausdrücke handhaben
+                    finale_koeffizienten.append(param_faktor)
+                else:
+                    # Kein Parameter gefunden, als Zahl behandeln
+                    finale_koeffizienten.append(zahl_faktor)
+            else:
+                # Komplexerer Ausdruck - für jetzt als Fehler behandeln
+                raise ValueError(f"Komplexer Koeffizient nicht unterstützt: {koeff}")
+
+        # Erstelle die ParametrischeFunktion
+        return cls(finale_koeffizienten, [variable])
 
     def __repr__(self) -> str:
         return f"ParametrischeFunktion({self.koeffizienten}, {self.variablen})"

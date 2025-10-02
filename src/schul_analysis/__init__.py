@@ -10,9 +10,9 @@ import plotly.graph_objects as go
 from .config import config
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
+from .parametrisch import Parameter, ParametrischeFunktion, Variable
 from .schmiegkurven import Schmiegkurve
 from .taylorpolynom import Taylorpolynom
-from .parametrisch import Variable, Parameter, ParametrischeFunktion
 
 # ====================
 # Vordefinierte Variablen und Parameter
@@ -618,8 +618,8 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
         >>> h = GanzrationaleFunktion("-x+3")
         >>> graph = Graph(f, g, h)
     """
-    import plotly.graph_objects as go
     import numpy as np
+    import plotly.graph_objects as go
 
     # 🔥 NEU: Handle multiple functions
     if not funktionen:
