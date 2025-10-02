@@ -591,29 +591,214 @@ def Graph(funktion, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs):
         >>> # Alle Grenzen manuell
         >>> graph = Graph(f, x_min=-3, x_max=3, y_min=0, y_max=10)
     """
-    # Finde interessante Punkte und berechne optimalen Bereich
-    interessante_punkte = _finde_interessante_punkte(funktion)
+    import plotly.graph_objects as go
+    import numpy as np
 
-    # Berechne x-Bereich
-    if x_min is None or x_max is None:
-        auto_x_min, auto_x_max = _berechne_optimalen_bereich(interessante_punkte)
-        if x_min is None:
-            x_min = auto_x_min
-        if x_max is None:
-            x_max = auto_x_max
+    # 🔥 NEU: Wenn alle Grenzen manuell gesetzt, verwende alten Ansatz
+    if (
+        x_min is not None
+        and x_max is not None
+        and y_min is not None
+        and y_max is not None
+    ):
+        # Verwende die alte Implementierung für manuelle Grenzen
+        interessante_punkte = _finde_interessante_punkte(funktion)
+        return _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs)
 
-    # Berechne y-Bereich
-    if y_min is None or y_max is None:
-        auto_y_min, auto_y_max = _berechne_y_bereich(
-            funktion, x_min, x_max, interessante_punkte
+    # 🔥 NEU: Intelligente Skalierung direkt implementiert (wie in f.graph())
+    fig = go.Figure()
+
+    # 🔍 Typ-Erkennung und Punkte-Sammlung
+    try:
+        if (
+            hasattr(funktion, "nullstellen")
+            and hasattr(funktion, "extremstellen")
+            and hasattr(funktion, "wendepunkte")
+        ):
+            # GanzrationaleFunktion
+            nullstellen = [float(ns) for ns in funktion.nullstellen()]
+            extremstellen = [float(ext[0]) for ext in funktion.extremstellen()]
+            wendepunkte = [float(wp[0]) for wp in funktion.wendepunkte()]
+            punkte_typ = "ganzrational"
+        else:
+            # GebrochenRationaleFunktion oder andere
+            nullstellen = []
+            extremstellen = []
+            wendepunkte = []
+            punkte_typ = "anderer"
+    except Exception:
+        # Fallback bei Fehlern
+        nullstellen, extremstellen, wendepunkte = [], [], []
+        punkte_typ = "fallback"
+
+    alle_x = nullstellen + extremstellen + wendepunkte
+
+    # 🎯 Berechne optimalen X-Bereich
+    if alle_x and len(alle_x) > 0:
+        x_min_opt, x_max_opt = min(alle_x), max(alle_x)
+        span = x_max_opt - x_min_opt
+
+        # Intelligenter Puffer basierend auf Punktdichte
+        if span > 0:
+            buffer = max(span * 0.3, 1.0)  # Mindestens 1.0 Puffer
+        else:
+            buffer = 2.0  # Standardpuffer bei gleichen Punkten
+
+        x_min_final = x_min_opt - buffer
+        x_max_final = x_max_opt + buffer
+
+        # Globale Limits
+        x_min_final = max(x_min_final, -50)
+        x_max_final = min(x_max_final, 50)
+    else:
+        # Fallback
+        x_min_final, x_max_final = -10, 10
+
+    # Override mit manuellen Werten wenn angegeben
+    if x_min is not None:
+        x_min_final = x_min
+    if x_max is not None:
+        x_max_final = x_max
+
+    # 📈 Erstelle Funktionskurve
+    x_vals = np.linspace(x_min_final, x_max_final, 200)
+
+    # 🔍 Funktion auswerten (je nach Typ)
+    try:
+        if punkte_typ == "ganzrational" and hasattr(funktion, "wert"):
+            y_vals = [funktion.wert(x) for x in x_vals]
+        else:
+            # Fallback für andere Funktionstypen
+            y_vals = [0] * len(x_vals)  # Einfache Nulllinie als Fallback
+    except Exception:
+        y_vals = [0] * len(x_vals)  # Fallback bei Auswertungsfehlern
+
+    # 📊 Berechne Y-Bereich
+    if y_vals:
+        y_min_opt, y_max_opt = min(y_vals), max(y_vals)
+        y_span = y_max_opt - y_min_opt
+        y_buffer = max(y_span * 0.1, 5.0)  # Mindestens 5.0 Puffer
+        y_min_final = y_min_opt - y_buffer
+        y_max_final = y_max_opt + y_buffer
+    else:
+        y_min_final, y_max_final = -10, 10
+
+    # Override mit manuellen Y-Werten wenn angegeben
+    if y_min is not None:
+        y_min_final = y_min
+    if y_max is not None:
+        y_max_final = y_max
+
+    # 🔵 Hauptkurve hinzufügen
+    if punkte_typ == "ganzrational":
+        fig.add_trace(
+            go.Scatter(
+                x=x_vals,
+                y=y_vals,
+                mode="lines",
+                name=funktion.term(),
+                line=dict(color="blue", width=2),
+            )
         )
-        if y_min is None:
-            y_min = auto_y_min
-        if y_max is None:
-            y_max = auto_y_max
+    else:
+        fig.add_trace(
+            go.Scatter(
+                x=x_vals,
+                y=y_vals,
+                mode="lines",
+                name="Funktion",
+                line=dict(color="blue", width=2),
+            )
+        )
 
-    # Erstelle Plotly-Figur
-    return _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs)
+    # 🔴 Interaktive Punkte hinzufügen (nur für ganzrationale Funktionen)
+    if punkte_typ == "ganzrational":
+        for ns in nullstellen:
+            fig.add_trace(
+                go.Scatter(
+                    x=[ns],
+                    y=[0],
+                    mode="markers",
+                    name=f"Nullstelle x={ns:.1f}",
+                    marker=dict(color="red", size=8),
+                )
+            )
+
+        for ext_x, ext_typ in funktion.extremstellen():
+            ext_y = funktion.wert(float(ext_x))
+            fig.add_trace(
+                go.Scatter(
+                    x=[float(ext_x)],
+                    y=[ext_y],
+                    mode="markers",
+                    name=f"{ext_typ} ({float(ext_x):.1f}, {ext_y:.1f})",
+                    marker=dict(color="green", size=8),
+                )
+            )
+
+        for wp in funktion.wendepunkte():
+            wp_x, wp_y = float(wp[0]), float(wp[1])
+            fig.add_trace(
+                go.Scatter(
+                    x=[wp_x],
+                    y=[wp_y],
+                    mode="markers",
+                    name=f"Wendepunkt ({wp_x:.1f}, {wp_y:.1f})",
+                    marker=dict(color="orange", size=8),
+                )
+            )
+
+    # 🔥 EXTREM AGGRESSIVE Layout-Einstellungen gegen Auto-Scaling
+    fig.update_layout(
+        title=f"<b>{funktion.term() if hasattr(funktion, 'term') else 'Funktion'}</b><br>Intelligente Skalierung: [{x_min_final:.1f}, {x_max_final:.1f}]",
+        xaxis_title="x",
+        yaxis_title="f(x)",
+        xaxis_range=[x_min_final, x_max_final],
+        yaxis_range=[y_min_final, y_max_final],
+        xaxis_autorange=False,
+        yaxis_autorange=False,
+        xaxis_constrain="domain",
+        yaxis_constrain="domain",
+        xaxis_fixedrange=True,
+        width=800,
+        height=600,
+        showlegend=True,
+        plot_bgcolor="white",
+        paper_bgcolor="white",
+        # 🔧 Schulbuch-Koordinatensystem mit Gitter
+        xaxis_showgrid=True,
+        xaxis_gridwidth=1,
+        xaxis_gridcolor="lightgray",
+        xaxis_zeroline=True,
+        xaxis_zerolinewidth=2,
+        xaxis_zerolinecolor="black",
+        xaxis_showline=True,
+        xaxis_linewidth=2,
+        xaxis_linecolor="black",
+        xaxis_ticks="inside",
+        xaxis_tickwidth=1,
+        xaxis_tickcolor="black",
+        xaxis_mirror=True,
+        yaxis_showgrid=True,
+        yaxis_gridwidth=1,
+        yaxis_gridcolor="lightgray",
+        yaxis_zeroline=True,
+        yaxis_zerolinewidth=2,
+        yaxis_zerolinecolor="black",
+        yaxis_showline=True,
+        yaxis_linewidth=2,
+        yaxis_linecolor="black",
+        yaxis_ticks="inside",
+        yaxis_tickwidth=1,
+        yaxis_tickcolor="black",
+        yaxis_mirror=True,
+    )
+
+    # Zusätzliche Range-Forcierung (doppelte Sicherheit)
+    fig.update_xaxes(range=[x_min_final, x_max_final], autorange=False)
+    fig.update_yaxes(range=[y_min_final, y_max_final], autorange=False)
+
+    return fig
 
 
 def Kürzen(funktion):
