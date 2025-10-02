@@ -68,80 +68,90 @@ def _finde_interessante_punkte(funktion):
     return punkte
 
 
-def _berechne_optimalen_bereich(punkte_dict, min_bereich=(-5, 5), puffer=0.2):
-    """Berechnet optimalen x-Bereich basierend auf interessanten Punkten
+def _berechne_optimalen_bereich(
+    punkte_dict,
+    default_range=(-10, 10),
+    min_buffer=1.0,
+    proportional_buffer=0.2,
+    min_span=5.0,
+):
+    """Berechnet optimalen x-Bereich basierend auf interessanten Punkten mit robuster Logik
 
     Args:
         punkte_dict: Dictionary mit interessanten Punkten
-        min_bereich: Minimaler Bereich der garantiert wird (wenn keine Punkte gefunden)
-        puffer: Zusätzlicher Puffer um die äußersten Punkte (20%)
+        default_range: Standardbereich wenn keine Punkte gefunden (Default: (-10, 10))
+        min_buffer: Minimaler absoluter Puffer (Default: 1.0)
+        proportional_buffer: Proportionaler Puffer (Default: 0.2 = 20%)
+        min_span: Minimale Gesamtbreite der x-Achse (Default: 5.0)
 
     Returns:
-        tuple: (x_min, x_max)
+        tuple: (x_min, x_max) optimaler Bereich
     """
-    # Sammle alle x-Koordinaten
+    import math
+
+    # 1. Sammle und bereinige alle x-Koordinaten
     alle_x = []
     for kategorie, punkte_liste in punkte_dict.items():
-        if kategorie != "polstellen":  # Polstellen können das Bild verzerren
-            try:
-                for p in punkte_liste:
-                    if p is not None:
-                        if isinstance(p, tuple):
-                            # Bei Tupeln (x, y, ...) nur die x-Koordinate nehmen
-                            alle_x.append(float(p[0]))
-                        else:
-                            # Bei einzelnen Werten direkt nehmen
-                            alle_x.append(float(p))
-            except (ValueError, TypeError, IndexError):
+        if kategorie == "polstellen":
+            continue  # Polstellen überspringen, da sie das Bild verzerren können
+
+        # Stelle sicher dass punkte_liste iterierbar ist
+        if not hasattr(punkte_liste, "__iter__"):
+            continue
+
+        for p in punkte_liste:
+            if p is None:
                 continue
 
-    # Falls keine Punkte gefunden, verwende min_bereich
+            x_val = None
+            if isinstance(p, (tuple, list)):
+                if len(p) > 0:
+                    x_val = p[0]
+            else:
+                x_val = p
+
+            if x_val is not None:
+                try:
+                    num_x = float(x_val)
+                    # Schließe NaN und Unendlich-Werte aus
+                    if not math.isinf(num_x) and not math.isnan(num_x):
+                        alle_x.append(num_x)
+                except (ValueError, TypeError):
+                    continue
+
+    # 2. Behandle Edge Cases
     if not alle_x:
-        return min_bereich
+        return default_range
 
-    # Berechne Bereich basierend auf den tatsächlichen Punkten
-    x_min_auto = min(alle_x)
-    x_max_auto = max(alle_x)
+    if len(alle_x) == 1:
+        # Nur ein Punkt - zentriere den Standardbereich darum
+        p = alle_x[0]
+        return (p - min_span / 2, p + min_span / 2)
 
-    # Füge Puffer hinzu - aber vernünftiger begrenzt
-    breite = x_max_auto - x_min_auto
-    if breite > 0:
-        puffer_wert = breite * puffer
-        x_min_auto -= puffer_wert
-        x_max_auto += puffer_wert
-    else:
-        # Falls alle Punkte gleich sind, verwende Standard-Puffer
-        x_min_auto -= 1
-        x_max_auto += 1
+    # 3. Berechne Kernbereich
+    x_min = min(alle_x)
+    x_max = max(alle_x)
+    span = x_max - x_min
 
-    # NEUE LOGIK: Stelle sicher dass der Bereich vernünftig ist, aber erzwinge nicht min_bereich
-    # Wenn der berechnete Bereich kleiner als min_bereich ist, verwende den berechneten Bereich
-    # Wenn er größer ist, schneide ihn auf min_bereich zu
+    # Behandle den Fall dass alle Punkte auf dem gleichen x-Wert liegen
+    if span == 0:
+        return (x_min - min_span / 2, x_min + min_span / 2)
 
-    berechnete_breite = x_max_auto - x_min_auto
-    min_breite = min_bereich[1] - min_bereich[0]
+    # 4. Berechne hybriden Puffer
+    buffer = max(min_buffer, span * proportional_buffer)
 
-    if berechnete_breite <= min_breite:
-        # Der berechnete Bereich ist kleiner oder gleich - verwende ihn
-        x_min_final, x_max_final = x_min_auto, x_max_auto
-    else:
-        # Der berechnete Bereich ist größer - schneide auf min_bereich zu
-        if x_min_auto < min_bereich[0] and x_max_auto > min_bereich[1]:
-            # Beide Seiten außerhalb - verwende min_bereich
-            x_min_final, x_max_final = min_bereich
-        elif x_min_auto < min_bereich[0]:
-            # Nur links außerhalb - passe an
-            x_min_final = min_bereich[0]
-            x_max_final = x_min_final + min_breite
-        elif x_max_auto > min_bereich[1]:
-            # Nur rechts außerhalb - passe an
-            x_max_final = min_bereich[1]
-            x_min_final = x_max_final - min_breite
-        else:
-            # Beide innerhalb - verwende berechneten Bereich
-            x_min_final, x_max_final = x_min_auto, x_max_auto
+    # 5. Wende Puffer an
+    final_min = x_min - buffer
+    final_max = x_max + buffer
 
-    return (x_min_final, x_max_final)
+    # 6. Erzwinge minimale Endspanne
+    final_span = final_max - final_min
+    if final_span < min_span:
+        delta = (min_span - final_span) / 2
+        final_min -= delta
+        final_max += delta
+
+    return (final_min, final_max)
 
 
 def _berechne_y_bereich(
