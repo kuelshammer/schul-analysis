@@ -492,7 +492,28 @@ class GebrochenRationaleFunktion:
         from . import Graph
 
         # Verwende die zentrale Graph-Funktion für intelligente Skalierung
-        return Graph(self, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
+        fig = Graph(self, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
+
+        # 🔥 FIX: Erzwinge Axis-Ranges gegen Marimo-Auto-Scaling
+        fig.update_layout(
+            xaxis={
+                "autorange": False,
+                "range": [fig.layout.xaxis.range[0], fig.layout.xaxis.range[1]],
+                "constrain": "domain",
+                "fixedrange": True,  # Verhindert manuelles Zoomen initially
+            },
+            yaxis={
+                "autorange": False,
+                "range": [fig.layout.yaxis.range[0], fig.layout.yaxis.range[1]],
+                "constrain": "domain",
+                "fixedrange": False,  # Erlaube manuelles Zoomen für y-Achse
+            },
+            # Zusätzliche Constraints um Auto-Scaling zu verhindern
+            xaxis_constrain="domain",
+            yaxis_constrain="domain",
+        )
+
+        return fig
 
     def plotly(
         self,

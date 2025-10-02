@@ -71,7 +71,7 @@ def _berechne_optimalen_bereich(
     punkte_dict,
     default_range=(-10, 10),
     min_buffer=1.0,
-    proportional_buffer=0.2,
+    proportional_buffer=0.15,  # Reduziert von 0.2 auf 0.15
     min_span=5.0,
 ):
     """Berechnet optimalen x-Bereich basierend auf interessanten Punkten mit robuster Logik
@@ -80,13 +80,14 @@ def _berechne_optimalen_bereich(
         punkte_dict: Dictionary mit interessanten Punkten
         default_range: Standardbereich wenn keine Punkte gefunden (Default: (-10, 10))
         min_buffer: Minimaler absoluter Puffer (Default: 1.0)
-        proportional_buffer: Proportionaler Puffer (Default: 0.2 = 20%)
+        proportional_buffer: Proportionaler Puffer (Default: 0.15 = 15%)
         min_span: Minimale Gesamtbreite der x-Achse (Default: 5.0)
 
     Returns:
         tuple: (x_min, x_max) optimaler Bereich
     """
     import math
+    import statistics
 
     # 1. Sammle und bereinige alle x-Koordinaten
     alle_x = []
@@ -94,9 +95,10 @@ def _berechne_optimalen_bereich(
         if kategorie == "polstellen":
             continue  # Polstellen überspringen, da sie das Bild verzerren können
 
-        # Stelle sicher dass punkte_liste iterierbar ist
-        if not hasattr(punkte_liste, "__iter__"):
-            continue
+        # GEMINI FIX: Bessere Iterable-Handhabung
+        if not isinstance(punkte_liste, (list, tuple)):
+            # Wenn es kein Iterable ist, behandle es als einzelnen Punkt
+            punkte_liste = [punkte_liste]
 
         for p in punkte_liste:
             if p is None:
@@ -122,10 +124,7 @@ def _berechne_optimalen_bereich(
     if not alle_x:
         return default_range
 
-    if len(alle_x) == 1:
-        # Nur ein Punkt - zentriere den Standardbereich darum
-        p = alle_x[0]
-        return (p - min_span / 2, p + min_span / 2)
+    # GEMINI FIX: Entferne redundante Einzel-Punkt-Logik (wird von Hauptlogik abgedeckt)
 
     # 3. Berechne Kernbereich
     x_min = min(alle_x)
@@ -136,19 +135,55 @@ def _berechne_optimalen_bereich(
     if span == 0:
         return (x_min - min_span / 2, x_min + min_span / 2)
 
-    # 4. Berechne hybriden Puffer
-    buffer = max(min_buffer, span * proportional_buffer)
+    # 4. GEMINI OPTIMIERUNG: Berechne adaptiven Puffer basierend auf Punkt-Dichte
+    if len(alle_x) >= 2:
+        # Sortiere Punkte und berechne Abstände
+        sortierte_x = sorted(alle_x)
+        abstaende = [
+            sortierte_x[i + 1] - sortierte_x[i] for i in range(len(sortierte_x) - 1)
+        ]
+
+        if abstaende:
+            # Verwende Median der Abstände als Basis für adaptiven Puffer
+            median_abstand = statistics.median(abstaende)
+            adaptiver_puffer = median_abstand * 1.5  # Faktor 1.5 für guten Sichtbereich
+
+            # Hybrid-Buffer: Maximum aus adaptivem und proportionalem Puffer
+            final_buffer = max(min_buffer, adaptiver_puffer, span * proportional_buffer)
+        else:
+            # Fallback auf alten Algorithmus
+            final_buffer = max(min_buffer, span * proportional_buffer)
+    else:
+        # Für einzelnen Punkt oder keine Abstände
+        final_buffer = max(min_buffer, span * proportional_buffer)
 
     # 5. Wende Puffer an
-    final_min = x_min - buffer
-    final_max = x_max + buffer
+    final_min = x_min - final_buffer
+    final_max = x_max + final_buffer
 
-    # 6. Erzwinge minimale Endspanne
+    # 6. GEMINI OPTIMIERUNG: Null-Punkt-Sicherheitsprüfung für pädagogischen Kontext
+    # Stelle sicher dass der Ursprung sichtbar ist, wenn der Bereich nah an 0 ist
+    if final_min > 0 and final_min / (final_max - final_min) < 0.2:
+        final_min = 0
+    elif final_max < 0 and abs(final_max) / (final_max - final_min) < 0.2:
+        final_max = 0
+
+    # 7. Erzwinge minimale Endspanne
     final_span = final_max - final_min
     if final_span < min_span:
         delta = (min_span - final_span) / 2
         final_min -= delta
         final_max += delta
+        print(
+            f"DEBUG: Final-Spanne zu klein ({final_span} < {min_span}), korrigiert auf: [{final_min}, {final_max}]"
+        )
+
+    # 8. GEMINI OPTIMIERUNG: Globale Limits zur Verhinderung von extremen Bereichen
+    global_limit = 50  # Absolute Grenze
+    if final_min < -global_limit:
+        final_min = -global_limit
+    if final_max > global_limit:
+        final_max = global_limit
 
     return (final_min, final_max)
 
