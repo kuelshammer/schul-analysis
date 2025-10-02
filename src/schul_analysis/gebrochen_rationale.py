@@ -279,11 +279,15 @@ class GebrochenRationaleFunktion:
 
     def __str__(self) -> str:
         """String-Repräsentation"""
-        return self.term()
+        return str(self.term_sympy)
 
     def __repr__(self) -> str:
         """Repräsentation für debugging"""
         return self.__str__()
+
+    def _repr_latex_(self) -> str:
+        """LaTeX-Darstellung für Jupyter/Marimo Notebooks"""
+        return self.term_sympy._repr_latex_()
 
     def __eq__(self, other) -> bool:
         """Vergleich zweier Funktionen auf Gleichheit"""
