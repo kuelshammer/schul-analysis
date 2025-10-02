@@ -193,21 +193,76 @@ def Schnittpunkt(f1, f2):
     return schnittpunkte
 
 
-def Extremstellen(funktion):
+def Extremstellen(funktion, typ: bool = True):
     """Berechnet die Extremstellen einer Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion
+        typ: Wenn True (Standard), werden die Extremstellen klassifiziert.
+             Wenn False, werden nur die x-Werte zurückgegeben.
 
     Returns:
-        list: Liste von Tupeln (x, art) mit den Extremstellen
+        list: Liste von Tupeln (x, art) mit den Extremstellen (typ=True)
+              oder Liste der x-Werte (typ=False)
 
     Beispiele:
         >>> f = GanzrationaleFunktion("x^3-3x")
         >>> Extremstellen(f)
-        [(-1.0, 'Maximum'), (1.0, 'Minimum')]
+        [(-1, 'Maximum'), (1, 'Minimum')]
+        >>> Extremstellen(f, typ=False)
+        [-1, 1]
     """
-    return funktion.extremstellen()
+    return funktion.extremstellen(typ=typ)
+
+
+def Wendestellen(funktion, typ: bool = True):
+    """Berechnet die Wendestellen einer Funktion
+
+    Args:
+        funktion: Eine GanzrationaleFunktion
+        typ: Wenn True (Standard), werden die Wendestellen klassifiziert.
+             Wenn False, werden nur die x-Werte zurückgegeben.
+
+    Returns:
+        list: Liste von Tupeln (x, art) mit den Wendestellen (typ=True)
+              oder Liste der x-Werte (typ=False)
+
+    Beispiele:
+        >>> f = GanzrationaleFunktion("x^3")
+        >>> Wendestellen(f)
+        [(0, 'L→R')]
+        >>> Wendestellen(f, typ=False)
+        [0]
+
+        >>> g = GanzrationaleFunktion("x^4-4x^3")
+        >>> Wendestellen(g)
+        [(0, 'R→L'), (2, 'L→R')]
+        >>> Wendestellen(g, typ=False)
+        [0, 2]
+    """
+    return funktion.wendestellen(typ=typ)
+
+
+def Extrempunkte(funktion, typ: bool = True):
+    """Berechnet die Extrempunkte einer Funktion
+
+    Args:
+        funktion: Eine GanzrationaleFunktion
+        typ: Wenn True (Standard), werden die Extrempunkte klassifiziert.
+             Wenn False, werden nur die Koordinaten zurückgegeben.
+
+    Returns:
+        list: Liste von Tupeln (x, y, art) mit den Extrempunkten (typ=True)
+              oder Liste der Koordinaten (x, y) (typ=False)
+
+    Beispiele:
+        >>> f = GanzrationaleFunktion("x^3-3x")
+        >>> Extrempunkte(f)
+        [(-1, 2.0, 'Maximum'), (1, -2.0, 'Minimum')]
+        >>> Extrempunkte(f, typ=False)
+        [(-1, 2.0), (1, -2.0)]
+    """
+    return funktion.extrempunkte(typ=typ)
 
 
 def Wendepunkte(funktion):
@@ -765,6 +820,8 @@ __all__ = [
     "Kürzen",
     "Schnittpunkt",
     "Extremstellen",
+    "Wendestellen",
+    "Extrempunkte",
     "Wendepunkte",
     "Integral",
     "Grenzwert",
