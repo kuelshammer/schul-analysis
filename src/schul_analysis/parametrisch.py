@@ -7,7 +7,6 @@ f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 
 from abc import ABC
 from dataclasses import dataclass
-from typing import Any
 
 import sympy as sp
 
@@ -564,6 +563,9 @@ class ParametrischeFunktion:
         Args:
             ordnung: Ordnung der Ableitung (1 = erste, 2 = zweite, etc.)
 
+        Returns:
+            Neue ParametrischeFunktion der abgeleiteten Funktion
+
         Beispiele:
             >>> x = Variable("x")
             >>> a = Parameter("a")
@@ -572,10 +574,15 @@ class ParametrischeFunktion:
             >>> f_strich = f.ableitung()  # 2ax + b
             >>> f_strich_strich = f.ableitung(2)  # 2a
 
+            # Mit der neuen __call__ Syntax:
+            >>> f_strich(2)    # Wert der ersten Ableitung bei x=2
+            >>> f.ableitung()(2)  # Direkte Berechnung
+
         Didaktischer Hinweis:
             Diese Methode ist besonders nützlich, um Schülern zu zeigen,
             wie sich die Koeffizienten einer Funktion beim Ableiten verändern.
             Bei quadratischen Funktionen wird linear, bei linearen wird konstant.
+            Die neue __call__ Syntax ermöglicht intuitive Berechnungen wie f'(x).
         """
         if ordnung <= 0:
             return self
@@ -746,6 +753,76 @@ class ParametrischeFunktion:
             return wendepunkte_mit_bedingungen
         except Exception:
             return []
+
+    def __call__(self, *werte):
+        """
+        Macht die Funktion aufrufbar: f(2), f(0, 1), etc.
+
+        Args:
+            *werte: Numerische Werte für die Variablen in der Reihenfolge der Definition
+
+        Returns:
+            Der Funktionswert als SymPy-Ausdruck oder numerischer Wert
+
+        Beispiele:
+            >>> x = Variable("x")
+            >>> a = Parameter("a")
+            >>> f = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
+            >>> f(2)           # 4a + 2
+            >>> f(0)           # 0
+            >>> f.mit_wert(a=3)(2)  # 3*4 + 2 = 14
+
+        Didaktischer Hinweis:
+            Diese Methode ermöglicht die natürliche mathematische Notation f(x),
+            die Schüler aus dem Unterricht kennen. Anstelle der technischen
+            Substitution f.term_sympy.subs(x, wert) kann man einfach f(wert) schreiben.
+        """
+        if len(werte) != len(self.variablen):
+            raise ValueError(
+                f"Funktion erwartet {len(self.variablen)} Variable(n), "
+                f"aber {len(werte)} Wert(e) wurden übergeben. "
+                f"Variablen: {[v.name for v in self.variablen]}"
+            )
+
+        # Substituiere alle Variablen mit den gegebenen Werten
+        ergebnis = self.term_sympy
+        for variable, wert in zip(self.variablen, werte, strict=True):
+            ergebnis = ergebnis.subs(variable.symbol, wert)
+
+        return ergebnis
+
+    def __eq__(self, anderer_wert):
+        """
+        Ermöglicht die Gleichungssyntax: f(3) == 7
+
+        Args:
+            anderer_wert: Der Wert, mit dem verglichen wird
+
+        Returns:
+            LineareGleichung oder NotImplemented
+
+        Beispiele:
+            >>> x = Variable("x")
+            >>> a = Parameter("a")
+            >>> f = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
+            >>> gleichung = f(3) == 7  # Erzeugt LineareGleichung für 9a + 3 = 7
+
+        Didaktischer Hinweis:
+            Diese Syntax ist sehr intuitiv für Schüler, da sie der mathematischen
+            Schreibweise "f(x) = wert" entspricht. Das Ergebnis kann direkt für
+            Lineare Gleichungssysteme verwendet werden.
+        """
+        if isinstance(anderer_wert, (int, float)):
+            # Erstelle eine Gleichung: f(...) - anderer_wert = 0
+            # Import hier, um zyklische Abhängigkeiten zu vermeiden
+            try:
+                from .lineare_gleichungssysteme import LineareGleichung
+
+                return LineareGleichung.aus_funktion_wert(self, anderer_wert)
+            except ImportError:
+                # Fallback: NotImplemented zurückgeben, wenn LGS-Modul nicht existiert
+                return NotImplemented
+        return NotImplemented
 
 
 # Convenience-Funktionen für häufige Anwendungsfälle

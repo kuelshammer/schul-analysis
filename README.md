@@ -10,6 +10,52 @@ Ein Python Framework für Schul-Analysis mit exakter Berechnung und Marimo-Integ
 - **Marimo-Integration** für interaktive Notebooks
 - **Pädagogische Darstellung** mit deutschen Methodennamen
 - **🔥 Mathematisch korrekte Visualisierung** mit Plotly (keine verzerrten Parabeln!)
+- **🎯 Intuitive `__call__`-Syntax**: `f(2)` statt `f.wert(2)` für natürliche mathematische Notation
+
+## 🔧 Neue Features in Version 1.1
+
+### 🎯 Intuitive `__call__`-Syntax für Funktionen
+
+Das Framework unterstützt jetzt die natürliche mathematische Notation `f(x)`:
+
+```python
+# Ganzrationale Funktionen
+f = GanzrationaleFunktion("x^2 + 2x - 3")
+print(f(2))     # 5.0 (statt f.wert(2))
+
+# Parametrische Funktionen
+x = Variable("x")
+a = Parameter("a")
+f_param = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
+print(f_param(2))    # 4a + 2 (symbolisches Ergebnis)
+
+# Mit konkreten Werten
+f_konkret = f_param.mit_wert(a=3)
+print(f_konkret(2))  # 14.0
+```
+
+### 🔄 Verbesserte Ableitungs-Syntax
+
+Ableitungen können jetzt direkt aufgerufen werden:
+
+```python
+f = GanzrationaleFunktion("x^3 - 3x^2 + 2x")
+f_strich = f.ableitung()
+print(f_strich(2))           # 2.0
+
+# Oder direkt ohne Zwischenvariable
+print(f.ableitung()(2))      # 2.0
+print(f.ableitung(2)(1))     # 0.0 (zweite Ableitung)
+```
+
+### 📋 Gleichungssyntax (Vorbereitung für LGS)
+
+Die Syntax `f(x) == wert` wird vorbereitet:
+
+```python
+# Wird in Zukunft Lineare Gleichungen für LGS erstellen
+bedingung = f(3) == 7  # f(3) = 7
+```
 
 ## 🔥 Visualisierungs-Strategie
 

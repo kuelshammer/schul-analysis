@@ -336,6 +336,34 @@ class GanzrationaleFunktion:
         """Berechnet den Funktionswert an einer Stelle."""
         return float(self.term_sympy.subs(self.x, x_wert))
 
+    def __call__(self, x_wert: float) -> float:
+        """
+        Macht die Funktion aufrufbar: f(2), f(0.5), etc.
+
+        Args:
+            x_wert: x-Wert, an dem die Funktion ausgewertet werden soll
+
+        Returns:
+            Der Funktionswert als float-Zahl
+
+        Beispiele:
+            >>> f = GanzrationaleFunktion("x^2 + 2x - 3")
+            >>> f(2)    # 2^2 + 2*2 - 3 = 5
+            >>> f(0)    # 0^2 + 2*0 - 3 = -3
+            >>> f(-1)   # (-1)^2 + 2*(-1) - 3 = -4
+
+        Didaktischer Hinweis:
+            Diese Methode ermöglicht die natürliche mathematische Notation f(x),
+            die Schüler aus dem Unterricht kennen. Anstelle von f.wert(x)
+            kann man einfach f(x) schreiben - das ist intuitiver und kürzer.
+
+        Hinweis:
+            Diese Methode ist identisch mit f.wert(x), sie bietet nur eine
+            bequemere Schreibweise. Die wert()-Methode bleibt für Abwärtskompatibilität
+            erhalten.
+        """
+        return self.wert(x_wert)
+
     def grad(self) -> int:
         """Gibt den Grad des Polynoms zurück"""
         return sp.Poly(self.term_sympy, self.x).degree()
