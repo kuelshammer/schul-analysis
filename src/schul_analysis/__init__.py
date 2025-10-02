@@ -93,12 +93,13 @@ def Wert(funktion, x_wert: float) -> float:
     return funktion.wert(x_wert)
 
 
-def Graph(funktion, x_bereich: tuple = (-5, 5)):
+def Graph(funktion, x_bereich: tuple = (-10, 10), **kwargs):
     """Erzeugt einen Graphen der Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion oder GebrochenRationaleFunktion
-        x_bereich: x-Bereich für den Graphen (Standard: (-5, 5))
+        x_bereich: x-Bereich für den Graphen (Standard: (-10, 10))
+        **kwargs: Zusätzliche Parameter für die plotly-Methode
 
     Returns:
         Plotly-Figure
@@ -106,8 +107,15 @@ def Graph(funktion, x_bereich: tuple = (-5, 5)):
     Beispiele:
         >>> f = GanzrationaleFunktion("x^2")
         >>> graph = Graph(f)
+
+        >>> # Mit speziellen Optionen
+        >>> graph = Graph(f, zeige_nullstellen=True, zeige_extremstellen=True)
+
+        >>> # Für gebrochen-rationale Funktionen
+        >>> g = GebrochenRationaleFunktion("1/(x-1)")
+        >>> graph = Graph(g, zeige_polstellen=True)
     """
-    return funktion.plotly(x_bereich)
+    return funktion.plotly(x_range=x_bereich, **kwargs)
 
 
 def Kürzen(funktion):

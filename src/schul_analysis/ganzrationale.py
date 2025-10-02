@@ -1564,6 +1564,145 @@ class GanzrationaleFunktion:
     # 🔥 PLOTLY VISUALISIERUNGSMETHODEN 🔥
     # ============================================
 
+    def plotly(
+        self,
+        x_range: tuple = (-10, 10),
+        punkte: int = 200,
+        zeige_nullstellen: bool = True,
+        zeige_extremstellen: bool = True,
+        zeige_wendepunkte: bool = True,
+        titel: str = None,
+        farbe: str = "blue",
+        marimo_mode: bool = False,
+    ) -> Any:
+        """
+        Erzeugt eine verbesserte Plotly-Visualisierung der ganzrationalen Funktion.
+
+        Args:
+            x_range: Tupel (xmin, xmax) für den x-Bereich
+            punkte: Anzahl der zu berechnenden Punkte
+            zeige_nullstellen: Ob Nullstellen markiert werden sollen
+            zeige_extremstellen: Ob Extremstellen markiert werden sollen
+            zeige_wendepunkte: Ob Wendepunkte markiert werden sollen
+            titel: Benutzerdefinierter Titel
+            farbe: Farbe der Hauptkurve
+            marimo_mode: Wenn True, gibt mo.ui.plotly zurück
+
+        Returns:
+            Plotly Figure-Objekt oder mo.ui.plotly
+        """
+        xmin, xmax = x_range
+
+        # Erstelle x-Werte für die Berechnung
+        x_werte = np.linspace(xmin, xmax, punkte)
+        y_werte = [self.wert(xi) for xi in x_werte]
+
+        # Erstelle die Figur
+        fig = go.Figure()
+
+        # Hauptkurve
+        fig.add_trace(
+            go.Scatter(
+                x=x_werte,
+                y=y_werte,
+                mode="lines",
+                name=f"f(x) = {self.term()}",
+                line=config.get_line_config(color_key=farbe),
+                hovertemplate="<b>x</b>: %{x:.3f}<br><b>f(x)</b>: %{y:.3f}<extra></extra>",
+            )
+        )
+
+        # Füge Nullstellen hinzu
+        if zeige_nullstellen:
+            nullstellen = self.nullstellen()
+            for ns in nullstellen:
+                try:
+                    x_ns = float(ns)
+                    if xmin <= x_ns <= xmax:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_ns],
+                                y=[0],
+                                mode="markers",
+                                name=f"Nullstelle x={x_ns:.3f}",
+                                marker=config.get_marker_config(
+                                    color_key="secondary", size=10
+                                ),
+                                showlegend=False,
+                                hovertemplate=f"<b>Nullstelle</b><br>x: {x_ns:.3f}<br>f(x): 0<extra></extra>",
+                            )
+                        )
+                except (ValueError, TypeError):
+                    continue
+
+        # Füge Extremstellen hinzu
+        if zeige_extremstellen:
+            extremstellen = self.extremstellen()
+            for xs, art in extremstellen:
+                try:
+                    x_es = float(xs)
+                    y_es = self.wert(x_es)
+                    if xmin <= x_es <= xmax:
+                        color = "green" if art == "Maximum" else "orange"
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_es],
+                                y=[y_es],
+                                mode="markers",
+                                name=f"{art} ({x_es:.3f}|{y_es:.3f})",
+                                marker=config.get_marker_config(
+                                    color_key=color, size=12
+                                ),
+                                showlegend=False,
+                                hovertemplate=f"<b>{art}</b><br>x: {x_es:.3f}<br>f(x): {y_es:.3f}<extra></extra>",
+                            )
+                        )
+                except (ValueError, TypeError):
+                    continue
+
+        # Füge Wendepunkte hinzu
+        if zeige_wendepunkte:
+            wendepunkte = self.wendepunkte()
+            for x_ws, y_ws, art in wendepunkte:
+                try:
+                    x_ws_float = float(x_ws)
+                    y_ws_float = float(y_ws)
+                    if xmin <= x_ws_float <= xmax:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_ws_float],
+                                y=[y_ws_float],
+                                mode="markers",
+                                name=f"Wendepunkt ({x_ws_float:.3f}|{y_ws_float:.3f})",
+                                marker=config.get_marker_config(
+                                    color_key="tertiary", size=10
+                                ),
+                                showlegend=False,
+                                hovertemplate=f"<b>Wendepunkt</b><br>x: {x_ws_float:.3f}<br>f(x): {y_ws_float:.3f}<br>Krümmung: {art}<extra></extra>",
+                            )
+                        )
+                except (ValueError, TypeError):
+                    continue
+
+        # Layout-Optionen mit improved Konfiguration
+        fig.update_layout(
+            **config.get_plot_config(),
+            title=titel or f"Ganzrationale Funktion: f(x) = {self.term()}",
+            xaxis={
+                **config.get_axis_config(mathematical_mode=True),
+                "range": x_range,
+                "title": "x",
+            },
+            yaxis={
+                **config.get_axis_config(mathematical_mode=False),
+                "title": "f(x)",
+            },
+            showlegend=True,
+            hovermode="x unified",
+        )
+
+        return mo.ui.plotly(fig) if marimo_mode else fig
+
     def zeige_funktion_plotly(self, x_range: tuple = None, punkte: int = 200) -> Any:
         """Zeigt interaktiven Funktionsgraph mit Plotly - MATHEMATISCH KORREKT"""
         if x_range is None:

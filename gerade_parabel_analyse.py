@@ -12,8 +12,8 @@ def _():
 
 @app.cell
 def _():
-    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen, Extrempunkte
-    return Ableitung, Extrempunkte, GanzrationaleFunktion, Nullstellen
+    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen, Extrempunkte, Graph
+    return Ableitung, Extrempunkte, GanzrationaleFunktion, Graph, Nullstellen
 
 
 @app.cell
@@ -57,6 +57,12 @@ def _(f):
 @app.cell
 def _(Extrempunkte, f):
     Extrempunkte(f)
+    return
+
+
+@app.cell
+def _(Graph, f):
+    Graph(f, (-3, 3))
     return
 
 
