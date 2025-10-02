@@ -9,6 +9,376 @@ from .gebrochen_rationale import GebrochenRationaleFunktion
 from .schmiegkurven import Schmiegkurve
 from .taylorpolynom import Taylorpolynom
 
+import numpy as np
+import plotly.graph_objects as go
+import plotly.express as px
+from .config import config
+
+# ====================
+# Hilfsfunktionen für intelligente Skalierung
+# ====================
+
+
+def _finde_interessante_punkte(funktion):
+    """Sammelt alle interessanten Punkte einer Funktion für die automatische Skalierung
+
+    Args:
+        funktion: GanzrationaleFunktion oder GebrochenRationaleFunktion
+
+    Returns:
+        dict: Dictionary mit x_koordinaten und punkten Listen
+    """
+    punkte = {
+        "nullstellen": [],
+        "extremstellen": [],
+        "wendepunkte": [],
+        "polstellen": [],
+    }
+
+    try:
+        # Nullstellen
+        if hasattr(funktion, "nullstellen"):
+            punkte["nullstellen"] = funktion.nullstellen()
+
+        # Extremstellen
+        if hasattr(funktion, "extremstellen"):
+            extremstellen = funktion.extremstellen()
+            # Extrahiere x-Koordinaten (könnten Tupel sein)
+            punkte["extremstellen"] = [
+                es[0] if isinstance(es, tuple) else es for es in extremstellen
+            ]
+
+        # Wendepunkte
+        if hasattr(funktion, "wendepunkte"):
+            wendepunkte = funktion.wendepunkte()
+            # Extrahiere x-Koordinaten (könnten Tupel sein)
+            punkte["wendepunkte"] = [
+                wp[0] if isinstance(wp, tuple) and len(wp) >= 1 else wp
+                for wp in wendepunkte
+            ]
+
+        # Polstellen (nur für gebrochen-rationale Funktionen)
+        if hasattr(funktion, "polstellen"):
+            punkte["polstellen"] = funktion.polstellen()
+
+    except Exception:
+        # Bei Fehlern leere Listen zurückgeben
+        pass
+
+    return punkte
+
+
+def _berechne_optimalen_bereich(punkte_dict, min_bereich=(-5, 5), puffer=0.2):
+    """Berechnet optimalen x-Bereich basierend auf interessanten Punkten
+
+    Args:
+        punkte_dict: Dictionary mit interessanten Punkten
+        min_bereich: Minimaler Bereich der garantiert wird
+        puffer: Zusätzlicher Puffer um die äußersten Punkte (20%)
+
+    Returns:
+        tuple: (x_min, x_max)
+    """
+    # Sammle alle x-Koordinaten
+    alle_x = []
+    for kategorie, punkte_liste in punkte_dict.items():
+        if kategorie != "polstellen":  # Polstellen können das Bild verzerren
+            try:
+                for p in punkte_liste:
+                    if p is not None:
+                        if isinstance(p, tuple):
+                            # Bei Tupeln (x, y, ...) nur die x-Koordinate nehmen
+                            alle_x.append(float(p[0]))
+                        else:
+                            # Bei einzelnen Werten direkt nehmen
+                            alle_x.append(float(p))
+            except (ValueError, TypeError, IndexError):
+                continue
+
+    # Falls keine Punkte gefunden, verwende min_bereich
+    if not alle_x:
+        return min_bereich
+
+    # Berechne Bereich mit Puffer
+    x_min_auto = min(alle_x)
+    x_max_auto = max(alle_x)
+
+    # Füge Puffer hinzu
+    breite = x_max_auto - x_min_auto
+    if breite > 0:
+        puffer_wert = breite * puffer
+        x_min_auto -= puffer_wert
+        x_max_auto += puffer_wert
+    else:
+        # Falls alle Punkte gleich sind, verwende Standard-Puffer
+        x_min_auto -= 1
+        x_max_auto += 1
+
+    # Stelle sicher dass min_bereich eingehalten wird
+    x_min_final = min(x_min_auto, min_bereich[0])
+    x_max_final = max(x_max_auto, min_bereich[1])
+
+    return (x_min_final, x_max_final)
+
+
+def _berechne_y_bereich(
+    funktion,
+    x_min,
+    x_max,
+    interessante_punkte=None,
+    min_bereich=(-5, 5),
+    punkte=100,
+    puffer=0.1,
+):
+    """Berechnet optimalen y-Bereich basierend auf Funktionswerten
+
+    Args:
+        funktion: Die zu analysierende Funktion
+        x_min, x_max: x-Bereich für die Auswertung
+        interessante_punkte: Dictionary mit interessanten Punkten für bessere y-Berechnung
+        min_bereich: Minimaler y-Bereich der garantiert wird
+        punkte: Anzahl der Auswertungspunkte
+        puffer: Zusätzlicher Puffer (10%)
+
+    Returns:
+        tuple: (y_min, y_max)
+    """
+    try:
+        # Sammle y-Werte aus interessanten Punkten
+        interessante_y = []
+        if interessante_punkte:
+            for kategorie, punkte_liste in interessante_punkte.items():
+                try:
+                    for p in punkte_liste:
+                        if p is not None:
+                            if isinstance(p, tuple) and len(p) >= 2:
+                                # Bei Tupeln (x, y, ...) die y-Koordinate nehmen
+                                interessante_y.append(float(p[1]))
+                except (ValueError, TypeError, IndexError):
+                    continue
+
+        # Erstelle x-Werte für die Auswertung
+        x_werte = np.linspace(x_min, x_max, punkte)
+        y_werte = []
+
+        # Berechne Funktionswerte, vermeide Probleme bei Polstellen
+        for x in x_werte:
+            try:
+                y = funktion.wert(x)
+                if not np.isinf(y) and not np.isnan(y):
+                    y_werte.append(y)
+            except (ValueError, ZeroDivisionError, OverflowError):
+                continue
+
+        # Kombiniere alle y-Werte
+        alle_y = y_werte + interessante_y
+
+        if not alle_y:
+            return min_bereich
+
+        # Finde y-Bereich mit Puffer
+        y_min_auto = min(alle_y)
+        y_max_auto = max(alle_y)
+
+        # Füge Puffer hinzu
+        hoehe = y_max_auto - y_min_auto
+        if hoehe > 0:
+            puffer_wert = hoehe * puffer
+            y_min_auto -= puffer_wert
+            y_max_auto += puffer_wert
+        else:
+            # Falls alle y-Werte gleich sind
+            y_min_auto -= 1
+            y_max_auto += 1
+
+        # Stelle sicher dass min_bereich eingehalten wird
+        y_min_final = min(y_min_auto, min_bereich[0])
+        y_max_final = max(y_max_auto, min_bereich[1])
+
+        return (y_min_final, y_max_final)
+
+    except Exception:
+        return min_bereich
+
+
+def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
+    """Erstelle die eigentliche Plotly-Figur mit allen Features
+
+    Args:
+        funktion: Die zu darstellende Funktion
+        x_min, x_max, y_min, y_max: Bereichsgrenzen
+        **kwargs: Zusätzliche Optionen
+
+    Returns:
+        go.Figure: Plotly-Figur
+    """
+    # Optionen extrahieren
+    zeige_nullstellen = kwargs.get("zeige_nullstellen", True)
+    zeige_extremstellen = kwargs.get("zeige_extremstellen", True)
+    zeige_wendepunkte = kwargs.get("zeige_wendepunkte", True)
+    zeige_polstellen = kwargs.get("zeige_polstellen", True)
+    zeige_asymptoten = kwargs.get("zeige_asymptoten", True)
+    titel = kwargs.get("titel")
+    punkte_anzahl = kwargs.get("punkte", 200)
+
+    # Erstelle x-Werte für die Berechnung
+    x_werte = np.linspace(x_min, x_max, punkte_anzahl)
+    y_werte = []
+    gueltige_x = []
+
+    # Berechne Funktionswerte, vermeide Polstellen
+    if hasattr(funktion, "polstellen"):
+        polstellen = [float(ps) for ps in funktion.polstellen()]
+    else:
+        polstellen = []
+
+    for x in x_werte:
+        try:
+            # Prüfe, ob x nahe einer Polstelle ist
+            ist_nahe_polstelle = any(abs(x - ps) < 0.1 for ps in polstellen)
+            if ist_nahe_polstelle:
+                continue
+
+            y = funktion.wert(x)
+            if not np.isinf(y) and not np.isnan(y):
+                y_werte.append(y)
+                gueltige_x.append(x)
+        except (ValueError, ZeroDivisionError, OverflowError):
+            continue
+
+    # Erstelle die Figur
+    fig = go.Figure()
+
+    # Hauptkurve
+    if gueltige_x and y_werte:
+        fig.add_trace(
+            go.Scatter(
+                x=gueltige_x,
+                y=y_werte,
+                mode="lines",
+                name=f"f(x) = {funktion.term()}",
+                line=config.get_line_config(color_key="primary"),
+                hovertemplate="<b>x</b>: %{x:.3f}<br><b>f(x)</b>: %{y:.3f}<extra></extra>",
+            )
+        )
+
+    # Füge spezielle Punkte hinzu (nur für ganzrationale Funktionen)
+    if hasattr(funktion, "nullstellen") and zeige_nullstellen:
+        nullstellen = funktion.nullstellen()
+        for ns in nullstellen:
+            try:
+                x_ns = float(ns)
+                if x_min <= x_ns <= x_max:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[x_ns],
+                            y=[0],
+                            mode="markers",
+                            name=f"Nullstelle x={x_ns:.3f}",
+                            marker=config.get_marker_config(
+                                color_key="secondary", size=10
+                            ),
+                            showlegend=False,
+                            hovertemplate=f"<b>Nullstelle</b><br>x: {x_ns:.3f}<br>f(x): 0<extra></extra>",
+                        )
+                    )
+            except (ValueError, TypeError):
+                continue
+
+    if hasattr(funktion, "extremstellen") and zeige_extremstellen:
+        extremstellen = funktion.extremstellen()
+        for es in extremstellen:
+            try:
+                if isinstance(es, tuple):
+                    x_es = float(es[0])
+                    art = es[1]
+                else:
+                    x_es = float(es)
+                    art = "Extremum"
+
+                y_es = funktion.wert(x_es)
+                if x_min <= x_es <= x_max:
+                    color = "green" if art == "Maximum" else "orange"
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[x_es],
+                            y=[y_es],
+                            mode="markers",
+                            name=f"{art} ({x_es:.3f}|{y_es:.3f})",
+                            marker=config.get_marker_config(color_key=color, size=12),
+                            showlegend=False,
+                            hovertemplate=f"<b>{art}</b><br>x: {x_es:.3f}<br>f(x): {y_es:.3f}<extra></extra>",
+                        )
+                    )
+            except (ValueError, TypeError):
+                continue
+
+    if hasattr(funktion, "wendepunkte") and zeige_wendepunkte:
+        wendepunkte = funktion.wendepunkte()
+        for wp in wendepunkte:
+            try:
+                if isinstance(wp, tuple) and len(wp) >= 2:
+                    x_ws = float(wp[0])
+                    y_ws = float(wp[1])
+                    art = wp[2] if len(wp) >= 3 else "Wendepunkt"
+                else:
+                    continue
+
+                if x_min <= x_ws <= x_max:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[x_ws],
+                            y=[y_ws],
+                            mode="markers",
+                            name=f"Wendepunkt ({x_ws:.3f}|{y_ws:.3f})",
+                            marker=config.get_marker_config(
+                                color_key="tertiary", size=10
+                            ),
+                            showlegend=False,
+                            hovertemplate=f"<b>Wendepunkt</b><br>x: {x_ws:.3f}<br>f(x): {y_ws:.3f}<br>Krümmung: {art}<extra></extra>",
+                        )
+                    )
+            except (ValueError, TypeError, IndexError):
+                continue
+
+    # Polstellen und Asymptoten für gebrochen-rationale Funktionen
+    if hasattr(funktion, "polstellen") and zeige_polstellen:
+        for ps in polstellen:
+            if x_min <= ps <= x_max:
+                # Berechne y-Werte für die Asymptote
+                y_asymptote_range = np.linspace(y_min, y_max, 100)
+                fig.add_trace(
+                    go.Scatter(
+                        x=[ps] * len(y_asymptote_range),
+                        y=y_asymptote_range,
+                        mode="lines",
+                        line={"color": "red", "width": 2, "dash": "dash"},
+                        name=f"Polstelle x={ps:.2f}",
+                        showlegend=False,
+                    )
+                )
+
+    # Layout-Optionen
+    fig.update_layout(
+        **config.get_plot_config(),
+        title=titel or f"Funktion: f(x) = {funktion.term()}",
+        xaxis={
+            **config.get_axis_config(mathematical_mode=True),
+            "range": [x_min, x_max],
+            "title": "x",
+        },
+        yaxis={
+            **config.get_axis_config(mathematical_mode=False),
+            "range": [y_min, y_max],
+            "title": "f(x)",
+        },
+        showlegend=True,
+        hovermode="x unified",
+    )
+
+    return fig
+
+
 # ====================
 # Schülerfreundliche Funktionen
 # ====================
@@ -93,21 +463,56 @@ def Wert(funktion, x_wert: float) -> float:
     return funktion.wert(x_wert)
 
 
-def Graph(funktion, x_bereich: tuple = (-5, 5)):
-    """Erzeugt einen Graphen der Funktion
+def Graph(funktion, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs):
+    """Erzeugt einen Graphen der Funktion mit intelligenter automatischer Skalierung
 
     Args:
         funktion: Eine GanzrationaleFunktion oder GebrochenRationaleFunktion
-        x_bereich: x-Bereich für den Graphen (Standard: (-5, 5))
+        x_min: Untere x-Grenze (Standard: None = automatisch)
+        x_max: Obere x-Grenze (Standard: None = automatisch)
+        y_min: Untere y-Grenze (Standard: None = automatisch)
+        y_max: Obere y-Grenze (Standard: None = automatisch)
+        **kwargs: Zusätzliche Parameter für die plotly-Methode
 
     Returns:
         Plotly-Figure
 
     Beispiele:
         >>> f = GanzrationaleFunktion("x^2")
-        >>> graph = Graph(f)
+        >>> graph = Graph(f)  # Automatische Skalierung
+
+        >>> # Manuelles Setzen von Grenzen
+        >>> graph = Graph(f, x_min=0, x_max=5)
+
+        >>> # Nur x-Grenzen festlegen, y automatisch
+        >>> graph = Graph(f, x_min=-2, x_max=2)
+
+        >>> # Alle Grenzen manuell
+        >>> graph = Graph(f, x_min=-3, x_max=3, y_min=0, y_max=10)
     """
-    return funktion.plotly(x_bereich)
+    # Finde interessante Punkte und berechne optimalen Bereich
+    interessante_punkte = _finde_interessante_punkte(funktion)
+
+    # Berechne x-Bereich
+    if x_min is None or x_max is None:
+        auto_x_min, auto_x_max = _berechne_optimalen_bereich(interessante_punkte)
+        if x_min is None:
+            x_min = auto_x_min
+        if x_max is None:
+            x_max = auto_x_max
+
+    # Berechne y-Bereich
+    if y_min is None or y_max is None:
+        auto_y_min, auto_y_max = _berechne_y_bereich(
+            funktion, x_min, x_max, interessante_punkte
+        )
+        if y_min is None:
+            y_min = auto_y_min
+        if y_max is None:
+            y_max = auto_y_max
+
+    # Erstelle Plotly-Figur
+    return _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs)
 
 
 def Kürzen(funktion):
