@@ -12,6 +12,7 @@ from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
 from .schmiegkurven import Schmiegkurve
 from .taylorpolynom import Taylorpolynom
+from .parametrisch import Variable, Parameter, ParametrischeFunktion
 
 # ====================
 # Hilfsfunktionen für intelligente Skalierung
@@ -568,7 +569,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
     """Erzeugt einen Graphen von einer oder mehreren Funktionen mit intelligenter automatischer Skalierung
 
     Args:
-        *funktionen: Eine oder mehrere GanzrationaleFunktion oder GebrochenRationaleFunktion
+        *funktionen: Eine oder mehrere GanzrationaleFunktion, GebrochenRationaleFunktion oder ParametrischeFunktion
         x_min: Untere x-Grenze (Standard: None = automatisch)
         x_max: Obere x-Grenze (Standard: None = automatisch)
         y_min: Untere y-Grenze (Standard: None = automatisch)
@@ -586,6 +587,15 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
         >>> f = GanzrationaleFunktion("x^2")
         >>> g = GanzrationaleFunktion("x+1")
         >>> graph = Graph(f, g)  # Zeigt beide mit Schnittpunkten
+
+        >>> # Parametrische Funktionen
+        >>> x = Variable("x")
+        >>> a = Parameter("a")
+        >>> f_param = ParametrischeFunktion([0, 1, a], [x])  # a*x² + x
+        >>> graph = Graph(f_param.mit_wert(a=2))  # Zeigt 2x² + x
+
+        >>> # Multi-Plot für verschiedene Parameterwerte
+        >>> graph = Graph.parametrisiert(f_param, a=[-2, -1, 0, 1, 2])  # Zeigt 5 Funktionen
 
         >>> # Manuelles Setzen von Grenzen
         >>> graph = Graph(f, x_min=0, x_max=5)
@@ -1485,6 +1495,83 @@ def SchmiegkurveAllgemein(punkte, tangenten=None, normalen=None, grad=None):
 
 
 # ====================
+# Parametrische Funktionen
+# ====================
+
+
+def Graph_parametrisiert(parametrische_funktion, **parameter_werte):
+    """Erzeugt mehrere Graphen für eine parametrische Funktion mit verschiedenen Parameterwerten
+
+    Args:
+        parametrische_funktion: ParametrischeFunktion-Objekt
+        **parameter_werte: Dictionary mit Parameter-Namen und Wertelisten
+                         z.B. a=[-2, -1, 0, 1, 2] für Parameter 'a'
+
+    Returns:
+        plotly.graph_objects.Figure: Plotly-Figur mit allen Funktionen
+
+    Beispiele:
+        >>> # Parametrische Funktion f_a(x) = a*x^2 + x
+        >>> x = Variable("x")
+        >>> a = Parameter("a")
+        >>> f_param = ParametrischeFunktion([a, 1, 0], [x])  # a*x^2 + x
+
+        # Erzeuge Graphen für verschiedene a-Werte
+        >>> fig = Graph_parametrisiert(f_param, a=[-2, -1, 0, 1, 2])
+
+        # Mit Marimo anzeigen:
+        >>> mo.ui.plotly(fig)
+    """
+    if not isinstance(parametrische_funktion, ParametrischeFunktion):
+        raise TypeError("Erste Argument muss eine ParametrischeFunktion sein")
+
+    if not parameter_werte:
+        raise ValueError("Mindestens ein Parameter mit Werten muss angegeben werden")
+
+    # Sammle alle konkreten Funktionen
+    konkrete_funktionen = []
+    farben = [
+        "blue",
+        "red",
+        "green",
+        "purple",
+        "orange",
+        "brown",
+        "pink",
+        "gray",
+        "olive",
+        "cyan",
+    ]
+
+    for param_name, werte in parameter_werte.items():
+        for i, wert in enumerate(werte):
+            # Erzeuge konkrete Funktion mit diesem Parameterwert
+            konkrete_funktion = parametrische_funktion.mit_wert(**{param_name: wert})
+
+            # Füge Parameter-Info zum Funktionsnamen hinzu
+            if hasattr(konkrete_funktion, "_parameter_info"):
+                konkrete_funktion._parameter_info = f"{param_name}={wert}"
+            else:
+                konkrete_funktion._parameter_info = f"{param_name}={wert}"
+
+            konkrete_funktionen.append(konkrete_funktion)
+
+    # Verwende die bestehende Graph-Funktion für mehrere Funktionen
+    fig = Graph(*konkrete_funktionen)
+
+    # Passe den Titel an, um die Parametrisierung zu zeigen
+    param_info = ", ".join(
+        [f"{k}=[{min(v)}, {max(v)}]" for k, v in parameter_werte.items()]
+    )
+    original_titel = fig.layout.title.text
+    fig.update_layout(
+        title=f"<b>{parametrische_funktion.term()}</b><br>Parameter: {param_info}"
+    )
+
+    return fig
+
+
+# ====================
 # Taylorpolynom-Funktionen
 # ====================
 
@@ -1658,11 +1745,15 @@ __all__ = [
     "GebrochenRationaleFunktion",
     "Schmiegkurve",
     "Taylorpolynom",
+    "Variable",
+    "Parameter",
+    "ParametrischeFunktion",
     "Nullstellen",
     "Polstellen",
     "Ableitung",
     "Wert",
     "Graph",
+    "Graph_parametrisiert",
     "Kürzen",
     "Schnittpunkt",
     "Extremstellen",
