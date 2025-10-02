@@ -443,8 +443,8 @@ class GanzrationaleFunktion:
             print(f"Fehler bei Nullstellenberechnung: {e}")
             return []
 
-    def extremstellen(self) -> list[tuple[float, str]]:
-        """Berechnet die Extremstellen der Funktion."""
+    def _berechne_stationäre_stellen(self) -> list[sp.Basic]:
+        """Berechnet alle stationären Stellen (f'(x) = 0)."""
         try:
             # Erste Ableitung
             f_strich = self.ableitung(1)
@@ -452,88 +452,188 @@ class GanzrationaleFunktion:
             # Kritische Punkte
             kritische_punkte = solve(f_strich.term_sympy, self.x)
 
-            extremstellen = []
+            stationäre_stellen = []
 
             for punkt in kritische_punkte:
                 if punkt.is_real:
-                    x_wert = float(punkt)
+                    stationäre_stellen.append(punkt)
 
-                    # Zweite Ableitung
-                    f_doppelstrich = self.ableitung(2)
-                    y_wert = f_doppelstrich.wert(x_wert)
-
-                    if y_wert > 0:
-                        art = "Minimum"
-                    elif y_wert < 0:
-                        art = "Maximum"
-                    else:
-                        art = "Sattelpunkt"
-
-                    extremstellen.append((x_wert, art))
-
-            return sorted(extremstellen, key=lambda x: x[0])
+            return sorted(stationäre_stellen, key=lambda x: float(x))
         except Exception:
             return []
 
-    def wendepunkte(self) -> list[tuple[float, str]]:
-        """
-        Calculates the inflection points of the function.
-
-        An inflection point is a point on a curve at which the curve changes
-        from being concave to convex, or vice versa.
-
-        Algorithm:
-        1. Find roots of the second derivative (f''(x) = 0). These are candidates.
-        2. For each real-valued candidate x_c:
-           - Check the first non-zero higher-order derivative.
-           - If the order of this derivative is odd, x_c is an inflection point.
-           - If the order is even, it's a local extremum of the derivative, not an inflection point.
-
-        Returns:
-            A sorted list of tuples, where each tuple contains the x-coordinate
-            of an inflection point and the string "Wendepunkt".
-            Returns an empty list if the calculation fails for any reason.
-        """
+    def _klassifiziere_extremum(self, x_wert: sp.Basic) -> str:
+        """Klassifiziert eine stationäre Stelle als Minimum, Maximum oder Sattelpunkt."""
         try:
-            # 1. Calculate derivatives ONCE outside the loop for efficiency.
+            # Zweite Ableitung
+            f_doppelstrich = self.ableitung(2)
+            y_wert = f_doppelstrich.wert(float(x_wert))
+
+            if y_wert > 0:
+                return "Minimum"
+            elif y_wert < 0:
+                return "Maximum"
+            else:
+                return "Sattelpunkt"
+        except Exception:
+            return "Unbestimmbar"
+
+    def extremstellen(
+        self, typ: bool = True
+    ) -> list[sp.Basic] | list[tuple[sp.Basic, str]]:
+        """Berechnet die Extremstellen der Funktion.
+
+        Args:
+            typ: Wenn True, liefert (x_wert, art) Tupel. Wenn False, nur x_werte.
+        """
+        stationäre_stellen = self._berechne_stationäre_stellen()
+
+        if not typ:
+            return stationäre_stellen
+
+        # Mit Klassifikation
+        extremstellen = []
+        for x_wert in stationäre_stellen:
+            art = self._klassifiziere_extremum(x_wert)
+            extremstellen.append((x_wert, art))
+
+        return extremstellen
+
+    def _berechne_wendestellen(self) -> list[sp.Basic]:
+        """Berechnet alle Wendestellen (f''(x) = 0)."""
+        try:
+            # Zweite Ableitung
             f_second_deriv = self.ableitung(2)
 
-            # 2. Find candidates for inflection points (where f''(x) = 0).
+            # Kandidaten für Wendestellen (f''(x) = 0)
             candidates = solve(f_second_deriv.term_sympy, self.x)
 
-            inflection_points = []
+            wendestellen = []
 
             for point in candidates:
                 if not point.is_real:
                     continue
 
-                x_val = float(point)
-
-                # 3. Check higher-order derivatives.
-                # Start with the 3rd derivative and find the first one that is not zero.
+                # Prüfe höhere Ableitungen
                 first_nonzero_deriv_order = 0
                 for order in range(3, MAX_DERIVATIVE_ORDER_CHECK + 1):
                     higher_deriv = self.ableitung(order)
-                    value = higher_deriv.wert(x_val)
+                    value = higher_deriv.wert(float(point))
 
                     if not np.isclose(value, 0, atol=DEFAULT_TOLERANCE):
                         first_nonzero_deriv_order = order
                         break
 
-                # An inflection point exists if the first non-zero derivative
-                # has an ODD order.
+                # Wendepunkt existiert, wenn erste nicht-null Ableitung ungerade Ordnung hat
                 if first_nonzero_deriv_order > 0 and first_nonzero_deriv_order % 2 != 0:
-                    inflection_points.append((x_val, "Wendepunkt"))
+                    wendestellen.append(point)
 
-            return sorted(inflection_points, key=lambda p: p[0])
+            return sorted(wendestellen, key=lambda x: float(x))
 
-        except (NotImplementedError, TypeError, ValueError, Exception) as e:
-            # 4. Catch specific exceptions and log them.
-            # Avoids silently failing and helps with debugging.
+        except Exception as e:
             log.error(
-                f"Could not calculate inflection points for {self.term_sympy}. Reason: {e}"
+                f"Could not calculate wendestellen for {self.term_sympy}. Reason: {e}"
             )
             return []
+
+    def _klassifiziere_wendepunkt(self, x_wert: sp.Basic) -> str:
+        """Analysiert die Krümmungsänderung an einem Wendepunkt."""
+        try:
+            # Testpunkte links und rechts vom Wendepunkt
+            delta = 0.01
+            x_links = float(x_wert) - delta
+            x_rechts = float(x_wert) + delta
+
+            # Zweite Ableitung für Krümmungsanalyse
+            f_second_deriv = self.ableitung(2)
+            y_links = f_second_deriv.wert(x_links)
+            y_rechts = f_second_deriv.wert(x_rechts)
+
+            if y_links < 0 and y_rechts > 0:
+                return "L→R"  # Linksgekrümmt → Rechtsgekrümmt
+            elif y_links > 0 and y_rechts < 0:
+                return "R→L"  # Rechtsgekrümmt → Linksgekrümmt
+            else:
+                return "Keine Änderung"
+        except Exception:
+            return "Unbestimmbar"
+
+    def wendestellen(
+        self, typ: bool = True
+    ) -> list[sp.Basic] | list[tuple[sp.Basic, str]]:
+        """Berechnet die Wendestellen der Funktion.
+
+        Args:
+            typ: Wenn True, liefert (x_wert, krümmungsänderung) Tupel. Wenn False, nur x_werte.
+        """
+        wendestellen = self._berechne_wendestellen()
+
+        if not typ:
+            return wendestellen
+
+        # Mit Krümmungsanalyse
+        klassifizierte_wendestellen = []
+        for x_wert in wendestellen:
+            krümmung = self._klassifiziere_wendepunkt(x_wert)
+            klassifizierte_wendestellen.append((x_wert, krümmung))
+
+        return klassifizierte_wendestellen
+
+    def extrempunkte(
+        self, typ: bool = True
+    ) -> list[tuple[sp.Basic, sp.Basic]] | list[tuple[sp.Basic, sp.Basic, str]]:
+        """Berechnet die Extrempunkte (x, y-Koordinaten).
+
+        Args:
+            typ: Wenn True, liefert (x, y, art) Tupel. Wenn False, nur (x, y) Tupel.
+        """
+        # Hole x-Koordinaten
+        extremstellen = self.extremstellen(typ=False)
+
+        # Berechne y-Koordinaten
+        punkte = []
+        for x_wert in extremstellen:
+            y_wert = self.wert(float(x_wert))
+            punkte.append((x_wert, y_wert))
+
+        if not typ:
+            return punkte
+
+        # Füge Klassifikation hinzu
+        klassifizierte_punkte = []
+        for x_wert, y_wert in punkte:
+            art = self._klassifiziere_extremum(x_wert)
+            klassifizierte_punkte.append((x_wert, y_wert, art))
+
+        return klassifizierte_punkte
+
+    def wendepunkte(
+        self, typ: bool = True
+    ) -> list[tuple[sp.Basic, sp.Basic]] | list[tuple[sp.Basic, sp.Basic, str]]:
+        """Berechnet die Wendepunkte (x, y-Koordinaten).
+
+        Args:
+            typ: Wenn True, liefert (x, y, krümmungsänderung) Tupel. Wenn False, nur (x, y) Tupel.
+        """
+        # Hole x-Koordinaten
+        wendestellen = self.wendestellen(typ=False)
+
+        # Berechne y-Koordinaten
+        punkte = []
+        for x_wert in wendestellen:
+            y_wert = self.wert(float(x_wert))
+            punkte.append((x_wert, y_wert))
+
+        if not typ:
+            return punkte
+
+        # Füge Krümmungsanalyse hinzu
+        klassifizierte_punkte = []
+        for x_wert, y_wert in punkte:
+            krümmung = self._klassifiziere_wendepunkt(x_wert)
+            klassifizierte_punkte.append((x_wert, y_wert, krümmung))
+
+        return klassifizierte_punkte
 
     def _rationale_nullstellen(self) -> list[sp.Rational]:
         """
