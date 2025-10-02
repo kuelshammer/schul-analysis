@@ -4,15 +4,14 @@ Schul-Analysis Framework
 Ein Python Framework für Schul-Analysis mit exakter Berechnung und Marimo-Integration.
 """
 
+import numpy as np
+import plotly.graph_objects as go
+
+from .config import config
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
 from .schmiegkurven import Schmiegkurve
 from .taylorpolynom import Taylorpolynom
-
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from .config import config
 
 # ====================
 # Hilfsfunktionen für intelligente Skalierung
@@ -180,7 +179,7 @@ def _berechne_y_bereich(
         # Sammle y-Werte aus interessanten Punkten
         interessante_y = []
         if interessante_punkte:
-            for kategorie, punkte_liste in interessante_punkte.items():
+            for _kategorie, punkte_liste in interessante_punkte.items():
                 try:
                     for p in punkte_liste:
                         if p is not None:
@@ -250,7 +249,6 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
     zeige_extremstellen = kwargs.get("zeige_extremstellen", True)
     zeige_wendepunkte = kwargs.get("zeige_wendepunkte", True)
     zeige_polstellen = kwargs.get("zeige_polstellen", True)
-    zeige_asymptoten = kwargs.get("zeige_asymptoten", True)
     titel = kwargs.get("titel")
     punkte_anzahl = kwargs.get("punkte", 200)
 
@@ -913,7 +911,7 @@ def Grenzwert(funktion, zielpunkt: float, richtung: str = "beidseitig") -> float
 
 def _numerischer_grenzwert(
     funktion, zielpunkt: float, richtung: str = "beidseitig"
-) -> float:
+) -> float | None:
     """Numerische Approximation von Grenzwerten"""
 
     if richtung == "links":
@@ -927,7 +925,11 @@ def _numerischer_grenzwert(
         links_limit = _numerischer_grenzwert(funktion, zielpunkt, "links")
         rechts_limit = _numerischer_grenzwert(funktion, zielpunkt, "rechts")
 
-        if abs(links_limit - rechts_limit) < 1e-10:
+        if (
+            links_limit is not None
+            and rechts_limit is not None
+            and abs(links_limit - rechts_limit) < 1e-10
+        ):
             return links_limit
         else:
             return None  # Kein beidseitiger Grenzwert

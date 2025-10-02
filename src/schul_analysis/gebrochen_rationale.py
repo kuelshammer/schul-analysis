@@ -8,7 +8,6 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 import re
 from typing import Any
 
-import numpy as np
 import plotly.graph_objects as go
 import sympy as sp
 from sympy import (
@@ -60,7 +59,7 @@ def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
     # Prüfe auf gefährliche Muster
     for muster in gefaehrliche_muster:
         if re.search(muster, ausdruck, re.IGNORECASE):
-            raise SicherheitsError(f"Gefährlicher Ausdruck erkannt: {ausdruck}")
+            raise SicherheitsError("Gefährlicher Ausdruck erkannt", ausdruck)
 
     # Prüfe auf gültiges mathematisches Format
     if not re.match(erlaubte_muster, ausdruck.strip()):

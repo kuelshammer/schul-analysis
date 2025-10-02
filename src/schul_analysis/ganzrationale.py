@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     from .gebrochen_rationale import GebrochenRationaleFunktion
 
 import marimo as mo
-import plotly.express as px
 import plotly.graph_objects as go
 import sympy as sp
 from plotly.subplots import make_subplots
