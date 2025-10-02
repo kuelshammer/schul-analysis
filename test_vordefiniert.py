@@ -9,14 +9,12 @@ sys.path.insert(0, "src")
 
 # Importieren mit vordefinierten Variablen und Parametern
 from schul_analysis import (
-    x,
-    t,
+    Graph_parametrisiert,
+    ParametrischeFunktion,
     a,
     k,
-    Variable,
-    Parameter,
-    ParametrischeFunktion,
-    Graph_parametrisiert,
+    t,
+    x,
 )
 
 

@@ -4,8 +4,10 @@ Educational demo for Taylor polynomials
 Shows how to use Taylor polynomials for function approximation
 """
 
-import numpy as np
 import math
+
+import numpy as np
+
 from src.schul_analysis import *
 
 

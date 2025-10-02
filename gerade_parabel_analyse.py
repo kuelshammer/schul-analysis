@@ -6,13 +6,17 @@ app = marimo.App(width="columns")
 
 @app.cell
 def _():
-    import marimo as mo
     return
 
 
 @app.cell
 def _():
-    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen, Extrempunkte, Graph, Wendepunkte, a, x, ParametrischeFunktion
+    from src.schul_analysis import (
+        GanzrationaleFunktion,
+        Graph,
+        ParametrischeFunktion,
+        Wendepunkte,
+    )
     return GanzrationaleFunktion, Graph, ParametrischeFunktion, Wendepunkte
 
 

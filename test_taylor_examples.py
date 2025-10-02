@@ -3,8 +3,10 @@
 Test examples for Taylor polynomials functionality
 """
 
-import numpy as np
 import math
+
+import numpy as np
+
 from src.schul_analysis import *
 from src.schul_analysis.taylorpolynom import Taylorpolynom
 
@@ -195,7 +197,7 @@ def test_konvergenzradius():
     f = GanzrationaleFunktion(koeff)
     taylor = Taylorpolynom(f, entwicklungspunkt=0, grad=4)
 
-    print(f"Für geometrische Reihe (1 + x + x² + x³ + x⁴):")
+    print("Für geometrische Reihe (1 + x + x² + x³ + x⁴):")
     print(f"Taylorpolynom: {taylor.term()}")
 
     # Konvergenzradius testen

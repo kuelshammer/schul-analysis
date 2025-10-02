@@ -8,11 +8,10 @@ import sys
 sys.path.insert(0, "src")
 
 from schul_analysis import (
-    Variable,
+    Graph_parametrisiert,
     Parameter,
     ParametrischeFunktion,
-    Graph_parametrisiert,
-    GanzrationaleFunktion,
+    Variable,
 )
 
 

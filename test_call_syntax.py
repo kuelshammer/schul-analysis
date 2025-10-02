@@ -7,13 +7,13 @@ import sys
 
 sys.path.insert(0, "src")
 
+
 from schul_analysis import (
-    Variable,
+    GanzrationaleFunktion,
     Parameter,
     ParametrischeFunktion,
-    GanzrationaleFunktion,
+    Variable,
 )
-import sympy as sp
 
 
 def test_ganzrationale_funktion_call_syntax():

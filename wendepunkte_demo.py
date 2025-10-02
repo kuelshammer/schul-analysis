@@ -9,7 +9,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion, Extremstellen, Wendepunkte, Graph
+from schul_analysis import Extremstellen, GanzrationaleFunktion, Graph, Wendepunkte
 
 
 def demo_wendepunkte():

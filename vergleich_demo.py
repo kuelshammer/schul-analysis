@@ -7,8 +7,8 @@ Zeigt den Unterschied zwischen zwei wichtigen mathematischen Konzepten:
 2. Schmiegkurven: Interpolation durch vorgegebene Punkte
 """
 
-import numpy as np
 import math
+
 from src.schul_analysis import *
 
 
@@ -128,7 +128,7 @@ def demo_vergleich_taylor_interpolation():
     print("   TAYLOR-ANSATZ:")
     taylor = Taylorpolynom(f, entwicklungspunkt=1, grad=2)
     print(f"   Taylorpolynom um x=1: {taylor.term()}")
-    print(f"   Eigenschaft: Perfekte Approximation um x=1")
+    print("   Eigenschaft: Perfekte Approximation um x=1")
     print(f"   f(1) = {f.wert(1)}, Taylor(1) = {taylor.wert(1)}")
     print()
 
@@ -142,7 +142,7 @@ def demo_vergleich_taylor_interpolation():
     p2 = (2, f.wert(2))
     print(f"   Punkte: {p0}, {p1}, {p2}")
     print(f"   Interpolationspolynom: {interpolation.term()}")
-    print(f"   Eigenschaft: Perfekte Interpolation durch die Punkte")
+    print("   Eigenschaft: Perfekte Interpolation durch die Punkte")
     print()
 
     # Vergleich an verschiedenen Stellen

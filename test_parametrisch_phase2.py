@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis.parametrisch import Variable, Parameter, ParametrischeFunktion
+from schul_analysis.parametrisch import Parameter, ParametrischeFunktion, Variable
 
 
 def test_symbolische_nullstellen():

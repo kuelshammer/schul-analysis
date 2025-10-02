@@ -1,3 +1,4 @@
+ruff, ty, gemini code review
 #!/usr/bin/env python3
 """
 Anleitung: Parametrische Funktionen im Schul-Analysis Framework

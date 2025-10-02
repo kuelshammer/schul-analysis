@@ -6,14 +6,12 @@ und zeigt pädagogische Anwendungen.
 """
 
 from src.schul_analysis import (
-    Schmiegkurve,
-    Schmiegparabel,
-    Schmiegkegel,
-    Schmieggerade,
     HermiteInterpolation,
-    SchmiegkurveAllgemein,
     Nullstellen,
-    Ableitung,
+    Schmieggerade,
+    Schmiegkegel,
+    SchmiegkurveAllgemein,
+    Schmiegparabel,
 )
 
 
@@ -26,7 +24,7 @@ def test_schmiegparabel_drei_punkte():
 
     parabel = Schmiegparabel(p1, p2, p3)
     print(f"Erzeugte Parabel: f(x) = {parabel.term}")
-    print(f"Erwartet: x²")
+    print("Erwartet: x²")
 
     # Validierung
     validierung = parabel.validiere_loesung()
@@ -48,7 +46,7 @@ def test_schmiegparabel_mit_tangente():
 #     parabel = Schmiegparabel((0, 0), (1, -1), (2, 0), tangente1=0)
 #     print(f"Erzeugte Parabel: f(x) = {parabel.term}")
 #     print(f"Erwartet: x² - 2x")
-# 
+#
 #     # Prüfe Tangente bei x=0
 #     ableitung = parabel.ableitung()
 #     tangente_0 = ableitung.wert(0)
@@ -64,7 +62,7 @@ def test_schmieggerade():
     # Gerade durch (1, 1) mit Steigung 2
     gerade = Schmieggerade((1, 1), 2)
     print(f"Erzeugte Gerade: f(x) = {gerade.term}")
-    print(f"Erwartet: 2x - 1")
+    print("Erwartet: 2x - 1")
 
     # Prüfe Punkt und Steigung
     print(f"f(1) = {gerade.wert(1):.6f} (erwartet: 1)")
@@ -103,7 +101,7 @@ def test_schmiegkegel_vier_punkte():
 
     kegel = Schmiegkegel(punkte)
     print(f"Erzeugter Kegel: f(x) = {kegel.term}")
-    print(f"Erwartet: x³")
+    print("Erwartet: x³")
 
     # Prüfe alle Punkte
     for i, (x, y) in enumerate(punkte):
@@ -163,7 +161,7 @@ def test_paedagogisches_beispiel():
     print(f"\nValidierung: {validierung}")
 
     # Zeige wichtige Eigenschaften
-    print(f"\nEigenschaften der Parabel:")
+    print("\nEigenschaften der Parabel:")
     print(f"- Scheitelpunktform: {parabel.term}")
     print(f"- Nullstellen: {Nullstellen(parabel)}")
     print(f"- y-Achsenabschnitt: {parabel.wert(0)}")

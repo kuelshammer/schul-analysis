@@ -80,6 +80,50 @@ class Parameter(SymbolischeGroesse):
     pass
 
 
+class Funktionsaufruf:
+    """Hilfsklasse für die Gleichungssyntax f(3) == 7"""
+
+    def __init__(self, funktion, wert_substitution):
+        self.funktion = funktion
+        self.wert_substitution = wert_substitution  # SymPy-Ausdruck nach Substitution
+
+    def __eq__(self, anderer_wert):
+        """Ermöglicht die Gleichungssyntax: f(3) == 7"""
+        if isinstance(anderer_wert, (int, float)):
+            try:
+                # Import hier, um zyklische Abhängigkeiten zu vermeiden
+                import sys
+
+                if "schul_analysis" in sys.modules:
+                    from schul_analysis import LineareGleichung
+                else:
+                    from .lineare_gleichungssysteme import LineareGleichung
+
+                # Beschreibung für pädagogische Zwecke
+                var_namen = [v.name for v in self.funktion.variablen]
+                if len(var_namen) == 1:
+                    # Versuche, x in der Beschreibung zu ersetzen
+                    try:
+                        x_val = str(self.wert_substitution)
+                        beschreibung = f"f({x_val}) = {anderer_wert}"
+                    except Exception:
+                        beschreibung = f"f(...) = {anderer_wert}"
+                else:
+                    beschreibung = f"f(...) = {anderer_wert}"
+
+                return LineareGleichung(
+                    linke_seite=self.wert_substitution,
+                    rechte_seite=float(anderer_wert),
+                    beschreibung=beschreibung,
+                )
+            except ImportError:
+                return NotImplemented
+        return NotImplemented
+
+    def __repr__(self):
+        return f"Funktionsaufruf({self.funktion.term()}, {self.wert_substitution})"
+
+
 class ParametrischeFunktion:
     """
     Repräsentiert eine parametrische Funktion mit symbolischen Parametern
@@ -789,40 +833,8 @@ class ParametrischeFunktion:
         for variable, wert in zip(self.variablen, werte, strict=True):
             ergebnis = ergebnis.subs(variable.symbol, wert)
 
-        return ergebnis
-
-    def __eq__(self, anderer_wert):
-        """
-        Ermöglicht die Gleichungssyntax: f(3) == 7
-
-        Args:
-            anderer_wert: Der Wert, mit dem verglichen wird
-
-        Returns:
-            LineareGleichung oder NotImplemented
-
-        Beispiele:
-            >>> x = Variable("x")
-            >>> a = Parameter("a")
-            >>> f = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
-            >>> gleichung = f(3) == 7  # Erzeugt LineareGleichung für 9a + 3 = 7
-
-        Didaktischer Hinweis:
-            Diese Syntax ist sehr intuitiv für Schüler, da sie der mathematischen
-            Schreibweise "f(x) = wert" entspricht. Das Ergebnis kann direkt für
-            Lineare Gleichungssysteme verwendet werden.
-        """
-        if isinstance(anderer_wert, (int, float)):
-            # Erstelle eine Gleichung: f(...) - anderer_wert = 0
-            # Import hier, um zyklische Abhängigkeiten zu vermeiden
-            try:
-                from .lineare_gleichungssysteme import LineareGleichung
-
-                return LineareGleichung.aus_funktion_wert(self, anderer_wert)
-            except ImportError:
-                # Fallback: NotImplemented zurückgeben, wenn LGS-Modul nicht existiert
-                return NotImplemented
-        return NotImplemented
+        # Gib ein Funktionsaufruf-Objekt zurück, das den Vergleich ermöglicht
+        return Funktionsaufruf(self, ergebnis)
 
 
 # Convenience-Funktionen für häufige Anwendungsfälle

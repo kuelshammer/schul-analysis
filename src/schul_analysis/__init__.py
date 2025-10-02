@@ -10,6 +10,7 @@ import plotly.graph_objects as go
 from .config import config
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
+from .lineare_gleichungssysteme import LGS
 from .parametrisch import Parameter, ParametrischeFunktion, Variable
 from .schmiegkurven import Schmiegkurve
 from .taylorpolynom import Taylorpolynom
@@ -635,7 +636,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             and y_max is not None
         ):
             # Verwende die alte Implementierung für manuelle Grenzen
-            interessante_punkte = _finde_interessante_punkte(funktion)
+            _finde_interessante_punkte(funktion)
             return _erstelle_plotly_figur(
                 funktion, x_min, x_max, y_min, y_max, **kwargs
             )
@@ -663,7 +664,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
     schnittpunkte = []
 
     # Für jede Funktion Punkte sammeln
-    for i, funktion in enumerate(funktionen):
+    for _, funktion in enumerate(funktionen):
         try:
             if (
                 hasattr(funktion, "nullstellen")
@@ -681,17 +682,17 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                 alle_x_punkte.extend(wendepunkte)
 
                 # Sammle auch y-Werte für bessere y-Skalierung
-                for ns in nullstellen:
+                for _ns in nullstellen:
                     alle_y_punkte.append(0.0)
-                for ext_x, ext_typ in funktion.extremstellen():
+                for ext_x, _ext_typ in funktion.extremstellen():
                     try:
                         alle_y_punkte.append(funktion.wert(float(ext_x)))
-                    except:
+                    except (ValueError, TypeError):
                         pass
                 for wp in funktion.wendepunkte():
                     try:
                         alle_y_punkte.append(float(wp[1]))
-                    except:
+                    except (ValueError, TypeError, IndexError):
                         pass
             else:
                 # GebrochenRationaleFunktion oder andere - nur x-Bereich sammeln
@@ -700,9 +701,9 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                     try:
                         nullstellen = [float(ns) for ns in funktion.nullstellen()]
                         alle_x_punkte.extend(nullstellen)
-                        for ns in nullstellen:
+                        for _ns in nullstellen:
                             alle_y_punkte.append(0.0)
-                    except:
+                    except (ValueError, TypeError):
                         pass
         except Exception:
             # Fallback bei Fehlern
@@ -780,7 +781,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                         y=y_vals,
                         mode="lines",
                         name=func_name,
-                        line=dict(color=farbe, width=2),
+                        line={"color": farbe, "width": 2},
                         hovertemplate=f"<b>{func_name}</b><br>x: %{{x:.3f}}<br>y: %{{y:.3f}}<extra></extra>",
                     )
                 )
@@ -816,7 +817,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                     y=[y_s],
                     mode="markers",
                     name=f"Schnittpunkt ({x_s:.2f}, {y_s:.2f})",
-                    marker=dict(color="black", size=10, symbol="diamond"),
+                    marker={"color": "black", "size": 10, "symbol": "diamond"},
                     showlegend=False,
                     hovertemplate=f"<b>Schnittpunkt</b><br>x: {x_s:.3f}<br>y: {y_s:.3f}<br>f{i + 1} = f{j + 1}<extra></extra>",
                 )
@@ -837,7 +838,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                                 y=[ns_y],
                                 mode="markers",
                                 name=f"Nullstelle f{i + 1} x={ns_x:.1f}",
-                                marker=dict(color="red", size=8),
+                                marker={"color": "red", "size": 8},
                                 showlegend=False,
                                 hovertemplate=f"<b>Nullstelle f{i + 1}</b><br>x: {ns_x:.3f}<br>y: 0.000<extra></extra>",
                             )
@@ -857,13 +858,13 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                                     y=[ext_y],
                                     mode="markers",
                                     name=f"{ext_typ} f{i + 1} ({ext_x_float:.1f}, {ext_y:.1f})",
-                                    marker=dict(color=farbe, size=8),
+                                    marker={"color": farbe, "size": 8},
                                     showlegend=False,
                                     hovertemplate=f"<b>{ext_typ} f{i + 1}</b><br>x: {ext_x_float:.3f}<br>y: {ext_y:.3f}<extra></extra>",
                                 )
                             )
                             punkte_hinzugefuegt.add((ext_x_float, ext_y))
-                    except:
+                    except (ValueError, TypeError):
                         pass
 
             if hasattr(funktion, "wendepunkte"):
@@ -877,13 +878,13 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                                     y=[wp_y],
                                     mode="markers",
                                     name=f"Wendepunkt f{i + 1} ({wp_x:.1f}, {wp_y:.1f})",
-                                    marker=dict(color="orange", size=8),
+                                    marker={"color": "orange", "size": 8},
                                     showlegend=False,
                                     hovertemplate=f"<b>Wendepunkt f{i + 1}</b><br>x: {wp_x:.3f}<br>y: {wp_y:.3f}<extra></extra>",
                                 )
                             )
                             punkte_hinzugefuegt.add((wp_x, wp_y))
-                    except:
+                    except (ValueError, TypeError, IndexError):
                         pass
         except Exception:
             pass
@@ -1542,21 +1543,9 @@ def Graph_parametrisiert(parametrische_funktion, **parameter_werte):
 
     # Sammle alle konkreten Funktionen
     konkrete_funktionen = []
-    farben = [
-        "blue",
-        "red",
-        "green",
-        "purple",
-        "orange",
-        "brown",
-        "pink",
-        "gray",
-        "olive",
-        "cyan",
-    ]
 
     for param_name, werte in parameter_werte.items():
-        for i, wert in enumerate(werte):
+        for _i, wert in enumerate(werte):
             # Erzeuge konkrete Funktion mit diesem Parameterwert
             konkrete_funktion = parametrische_funktion.mit_wert(**{param_name: wert})
 
@@ -1575,7 +1564,6 @@ def Graph_parametrisiert(parametrische_funktion, **parameter_werte):
     param_info = ", ".join(
         [f"{k}=[{min(v)}, {max(v)}]" for k, v in parameter_werte.items()]
     )
-    original_titel = fig.layout.title.text
     fig.update_layout(
         title=f"<b>{parametrische_funktion.term()}</b><br>Parameter: {param_info}"
     )

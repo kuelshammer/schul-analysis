@@ -11,6 +11,59 @@ Ein Python Framework für Schul-Analysis mit exakter Berechnung und Marimo-Integ
 - **Pädagogische Darstellung** mit deutschen Methodennamen
 - **🔥 Mathematisch korrekte Visualisierung** mit Plotly (keine verzerrten Parabeln!)
 - **🎯 Intuitive `__call__`-Syntax**: `f(2)` statt `f.wert(2)` für natürliche mathematische Notation
+- **🆕 Lineare Gleichungssysteme (LGS)** mit intuitiver Syntax `LGS(f(3)==4, f(2)==0, f1(0)=0)`
+
+## 🔧 Neue Features in Version 1.2
+
+### 🆕 Lineare Gleichungssysteme (LGS) für parametrische Funktionen
+
+Das Framework unterstützt jetzt das Lösen von linearen Gleichungssystemen für parametrische Funktionen mit intuitiver Syntax:
+
+```python
+# Erstelle Parameter und Variable
+a, b, c = Parameter("a"), Parameter("b"), Parameter("c")
+x = Variable("x")
+
+# Erstelle parametrische Funktion f(x) = ax² + bx + c
+f = ParametrischeFunktion([a, b, c], [x])
+
+# Finde Parabel durch 3 Punkte mit intuitiver Syntax
+gl1 = f(1) == 2  # f(1) = 2
+gl2 = f(2) == 3  # f(2) = 3
+gl3 = f(3) == 6  # f(3) = 6
+
+# Erstelle und löse LGS
+lgs = LGS(gl1, gl2, gl3)
+loesung = lgs.löse()
+
+# Ergebnis: {a: 3.0, b: -2.0, c: 1.0}
+# Gefundene Parabel: f(x) = x² - 2x + 3
+```
+
+#### Funktion mit Ableitungsbedingungen
+
+```python
+# Erste Ableitung
+f1 = Ableitung(f)  # f'(x) = 2ax + b
+
+# Bedingungen mit Ableitungen
+gl1 = f(0) == 1   # f(0) = 1
+gl2 = f(1) == 3   # f(1) = 3
+gl3 = f1(1) == 4  # f'(1) = 4
+
+lgs = LGS(gl1, gl2, gl3)
+loesung = lgs.löse()
+
+# Ergebnis: {a: 2.0, b: 0.0, c: 1.0}
+# Funktion: f(x) = 2x² + 1
+```
+
+#### Pädagogische Features
+
+- **Intuitive Gleichungssyntax**: `f(3) == 4` entspricht der mathematischen Notation
+- **Automatische Koeffizientenextraktion**: Aus ax² + bx + c wird das LGS-System
+- **Detaillierte Inspektion**: `zeige_gleichungen()`, `zeige_matrix()`, `zeige_unbekannte()`
+- **Pädagogische Fehlermeldungen**: Verständliche Erklärungen bei widersprüchlichen Bedingungen
 
 ## 🔧 Neue Features in Version 1.1
 
@@ -34,19 +87,45 @@ f_konkret = f_param.mit_wert(a=3)
 print(f_konkret(2))  # 14.0
 ```
 
-### 🔄 Verbesserte Ableitungs-Syntax
+### 🔥 Neue Prime-Notation für Ableitungen
 
-Ableitungen können jetzt direkt aufgerufen werden:
+Das Framework unterstützt jetzt die intuitive mathematische Notation für Ableitungen:
 
 ```python
-f = GanzrationaleFunktion("x^3 - 3x^2 + 2x")
-f_strich = f.ableitung()
-print(f_strich(2))           # 2.0
+# Mathematisch: f'(x) = 2x + 3, f'(2) = 7
+f = GanzrationaleFunktion("x^2 + 3x - 2")
+f_strich = Ableitung(f)        # f'(x) = 2x + 3
+print(f_strich(2))            # 7.0
 
-# Oder direkt ohne Zwischenvariable
-print(f.ableitung()(2))      # 2.0
-print(f.ableitung(2)(1))     # 0.0 (zweite Ableitung)
+# Höhere Ableitungen
+f_zwei_strich = Ableitung(f_strich)  # f''(x) = 2
+print(f_zwei_strich(5))       # 2.0
+
+# Funktioniert auch mit parametrischen Funktionen
+t = Variable("t")
+g = ParametrischeFunktion("t^2 + 2*t", t)
+g_strich = Ableitung(g)        # g'(t) = 2t + 2
+print(g_strich(3))            # 8.0
+
+# Kombination mit __call__ Syntax
+f = GanzrationaleFunktion("x^3 - 2x^2 + 5x - 1")
+f_strich = Ableitung(f)       # f'(x) = 3x² - 4x + 5
+print(f_strich(1))            # 4.0
+
+f_zwei_strich = Ableitung(f_strich)  # f''(x) = 6x - 4
+print(f_zwei_strich(1))       # 2.0
+
+f_drei_strich = Ableitung(f_zwei_strich)  # f'''(x) = 6
+print(f_drei_strich(1))       # 6.0
 ```
+
+**Vorteile:**
+
+- **Extrem intuitive Notation**: `f_strich = Ableitung(f)` entspricht mathematisch `f' = df/dx`
+- **Konsistente Syntax**: Funktioniert für alle Funktionstypen gleich
+- **Natürliche Aufrufe**: `f_strich(2)` entspricht `f'(2)`
+- **Kombinierbar**: Höhere Ableitungen durch Kaskadierung möglich
+- **Abwärtskompatibel**: Bestehende `f.ableitung()` Methode bleibt erhalten
 
 ### 📋 Gleichungssyntax (Vorbereitung für LGS)
 
