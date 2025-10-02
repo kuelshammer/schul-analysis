@@ -586,10 +586,14 @@ class GanzrationaleFunktion:
             y_links = f_second_deriv.wert(x_links)
             y_rechts = f_second_deriv.wert(x_rechts)
 
+            # Korrekte Interpretation der zweiten Ableitung:
+            # f''(x) > 0 = linksgekrümmt (konkav)
+            # f''(x) < 0 = rechtsgekrümmt (konvex)
+
             if y_links < 0 and y_rechts > 0:
-                return "L→R"  # Linksgekrümmt → Rechtsgekrümmt
-            elif y_links > 0 and y_rechts < 0:
                 return "R→L"  # Rechtsgekrümmt → Linksgekrümmt
+            elif y_links > 0 and y_rechts < 0:
+                return "L→R"  # Linksgekrümmt → Rechtsgekrümmt
             else:
                 return "Keine Änderung"
         except Exception:
