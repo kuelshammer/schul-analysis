@@ -279,25 +279,35 @@ def Extrempunkte(funktion, typ: bool = True, runden=None):
     return funktion.extrempunkte(typ=typ, runden=runden)
 
 
-def Wendepunkte(funktion):
+def Wendepunkte(funktion, typ: bool = True, runden=None):
     """Berechnet die Wendepunkte einer Funktion
 
     Args:
         funktion: Eine GanzrationaleFunktion
+        typ: Wenn True (Standard), werden die Wendepunkte klassifiziert.
+             Wenn False, werden nur die Koordinaten zurückgegeben.
+        runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
     Returns:
-        list: Liste von Tupeln (x, art) mit den Wendepunkten
+        list: Liste von Tupeln (x, y, art) mit den Wendepunkten (typ=True)
+              oder Liste der Koordinaten (x, y) (typ=False)
 
     Beispiele:
         >>> f = GanzrationaleFunktion("x^3")
         >>> Wendepunkte(f)
-        [(0.0, 'Wendepunkt')]
+        [(0, 0, 'Wendepunkt')]
+        >>> Wendepunkte(f, typ=False)
+        [(0, 0)]
+        >>> Wendepunkte(f, runden=2)
+        [(0.0, 0.0, 'Wendepunkt')]
 
         >>> g = GanzrationaleFunktion("x^4-4x^3")
         >>> Wendepunkte(g)
-        [(0.0, 'Wendepunkt'), (2.0, 'Wendepunkt')]
+        [(0.0, 0.0, 'Wendepunkt'), (2.0, -16.0, 'Wendepunkt')]
+        >>> Wendepunkte(g, typ=False)
+        [(0.0, 0.0), (2.0, -16.0)]
     """
-    return funktion.wendepunkte()
+    return funktion.wendepunkte(typ=typ, runden=runden)
 
 
 def Integral(funktion, a: float, b: float) -> float:

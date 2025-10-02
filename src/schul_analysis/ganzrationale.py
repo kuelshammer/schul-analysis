@@ -637,8 +637,13 @@ class GanzrationaleFunktion:
         # Berechne y-Koordinaten
         punkte = []
         for x_wert in extremstellen:
-            y_wert = self.wert(float(x_wert))
-            y_wert = _runde_wert(y_wert, runden)
+            if runden is None:
+                # Exakte Berechnung mit SymPy
+                y_wert = self.term_sympy.subs(self.x, x_wert)
+            else:
+                # Numerische Berechnung mit Rundung
+                y_wert = self.wert(float(x_wert))
+                y_wert = _runde_wert(y_wert, runden)
             punkte.append((x_wert, y_wert))
 
         if not typ:
@@ -667,8 +672,13 @@ class GanzrationaleFunktion:
         # Berechne y-Koordinaten
         punkte = []
         for x_wert in wendestellen:
-            y_wert = self.wert(float(x_wert))
-            y_wert = _runde_wert(y_wert, runden)
+            if runden is None:
+                # Exakte Berechnung mit SymPy
+                y_wert = self.term_sympy.subs(self.x, x_wert)
+            else:
+                # Numerische Berechnung mit Rundung
+                y_wert = self.wert(float(x_wert))
+                y_wert = _runde_wert(y_wert, runden)
             punkte.append((x_wert, y_wert))
 
         if not typ:

@@ -12,8 +12,8 @@ def _():
 
 @app.cell
 def _():
-    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen
-    return Ableitung, GanzrationaleFunktion, Nullstellen
+    from src.schul_analysis import GanzrationaleFunktion, Nullstellen, Ableitung, Extremstellen, Extrempunkte
+    return Ableitung, Extrempunkte, GanzrationaleFunktion, Nullstellen
 
 
 @app.cell
