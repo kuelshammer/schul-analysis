@@ -7,6 +7,7 @@ f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 
 from abc import ABC
 from dataclasses import dataclass
+from typing import Any
 
 import sympy as sp
 
@@ -203,7 +204,7 @@ class ParametrischeFunktion:
                     # Höhere Potenzen
                     term += koeff_symbol * (x**i)
 
-            return term
+            return term  # type: ignore
         else:
             # Mehrere Variablen - komplexerer Fall
             raise NotImplementedError("Mehrere Variablen noch nicht implementiert")
@@ -293,7 +294,7 @@ class ParametrischeFunktion:
 
         # Parse den String mit SymPy
         try:
-            term_sympy = sp.sympify(term_string, locals=symbol_mapping)
+            term_sympy = sp.sympify(term_string, locals=symbol_mapping)  # type: ignore
         except Exception as e:
             raise ValueError(f"Konnte Term '{term_string}' nicht parsen: {e}")
 
@@ -354,7 +355,11 @@ class ParametrischeFunktion:
                 zahl_faktor = 1
 
                 for faktor in faktoren:
-                    if faktor.is_symbol and faktor.name in parameter_namen:
+                    if (
+                        faktor.is_symbol
+                        and hasattr(faktor, "name")
+                        and faktor.name in parameter_namen
+                    ):
                         param_faktor = parameter_namen[faktor.name]
                     elif faktor.is_number:
                         zahl_faktor = float(faktor)
@@ -533,7 +538,7 @@ class ParametrischeFunktion:
                         param_symbol.name: param_symbol,
                         var_symbol.name: var_symbol,
                     },
-                )
+                )  # type: ignore
             elif isinstance(x_wert, (int, float)):
                 x_expr = sp.Number(x_wert)
             elif hasattr(x_wert, "is_symbol"):  # SymPy-Objekt
