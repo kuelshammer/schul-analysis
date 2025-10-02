@@ -473,6 +473,75 @@ class GanzrationaleFunktion:
             print(f"Fehler bei Nullstellenberechnung: {e}")
             return []
 
+    def löse_gleichung(
+        self, ziel_wert: float = 0, real: bool = True, runden=None
+    ) -> list:
+        """Löst die Gleichung f(x) = ziel_wert
+
+        Args:
+            ziel_wert: Zielwert der Gleichung (Standard 0 für Nullstellen)
+            real: Nur reelle Lösungen zurückgeben (Standard True)
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
+
+        Returns:
+            list: Liste der Lösungen als exakte symbolische Ausdrücke oder gerundete Zahlen
+
+        Beispiele:
+            >>> f = GanzrationaleFunktion("x^2 + 2x - 3")
+            >>> f.löse_gleichung(0)    # [-3, 1] (Standard-Nullstellen)
+            >>> f.löse_gleichung(5)    # Lösungen für x^2 + 2x - 3 = 5
+        """
+        try:
+            # Erstelle Gleichungsterm: f(x) - ziel_wert = 0
+            gleichung_term = self.term_sympy - ziel_wert
+
+            # Verwende die gleiche Logik wie in nullstellen()
+            # Für höhere Grade (≥ 3) zuerst versuchen, rationale Nullstellen zu finden
+            grad = len(self.koeffizienten) - 1
+            if grad >= 3 and ziel_wert == 0:
+                # Für Nullstellen können wir die optimierte Logik nutzen
+                return self.nullstellen(real=real, runden=runden)
+
+            # Allgemeiner Fall: löse direkt mit SymPy
+            lösungen = solve(gleichung_term, self.x)
+            lösungen_liste = []
+
+            for lösung in lösungen:
+                if real and not lösung.is_real:
+                    continue
+
+                if lösung.is_real:
+                    lösungen_liste.append(_runde_wert(lösung, runden))
+                else:
+                    # Komplexe Zahlen werden immer zu floats konvertiert
+                    komplex_wert = complex(lösung)
+                    if runden is not None:
+                        # Runde Real- und Imaginärteil
+                        komplex_wert = complex(
+                            round(komplex_wert.real, runden),
+                            round(komplex_wert.imag, runden),
+                        )
+                    lösungen_liste.append(komplex_wert)
+
+            # Sortiere Lösungen (reelle zuerst, dann komplexe nach Realteil)
+            reelle_lösungen = [
+                x for x in lösungen_liste if hasattr(x, "is_real") and x.is_real
+            ]
+            komplexe_lösungen = [
+                x for x in lösungen_liste if not hasattr(x, "is_real") or not x.is_real
+            ]
+
+            # Sortiere reelle Lösungen
+            reelle_lösungen.sort(key=lambda x: float(x))
+
+            # Sortiere komplexe Lösungen nach Realteil
+            komplexe_lösungen.sort(key=lambda x: complex(x).real)
+
+            return reelle_lösungen + komplexe_lösungen
+        except Exception as e:
+            print(f"Fehler bei Gleichungslösung f(x) = {ziel_wert}: {e}")
+            return []
+
     def _berechne_stationäre_stellen(self) -> list[sp.Basic]:
         """Berechnet alle stationären Stellen (f'(x) = 0)."""
         try:

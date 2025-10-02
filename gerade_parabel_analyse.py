@@ -35,6 +35,17 @@ def _(Graph, f):
 
 
 @app.cell
+def _(GanzrationaleFunktion):
+    g = GanzrationaleFunktion("a*x^2 + 1")
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
 def _():
     return
 

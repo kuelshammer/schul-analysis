@@ -5,9 +5,9 @@ Dieses Modul ermöglicht die Arbeit mit parametrischen Funktionen wie
 f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 """
 
-from typing import Union, List, Tuple, Optional, Any
-import sympy as sp
 from dataclasses import dataclass
+
+import sympy as sp
 
 
 @dataclass
@@ -107,8 +107,8 @@ class ParametrischeFunktion:
 
     def __init__(
         self,
-        koeffizienten: List[Union[Parameter, int, float]],
-        variablen: List[Variable],
+        koeffizienten: list[Parameter | int | float],
+        variablen: list[Variable],
     ):
         self.koeffizienten = koeffizienten
         self.variablen = variablen
@@ -172,7 +172,7 @@ class ParametrischeFunktion:
 
     @classmethod
     def term(
-        cls, term_string: str, *args: Union[Parameter, Variable]
+        cls, term_string: str, *args: Parameter | Variable
     ) -> "ParametrischeFunktion":
         """
         Erstellt eine parametrische Funktion aus einem String
@@ -286,6 +286,105 @@ class ParametrischeFunktion:
         # Erstelle konkrete Funktion
         return GanzrationaleFunktion(konkrete_koeffizienten)
 
+    def löse_für_x(
+        self,
+        parameter_wert: float,
+        ziel_wert: float = 0,
+        real: bool = True,
+        runden=None,
+    ) -> list:
+        """Löst f_c(x) = ziel_wert für konkreten Parameterwert c
+
+        Args:
+            parameter_wert: Wert für den Parameter
+            ziel_wert: Zielwert der Gleichung (Standard 0)
+            real: Nur reelle Lösungen zurückgeben (Standard True)
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
+
+        Returns:
+            list: Liste der x-Lösungen
+
+        Beispiele:
+            >>> x = Variable("x")
+            >>> a = Parameter("a")
+            >>> f = ParametrischeFunktion([0, 1, a], [x])  # ax² + x
+            >>> f.löse_für_x(3, 17)     # Löst 3x² + x = 17
+            >>> f.löse_für_x(-1, 0)    # Löst -x² + x = 0
+        """
+        try:
+            # Finde Parameter-Namen automatisch
+            parameter_objekte = [
+                k for k in self.koeffizienten if isinstance(k, Parameter)
+            ]
+            if not parameter_objekte:
+                raise ValueError("Keine Parameter in der Funktion gefunden")
+
+            # Erzeuge konkrete Funktion und löse Gleichung
+            param_name = parameter_objekte[0].name
+            f_konkret = self.mit_wert(**{param_name: parameter_wert})
+            return f_konkret.löse_gleichung(ziel_wert, real, runden)
+        except Exception as e:
+            print(f"Fehler bei löse_für_x mit parameter_wert={parameter_wert}: {e}")
+            return []
+
+    def löse_für_parameter(
+        self, x_wert: float | str | sp.Expr, ziel_wert: float = 0
+    ) -> list:
+        """Löst f_a(x_wert) = ziel_wert für Parameter a
+
+        Args:
+            x_wert: x-Wert (Zahl, String wie "a/2", oder SymPy-Ausdruck)
+            ziel_wert: Zielwert der Gleichung (Standard 0)
+
+        Returns:
+            list: Liste der Parameter-Lösungen
+
+        Beispiele:
+            >>> x = Variable("x")
+            >>> a = Parameter("a")
+            >>> f = ParametrischeFunktion([0, 1, a], [x])  # ax² + x
+            >>> f.löse_für_parameter("a/2", 1)  # Löst a(a/2)² + (a/2) = 1
+            >>> f.löse_für_parameter(2, 5)      # Löst a(2)² + 2 = 5
+        """
+        try:
+            # Finde Parameter und Variable automatisch
+            parameter_objekte = [
+                k for k in self.koeffizienten if isinstance(k, Parameter)
+            ]
+            if not parameter_objekte:
+                raise ValueError("Keine Parameter in der Funktion gefunden")
+
+            param_symbol = parameter_objekte[0].symbol
+            var_symbol = self.variablen[0].symbol
+
+            # Verarbeite x_wert: Konvertiere zu SymPy-Ausdruck
+            if isinstance(x_wert, str):
+                # Parse String zu SymPy-Ausdruck
+                x_expr = sp.sympify(
+                    x_wert,
+                    locals={
+                        param_symbol.name: param_symbol,
+                        var_symbol.name: var_symbol,
+                    },
+                )
+            elif isinstance(x_wert, (int, float)):
+                x_expr = sp.Number(x_wert)
+            elif hasattr(x_wert, "is_symbol"):  # SymPy-Objekt
+                x_expr = x_wert
+            else:
+                raise ValueError(f"Unbekannter Typ für x_wert: {type(x_wert)}")
+
+            # Erzeuge Gleichung: f(x_wert) = ziel_wert
+            gleichung = sp.Eq(self.term_sympy.subs(var_symbol, x_expr), ziel_wert)
+
+            # Löse nach Parameter auf
+            lösungen = sp.solve(gleichung, param_symbol)
+
+            return lösungen if lösungen else []
+        except Exception as e:
+            print(f"Fehler bei löse_für_parameter mit x_wert={x_wert}: {e}")
+            return []
+
     def ableitung(self, ordnung: int = 1) -> "ParametrischeFunktion":
         """
         Berechnet die symbolische Ableitung der Funktion
@@ -312,7 +411,7 @@ class ParametrischeFunktion:
             "Symbolische Ableitung noch nicht vollständig implementiert"
         )
 
-    def nullstellen(self) -> List[Union[sp.Expr, Tuple[sp.Expr, str]]]:
+    def nullstellen(self) -> list[sp.Expr | tuple[sp.Expr, str]]:
         """
         Berechnet die symbolischen Nullstellen der Funktion
 
@@ -352,7 +451,7 @@ class ParametrischeFunktion:
         except Exception:
             return []
 
-    def extremstellen(self) -> List[Tuple[sp.Expr, str]]:
+    def extremstellen(self) -> list[tuple[sp.Expr, str]]:
         """
         Berechnet die symbolischen Extremstellen der Funktion
 
@@ -418,7 +517,7 @@ class ParametrischeFunktion:
         except Exception:
             return []
 
-    def wendepunkte(self) -> List[Tuple[sp.Expr, sp.Expr, str]]:
+    def wendepunkte(self) -> list[tuple[sp.Expr, sp.Expr, str]]:
         """
         Berechnet die symbolischen Wendepunkte der Funktion
 
