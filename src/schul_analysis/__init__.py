@@ -15,6 +15,18 @@ from .taylorpolynom import Taylorpolynom
 from .parametrisch import Variable, Parameter, ParametrischeFunktion
 
 # ====================
+# Vordefinierte Variablen und Parameter
+# ====================
+
+# Standard-Variablen
+x = Variable("x")
+t = Variable("t")
+
+# Standard-Parameter
+a = Parameter("a")
+k = Parameter("k")
+
+# ====================
 # Hilfsfunktionen für intelligente Skalierung
 # ====================
 
@@ -1748,6 +1760,10 @@ __all__ = [
     "Variable",
     "Parameter",
     "ParametrischeFunktion",
+    "x",
+    "t",
+    "a",
+    "k",
     "Nullstellen",
     "Polstellen",
     "Ableitung",
