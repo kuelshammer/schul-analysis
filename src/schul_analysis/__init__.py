@@ -73,7 +73,7 @@ def _berechne_optimalen_bereich(punkte_dict, min_bereich=(-5, 5), puffer=0.2):
 
     Args:
         punkte_dict: Dictionary mit interessanten Punkten
-        min_bereich: Minimaler Bereich der garantiert wird
+        min_bereich: Minimaler Bereich der garantiert wird (wenn keine Punkte gefunden)
         puffer: Zusätzlicher Puffer um die äußersten Punkte (20%)
 
     Returns:
@@ -99,11 +99,11 @@ def _berechne_optimalen_bereich(punkte_dict, min_bereich=(-5, 5), puffer=0.2):
     if not alle_x:
         return min_bereich
 
-    # Berechne Bereich mit Puffer
+    # Berechne Bereich basierend auf den tatsächlichen Punkten
     x_min_auto = min(alle_x)
     x_max_auto = max(alle_x)
 
-    # Füge Puffer hinzu
+    # Füge Puffer hinzu - aber vernünftiger begrenzt
     breite = x_max_auto - x_min_auto
     if breite > 0:
         puffer_wert = breite * puffer
@@ -114,9 +114,32 @@ def _berechne_optimalen_bereich(punkte_dict, min_bereich=(-5, 5), puffer=0.2):
         x_min_auto -= 1
         x_max_auto += 1
 
-    # Stelle sicher dass min_bereich eingehalten wird
-    x_min_final = min(x_min_auto, min_bereich[0])
-    x_max_final = max(x_max_auto, min_bereich[1])
+    # NEUE LOGIK: Stelle sicher dass der Bereich vernünftig ist, aber erzwinge nicht min_bereich
+    # Wenn der berechnete Bereich kleiner als min_bereich ist, verwende den berechneten Bereich
+    # Wenn er größer ist, schneide ihn auf min_bereich zu
+
+    berechnete_breite = x_max_auto - x_min_auto
+    min_breite = min_bereich[1] - min_bereich[0]
+
+    if berechnete_breite <= min_breite:
+        # Der berechnete Bereich ist kleiner oder gleich - verwende ihn
+        x_min_final, x_max_final = x_min_auto, x_max_auto
+    else:
+        # Der berechnete Bereich ist größer - schneide auf min_bereich zu
+        if x_min_auto < min_bereich[0] and x_max_auto > min_bereich[1]:
+            # Beide Seiten außerhalb - verwende min_bereich
+            x_min_final, x_max_final = min_bereich
+        elif x_min_auto < min_bereich[0]:
+            # Nur links außerhalb - passe an
+            x_min_final = min_bereich[0]
+            x_max_final = x_min_final + min_breite
+        elif x_max_auto > min_bereich[1]:
+            # Nur rechts außerhalb - passe an
+            x_max_final = min_bereich[1]
+            x_min_final = x_max_final - min_breite
+        else:
+            # Beide innerhalb - verwende berechneten Bereich
+            x_min_final, x_max_final = x_min_auto, x_max_auto
 
     return (x_min_final, x_max_final)
 
