@@ -225,7 +225,7 @@ class GebrochenRationaleFunktion:
         """Gibt den Term als LaTeX-String zurück"""
         return latex(self.term_sympy)
 
-    def wert(self, x_wert: float) -> float:
+    def wert(self, x_wert: float) -> float | sp.Basic:
         """
         Berechnet den Funktionswert an einer Stelle.
 
@@ -233,7 +233,7 @@ class GebrochenRationaleFunktion:
             x_wert: x-Wert an dem die Funktion ausgewertet werden soll
 
         Returns:
-            Funktionswert als float
+            Funktionswert als float oder symbolischer Ausdruck (bei Parametern)
 
         Raises:
             ValueError: Wenn x_wert eine Polstelle ist (Division durch Null)
@@ -242,11 +242,53 @@ class GebrochenRationaleFunktion:
         if self._ist_polstelle(x_wert):
             raise ValueError(f"x = {x_wert} ist eine Polstelle der Funktion")
 
-        return float(self.term_sympy.subs(self.x, x_wert))
+        # Berechne Zähler und Nenner separat, um symbolische Unterstützung zu nutzen
+        zaehler_wert = self.zaehler.wert(x_wert)
+        nenner_wert = self.nenner.wert(x_wert)
+
+        # Wenn beide Werte konkrete Zahlen sind, teile sie
+        if isinstance(zaehler_wert, (int, float)) and isinstance(
+            nenner_wert, (int, float)
+        ):
+            return float(zaehler_wert) / float(nenner_wert)
+
+        # Andernfalls gib den symbolischen Ausdruck zurück
+        return zaehler_wert / nenner_wert
+
+    def __call__(self, x_wert: float) -> float | sp.Basic:
+        """
+        Macht die Funktion aufrufbar: f(2), f(0.5), etc.
+
+        Args:
+            x_wert: x-Wert, an dem die Funktion ausgewertet werden soll
+
+        Returns:
+            Der Funktionswert als float-Zahl oder symbolischer Ausdruck (bei Parametern)
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion(GanzrationaleFunktion("x^2 + 1"), GanzrationaleFunktion("x - 1"))
+            >>> f(2)    # (2^2 + 1)/(2 - 1) = 5.0
+            >>> g = GebrochenRationaleFunktion(GanzrationaleFunktion("a x^2 + 1"), GanzrationaleFunktion("x"))
+            >>> g(1)    # (a*1^2 + 1)/1 = a + 1 (symbolisch)
+
+        Didaktischer Hinweis:
+            Diese Methode ermöglicht die natürliche mathematische Notation f(x),
+            die Schüler aus dem Unterricht kennen.
+        """
+        return self.wert(x_wert)
 
     def _ist_polstelle(self, x_wert: float) -> bool:
         """Prüft, ob x_wert eine Polstelle ist"""
-        return abs(self.nenner.term_sympy.subs(self.x, x_wert)) < 1e-10
+        try:
+            # Versuche, den Nenner auszuwerten
+            nenner_wert = self.nenner.wert(x_wert)
+            if isinstance(nenner_wert, (int, float)):
+                return abs(nenner_wert) < 1e-10
+            # Bei symbolischen Ausdrücken: keine Polstelle erkennbar
+            return False
+        except (ValueError, TypeError, AttributeError):
+            # Bei Fehlern: keine Polstelle erkennbar
+            return False
 
     def nullstellen(self) -> list[float]:
         """

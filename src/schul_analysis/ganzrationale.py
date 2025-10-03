@@ -6,6 +6,7 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
@@ -20,6 +21,48 @@ from plotly.subplots import make_subplots
 from sympy import Poly, Rational, diff, factor, latex, solve, symbols, sympify
 
 from .config import config
+
+
+# Einfache Versionen von Variable und Parameter zur Vermeidung zirkulärer Importe
+@dataclass
+class _Variable:
+    """Interne Variable-Klasse für GanzrationaleFunktion"""
+
+    name: str
+
+    def __post_init__(self):
+        self._symbol = sp.Symbol(self.name)
+
+    @property
+    def symbol(self) -> sp.Symbol:
+        return self._symbol
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"Variable('{self.name}')"
+
+
+@dataclass
+class _Parameter:
+    """Interne Parameter-Klasse für GanzrationaleFunktion"""
+
+    name: str
+
+    def __post_init__(self):
+        self._symbol = sp.Symbol(self.name)
+
+    @property
+    def symbol(self) -> sp.Symbol:
+        return self._symbol
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return f"Parameter('{self.name}')"
+
 
 # Logger instance for the module
 log = logging.getLogger(__name__)
@@ -57,34 +100,62 @@ class GanzrationaleFunktion:
     Konstruktor-Optionen und Visualisierungsmethoden.
     """
 
-    def __init__(self, eingabe: str | list[float] | dict[int, float] | sp.Basic):
+    def __init__(
+        self,
+        eingabe: str | list[float] | dict[int, float] | sp.Basic,
+        variable: str | None = None,
+        parameter: list[str] | None = None,
+    ):
         """
         Konstruktor für ganzrationale Funktionen.
 
         Args:
             eingabe: String ("x^3-2x+1"), Liste ([1, 0, -2, 1]), Dictionary ({3: 1, 1: -2, 0: 1}) oder SymPy-Ausdruck
+            variable: Optional expliziter Variablenname (überschreibt automatische Erkennung)
+            parameter: Optionale Liste von Parameternamen (überschreibt automatische Erkennung)
         """
-        self.x = symbols("x")
         self.original_eingabe = str(eingabe)  # Original eingabe speichern
 
+        # Neue Eigenschaften für automatische Symbolerkennung
+        self.variablen: list[_Variable] = []
+        self.parameter: list[_Parameter] = []
+        self.hauptvariable: _Variable | None = None
+
+        # Speichere explizite Vorgaben
+        self._explizite_variable = variable
+        self._explizite_parameter = parameter or []
+
         if isinstance(eingabe, str):
-            # String-Konstruktor mit robuster Verarbeitung
-            self.term_str, self.term_sympy = self._parse_string_eingabe(eingabe)
+            # String-Konstruktor mit robuster Verarbeitung und automatischer Symbolerkennung
+            self.term_str, self.term_sympy = self._parse_string_eingabe_mit_symbols(
+                eingabe
+            )
         elif isinstance(eingabe, list):
-            # Listen-Konstruktor: [1, 0, -2, 1] für x³ - 2x + 1
+            # Listen-Konstruktor: [1, 0, -2, 1] für x³ - 2x + 1 (Standard x als Variable)
+            self.x = symbols("x")
+            self.variablen = [_Variable("x")]
+            self.hauptvariable = self.variablen[0]
             self.term_str = self._liste_zu_string(eingabe)
             self.term_sympy = self._liste_zu_sympy(eingabe)
         elif isinstance(eingabe, dict):
-            # Dictionary-Konstruktor: {3: 1, 1: -2, 0: 1} für x³ - 2x + 1
+            # Dictionary-Konstruktor: {3: 1, 1: -2, 0: 1} für x³ - 2x + 1 (Standard x als Variable)
+            self.x = symbols("x")
+            self.variablen = [_Variable("x")]
+            self.hauptvariable = self.variablen[0]
             self.term_str = self._dict_zu_string(eingabe)
             self.term_sympy = self._dict_zu_sympy(eingabe)
         elif isinstance(eingabe, sp.Basic):
-            # SymPy-Ausdruck-Konstruktor
+            # SymPy-Ausdruck-Konstruktor - versuche auch hier Symbolerkennung
             self.term_str = str(eingabe)
             self.term_sympy = eingabe
+            self._erkenne_und_klassifiziere_symbole(self.term_sympy)
             # Validiere, dass es wirklich ein Polynom ist
-            if not self.term_sympy.is_polynomial(self.x):
-                raise TypeError("SymPy-Ausdruck ist kein Polynom in x")
+            if self.hauptvariable and not self.term_sympy.is_polynomial(
+                self.hauptvariable.symbol
+            ):
+                raise TypeError(
+                    "SymPy-Ausdruck ist kein Polynom in der erkannten Hauptvariable"
+                )
         else:
             raise TypeError(
                 "Eingabe muss String, Liste, Dictionary oder SymPy-Ausdruck sein"
@@ -92,6 +163,176 @@ class GanzrationaleFunktion:
 
         # Koeffizienten extrahieren (als exakte SymPy-Objekte)
         self.koeffizienten = self._extrahiere_koeffizienten()
+
+        # Abwärtskompatibilität: self.x für bestehenden Code
+        if not hasattr(self, "x") or self.x is None:
+            self.x = self.hauptvariable.symbol if self.hauptvariable else symbols("x")
+
+    def _get_x_symbol(self) -> sp.Symbol:
+        """Hilfsmethode zur Abwärtskompatibilität - gibt das korrekte x-Symbol zurück"""
+        return self.hauptvariable.symbol if self.hauptvariable else self.x
+
+    def _parse_string_eingabe_mit_symbols(self, eingabe: str) -> tuple[str, sp.Basic]:
+        """
+        Erweiterter Parser für String-Eingaben mit automatischer Symbolerkennung.
+
+        Unterstützt:
+        - "x^2+4x-2" (Standard-Schreibweise)
+        - "a x^2 + 1" (automatische Erkennung: x=Variable, a=Parameter)
+        - "100t + 20" (automatische Erkennung: t=Variable)
+        - "$x^2+4x-2$" (LaTeX-Format)
+        - "x**2+4*x-2" (Python-Syntax)
+        - "2x" (implizite Multiplikation)
+        - "x^2 + 4x - 2" (mit Leerzeichen)
+
+        Args:
+            eingabe: String-Eingabe in verschiedenen Formaten
+
+        Returns:
+            Tuple aus (original_string, sympy_ausdruck)
+        """
+        # Spezialfall: Linearfaktoren-Format
+        if self._ist_linearfaktor_format(eingabe):
+            term_str, term_sympy = self._parse_linearfaktoren(eingabe)
+            self._erkenne_und_klassifiziere_symbole(term_sympy)
+            return term_str, term_sympy
+
+        # Für alle anderen Strings: sympify die Arbeit machen lassen
+        try:
+            # Bereinige die Eingabe für bessere Kompatibilität
+            import re
+
+            bereinigt = eingabe.strip().replace("$", "").replace("^", "**")
+
+            # Implizite Multiplikation hinzufügen (2x -> 2*x, a x -> a*x)
+            bereinigt = re.sub(
+                r"([a-zA-Z])\s*([a-zA-Z])", r"\1*\2", bereinigt
+            )  # Buchstabe-Buchstabe
+            bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)  # Zahl-Buchstabe
+            # Leerzeichen um Operatoren normalisieren
+            bereinigt = re.sub(r"\s+", "", bereinigt)
+
+            # Zuerst mit generischem sympify parsen, um alle Symbole zu erkennen
+            term_sympy: sp.Basic = sympify(bereinigt)
+
+            # Erkenne und klassifiziere Symbole automatisch
+            self._erkenne_und_klassifiziere_symbole(term_sympy)
+
+            # Validiere, dass das Ergebnis wirklich ein Polynom ist
+            if self.hauptvariable and not term_sympy.is_polynomial(  # type: ignore
+                self.hauptvariable.symbol
+            ):
+                raise ValueError(
+                    f"Eingabe '{eingabe}' ist keine ganzrationale Funktion in der erkannten Variable {self.hauptvariable}."
+                )
+
+            # Expandiere den Ausdruck für konsistente Darstellung
+            term_sympy = sp.expand(term_sympy)
+
+            return eingabe, term_sympy
+
+        except (sp.SympifyError, TypeError, ValueError) as e:
+            raise ValueError(f"Ungültiger mathematischer Ausdruck: '{eingabe}'") from e
+
+    def _erkenne_und_klassifiziere_symbole(self, term_sympy: sp.Basic):
+        """
+        Erkennt alle Symbole im Ausdruck und klassifiziert sie als Variablen oder Parameter.
+
+        Args:
+            term_sympy: Der zu analysierende SymPy-Ausdruck
+        """
+        # Alle Symbole extrahieren
+        alle_symbole = list(term_sympy.free_symbols)
+
+        if not alle_symbole:
+            # Keine Symbole gefunden - konstante Funktion
+            return
+
+        # Klassifiziere Symbole mittels Heuristiken
+        variablen_kandidaten = []
+        parameter_kandidaten = []
+
+        for symbol in alle_symbole:
+            symbol_name = str(symbol)
+
+            # Heuristik 1: Häufige Variablennamen
+            if symbol_name in ["x", "t", "y", "z", "u", "v"]:
+                variablen_kandidaten.append((symbol, symbol_name))
+            # Heuristik 2: Häufige Parameternamen
+            elif symbol_name in ["a", "b", "c", "k", "m", "n", "p", "q", "r", "s"]:
+                parameter_kandidaten.append((symbol, symbol_name))
+            else:
+                # Heuristik 3: Analysiere die Rolle im Ausdruck
+                # Finde den höchsten Grad, in dem das Symbol vorkommt
+                try:
+                    grad = term_sympy.as_poly(symbol).degree()  # type: ignore
+                    if grad is not None and grad > 0:
+                        # Symbol kommt in nicht-konstantem Term vor -> wahrscheinliche Variable
+                        variablen_kandidaten.append((symbol, symbol_name))
+                    else:
+                        # Symbol kommt nur als konstanter Faktor vor -> wahrscheinlicher Parameter
+                        parameter_kandidaten.append((symbol, symbol_name))
+                except Exception:
+                    # Fallback: Einzelbuchstaben sind eher Parameter, längere Namen eher Variablen
+                    if len(symbol_name) == 1:
+                        parameter_kandidaten.append((symbol, symbol_name))
+                    else:
+                        variablen_kandidaten.append((symbol, symbol_name))
+
+        # Wähle Hauptvariable (die mit dem höchsten Grad oder die erste in der Liste)
+        hauptvariable_symbol = None
+        if variablen_kandidaten:
+            # Finde die Variable mit dem höchsten Grad
+            max_grad = -1
+            for symbol, _ in variablen_kandidaten:
+                try:
+                    grad = term_sympy.as_poly(symbol).degree()  # type: ignore
+                    if grad > max_grad:
+                        max_grad = grad
+                        hauptvariable_symbol = symbol
+                except Exception:
+                    continue
+
+            # Wenn kein Grad bestimmbar war, nimm die erste Variable
+            if hauptvariable_symbol is None:
+                hauptvariable_symbol = variablen_kandidaten[0][0]
+        elif parameter_kandidaten and len(alle_symbole) == 1:
+            # Nur ein Symbol vorhanden, das als Parameter klassifiziert wurde -> mache es zur Variable
+            hauptvariable_symbol = parameter_kandidaten[0][0]
+            parameter_kandidaten.remove(parameter_kandidaten[0])
+            variablen_kandidaten.append(
+                (hauptvariable_symbol, str(hauptvariable_symbol))
+            )
+
+        # Erstelle Variable- und Parameter-Objekte
+        self.variablen = []
+        self.parameter = []
+
+        # Hauptvariable hinzufügen
+        if hauptvariable_symbol:
+            self.hauptvariable = _Variable(str(hauptvariable_symbol))
+            self.variablen.append(self.hauptvariable)
+            # Entferne Hauptvariable aus den Kandidatenlisten
+            variablen_kandidaten = [
+                (s, n) for s, n in variablen_kandidaten if s != hauptvariable_symbol
+            ]
+
+        # Verbleibende Variablen hinzufügen
+        for symbol, name in variablen_kandidaten:
+            if symbol != hauptvariable_symbol:
+                self.variablen.append(_Variable(name))
+
+        # Parameter hinzufügen
+        for symbol, name in parameter_kandidaten:
+            if symbol != hauptvariable_symbol:
+                self.parameter.append(_Parameter(name))
+
+        # Logging für Debugging
+        log.debug(
+            f"Symbolerkennung: Variablen={[str(v) for v in self.variablen]}, "
+            f"Parameter={[str(p) for p in self.parameter]}, "
+            f"Hauptvariable={self.hauptvariable}"
+        )
 
     def _parse_string_eingabe(self, eingabe: str) -> tuple[str, sp.Basic]:
         """
@@ -126,11 +367,15 @@ class GanzrationaleFunktion:
             # Leerzeichen um Operatoren normalisieren
             bereinigt = re.sub(r"\s+", "", bereinigt)
 
-            # sympify mit korrekter Variable
-            term_sympy = sympify(bereinigt, locals={"x": self.x})
+            # sympify mit korrekter Variable (für Abwärtskompatibilität)
+            term_sympy = sympify(  # type: ignore
+                bereinigt, locals={"x": self.x if hasattr(self, "x") else symbols("x")}
+            )
 
             # Wichtig: Validiere, dass das Ergebnis wirklich ein Polynom in x ist
-            if not term_sympy.is_polynomial(self.x):
+            if not term_sympy.is_polynomial(
+                self.x if hasattr(self, "x") else symbols("x")
+            ):
                 raise ValueError(
                     f"Eingabe '{eingabe}' ist keine ganzrationale Funktion in x."
                 )
@@ -171,7 +416,7 @@ class GanzrationaleFunktion:
             raise ValueError(f"Ungültiges Linearfaktoren-Format: '{eingabe}'")
 
         # Baue den Ausdruck direkt mit SymPy zusammen
-        x = self.x
+        x_var = self.hauptvariable.symbol if self.hauptvariable else symbols("x")
         ergebnis = 1
 
         for koeff, vorzeichen, zahl, potenz in faktoren:
@@ -188,7 +433,7 @@ class GanzrationaleFunktion:
                 konstante = sp.Integer(int(zahl))  # (x-1) bedeutet (x - 1)
 
             # Linearfaktor erstellen
-            linearfaktor = x - konstante
+            linearfaktor = x_var - konstante
 
             if potenz:
                 # Mit Potenz
@@ -239,11 +484,20 @@ class GanzrationaleFunktion:
 
         return "+".join(terme).replace("+-", "-")
 
+    @property
+    def _variable_symbol(self) -> sp.Symbol:
+        """Gibt das Symbol der Hauptvariable zurück, mit Fallback auf 'x'."""
+        if self.hauptvariable:
+            return self.hauptvariable.symbol
+        # Legacy-Fallback für List/Dict-Eingaben, die hauptvariable nicht setzen
+        return symbols("x")
+
     def _liste_zu_sympy(self, koeff: list[float]) -> sp.Basic:
         """Wandelt Koeffizienten-Liste in SymPy-Ausdruck um."""
-        term = 0
+        term: sp.Basic = sp.sympify("0")
+        x_var = self.hauptvariable.symbol if self.hauptvariable else symbols("x")
         for i, k in enumerate(koeff):
-            term += k * self.x**i
+            term += k * x_var**i
         return term
 
     def _dict_zu_string(self, koeff: dict[int, float]) -> str:
@@ -306,15 +560,21 @@ class GanzrationaleFunktion:
 
     def _dict_zu_sympy(self, koeff: dict[int, float]) -> sp.Basic:
         """Wandelt Koeffizienten-Dictionary in SymPy-Ausdruck um."""
-        term = 0
+        term: sp.Basic = sp.sympify("0")
+        x_var = self.hauptvariable.symbol if self.hauptvariable else symbols("x")
         for grad, k in koeff.items():
-            term += k * self.x**grad
+            term += k * x_var**grad
         return term
 
     def _extrahiere_koeffizienten(self) -> list[sp.Basic]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
+        # Verwende die Hauptvariable für die Koeffizientenextraktion
+        if not self.hauptvariable:
+            # Keine Variable gefunden - konstante Funktion
+            return [self.term_sympy]
+
         # Durch die Polynom-Validierung im Konstruktor ist dies immer möglich
-        poly = Poly(self.term_sympy, self.x)
+        poly = Poly(self.term_sympy, self.hauptvariable.symbol)
 
         # all_coeffs() gibt Koeffizienten von höchstem zu niedrigstem Grad zurück
         # Wir kehren die Reihenfolge um für [c0, c1, c2, ...] Format
@@ -332,11 +592,32 @@ class GanzrationaleFunktion:
         """Gibt den Term als LaTeX-String zurück."""
         return latex(self.term_sympy)
 
-    def wert(self, x_wert: float) -> float:
+    def wert(self, x_wert: float) -> float | sp.Basic:
         """Berechnet den Funktionswert an einer Stelle."""
-        return float(self.term_sympy.subs(self.x, x_wert))
+        if not self.hauptvariable:
+            # Konstante Funktion
+            if self.term_sympy.free_symbols:
+                # Noch Parameter vorhanden - gib symbolischen Ausdruck zurück
+                return self.term_sympy
+            return float(self.term_sympy)
 
-    def __call__(self, x_wert: float) -> float:
+        # Prüfe auf verbleibende freie Symbole (Parameter)
+        free_syms = self.term_sympy.free_symbols
+        if self.hauptvariable:
+            free_syms.discard(self.hauptvariable.symbol)
+
+        if free_syms:
+            # Noch Parameter vorhanden - substituiere x-Wert und gib symbolischen Ausdruck zurück
+            return self.term_sympy.subs(self.hauptvariable.symbol, x_wert)
+
+        try:
+            return float(self.term_sympy.subs(self.hauptvariable.symbol, x_wert))
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"Fehler bei der Werteberechnung bei x={x_wert}: {e}"
+            ) from e
+
+    def __call__(self, x_wert: float) -> float | sp.Basic:
         """
         Macht die Funktion aufrufbar: f(2), f(0.5), etc.
 
@@ -344,13 +625,15 @@ class GanzrationaleFunktion:
             x_wert: x-Wert, an dem die Funktion ausgewertet werden soll
 
         Returns:
-            Der Funktionswert als float-Zahl
+            Der Funktionswert als float-Zahl oder symbolischer Ausdruck (bei Parametern)
 
         Beispiele:
             >>> f = GanzrationaleFunktion("x^2 + 2x - 3")
             >>> f(2)    # 2^2 + 2*2 - 3 = 5
             >>> f(0)    # 0^2 + 2*0 - 3 = -3
             >>> f(-1)   # (-1)^2 + 2*(-1) - 3 = -4
+            >>> g = GanzrationaleFunktion("a x^2 + 1")
+            >>> g(1)    # a*1^2 + 1 = a + 1 (symbolisch)
 
         Didaktischer Hinweis:
             Diese Methode ermöglicht die natürliche mathematische Notation f(x),
@@ -376,16 +659,25 @@ class GanzrationaleFunktion:
 
     def ableitung(self, ordnung: int = 1) -> "GanzrationaleFunktion":
         """Berechnet die Ableitung gegebener Ordnung."""
-        abgeleitet = diff(self.term_sympy, self.x, ordnung)
+        x_var = self._get_x_symbol()
+        abgeleitet = diff(self.term_sympy, x_var, ordnung)
 
         # Erstelle neue Funktion direkt mit dem abgeleiteten Ausdruck
         neue_funktion = GanzrationaleFunktion.__new__(GanzrationaleFunktion)
-        neue_funktion.x = self.x
+        neue_funktion.x = x_var
         neue_funktion.term_sympy = abgeleitet
         neue_funktion.term_str = str(abgeleitet)
+
+        # Kopiere die Symbol-Informationen
+        neue_funktion.variablen = self.variablen.copy()
+        neue_funktion.parameter = self.parameter.copy()
+        neue_funktion.hauptvariable = self.hauptvariable
+
         neue_funktion.koeffizienten = neue_funktion._extrahiere_koeffizienten()
 
-        # Stelle sicher, dass die Koeffizientenliste die richtige Länge hat
+        neue_funktion.original_eingabe = (
+            f"Ableitung({self.original_eingabe}, {ordnung})"
+        )
         # (füge führende Nullen hinzu, wenn nötig)
         erwartete_laenge = max(0, len(self.koeffizienten) - ordnung)
         while len(neue_funktion.koeffizienten) < erwartete_laenge:
@@ -404,91 +696,53 @@ class GanzrationaleFunktion:
             Liste der Nullstellen als exakte symbolische Ausdrücke oder gerundete Zahlen
         """
         try:
-            # Für höhere Grade (≥ 3) zuerst versuchen, rationale Nullstellen zu finden
-            grad = len(self.koeffizienten) - 1
-            if grad >= 3:
-                rationale_nullstellen = self._rationale_nullstellen()
-                if rationale_nullstellen:
-                    # Lineare Faktoren abspalten
-                    linearfaktoren, rest_polynom = self._faktorisiere()
-
-                    nullstellen_liste = []
-
-                    # Gefundene rationale Nullstellen hinzufügen
-                    for nullstelle in rationale_nullstellen:
-                        nullstellen_liste.append(_runde_wert(nullstelle, runden))
-
-                    # Restpolynom lösen (kann quadratisch oder höher sein)
-                    if rest_polynom != 1 and rest_polynom.degree(self.x) > 0:
-                        rest_lösungen = solve(rest_polynom, self.x)
-
-                        for lösung in rest_lösungen:
-                            if real and not lösung.is_real:
-                                continue
-
-                            if lösung.is_real:
-                                nullstellen_liste.append(_runde_wert(lösung, runden))
-                            else:
-                                # Komplexe Zahlen werden immer zu floats konvertiert
-                                komplex_wert = complex(lösung)
-                                if runden is not None:
-                                    # Runde Real- und Imaginärteil
-                                    komplex_wert = complex(
-                                        round(komplex_wert.real, runden),
-                                        round(komplex_wert.imag, runden),
-                                    )
-                                nullstellen_liste.append(komplex_wert)
-
-                    # Sortiere Nullstellen (reelle zuerst, dann komplexe nach Realteil)
-                    reelle_nullstellen = [
-                        x
-                        for x in nullstellen_liste
-                        if hasattr(x, "is_real") and x.is_real
-                    ]
-                    komplexe_nullstellen = [
-                        x
-                        for x in nullstellen_liste
-                        if not hasattr(x, "is_real") or not x.is_real
-                    ]
-
-                    # Sortiere reelle Nullstellen
-                    reelle_nullstellen.sort(key=lambda x: float(x))
-
-                    # Sortiere komplexe Nullstellen nach Realteil
-                    komplexe_nullstellen.sort(key=lambda x: complex(x).real)
-
-                    return reelle_nullstellen + komplexe_nullstellen
-
-            # Für niedrigere Grade oder wenn Faktorisierung nicht funktioniert
+            # Verwende direkt SymPy's solve für alle Fälle
             lösungen = solve(self.term_sympy, self.x)
             nullstellen_liste = []
 
             for lösung in lösungen:
-                if real and not lösung.is_real:
+                # Bei symbolischen Lösungen: is_real kann None sein
+                # In diesem Fall nehmen wir die Lösung trotzdem, da sie potenziell real sein kann
+                if real and lösung.is_real is False:
                     continue
 
-                if lösung.is_real:
+                if lösung.is_real is True:
                     nullstellen_liste.append(_runde_wert(lösung, runden))
                 else:
-                    # Komplexe Zahlen werden immer zu floats konvertiert
-                    komplex_wert = complex(lösung)
-                    if runden is not None:
-                        # Runde Real- und Imaginärteil
-                        komplex_wert = complex(
-                            round(komplex_wert.real, runden),
-                            round(komplex_wert.imag, runden),
-                        )
-                    nullstellen_liste.append(komplex_wert)
+                    # Symbolische Lösungen oder komplexe Zahlen
+                    # Bei symbolischen Lösungen: als SymPy-Expr belassen
+                    # Bei komplexen Zahlen: zu float konvertieren
+                    if lösung.is_real is None:
+                        # Symbolische Lösung - behalte als SymPy-Expr
+                        nullstellen_liste.append(lösung)
+                    else:
+                        # Komplexe Zahl
+                        komplex_wert = complex(lösung)
+                        if runden is not None:
+                            # Runde Real- und Imaginärteil
+                            komplex_wert = complex(
+                                round(komplex_wert.real, runden),
+                                round(komplex_wert.imag, runden),
+                            )
+                        nullstellen_liste.append(komplex_wert)
 
-            # Sortiere Nullstellen (reelle zuerst, dann komplexe nach Realteil)
-            reelle_nullstellen = [
-                x for x in nullstellen_liste if hasattr(x, "is_real") and x.is_real
-            ]
-            komplexe_nullstellen = [
-                x
-                for x in nullstellen_liste
-                if not hasattr(x, "is_real") or not x.is_real
-            ]
+            # Sortiere Nullstellen (reelle zuerst, dann symbolische, dann komplexe nach Realteil)
+            reelle_nullstellen = []
+            komplexe_nullstellen = []
+            symbolische_nullstellen = []
+
+            for x in nullstellen_liste:
+                if hasattr(x, "is_real"):
+                    if x.is_real is True:
+                        reelle_nullstellen.append(x)
+                    elif x.is_real is False:
+                        komplexe_nullstellen.append(x)
+                    else:
+                        # Symbolische Ausdrücke
+                        symbolische_nullstellen.append(x)
+                else:
+                    # Komplexe Zahlen (als Python complex)
+                    komplexe_nullstellen.append(x)
 
             # Sortiere reelle Nullstellen
             reelle_nullstellen.sort(key=lambda x: float(x))
@@ -496,7 +750,9 @@ class GanzrationaleFunktion:
             # Sortiere komplexe Nullstellen nach Realteil
             komplexe_nullstellen.sort(key=lambda x: complex(x).real)
 
-            return reelle_nullstellen + komplexe_nullstellen
+            # Symbolische Nullstellen unverändert lassen (kann nicht sortiert werden)
+
+            return reelle_nullstellen + symbolische_nullstellen + komplexe_nullstellen
         except Exception as e:
             print(f"Fehler bei Nullstellenberechnung: {e}")
             return []
@@ -523,41 +779,53 @@ class GanzrationaleFunktion:
             # Erstelle Gleichungsterm: f(x) - ziel_wert = 0
             gleichung_term = self.term_sympy - ziel_wert
 
-            # Verwende die gleiche Logik wie in nullstellen()
-            # Für höhere Grade (≥ 3) zuerst versuchen, rationale Nullstellen zu finden
-            grad = len(self.koeffizienten) - 1
-            if grad >= 3 and ziel_wert == 0:
-                # Für Nullstellen können wir die optimierte Logik nutzen
-                return self.nullstellen(real=real, runden=runden)
-
-            # Allgemeiner Fall: löse direkt mit SymPy
+            # Verwende direkt SymPy's solve für alle Fälle
             lösungen = solve(gleichung_term, self.x)
             lösungen_liste = []
 
             for lösung in lösungen:
-                if real and not lösung.is_real:
+                # Bei symbolischen Lösungen: is_real kann None sein
+                # In diesem Fall nehmen wir die Lösung trotzdem, da sie potenziell real sein kann
+                if real and lösung.is_real is False:
                     continue
 
-                if lösung.is_real:
+                if lösung.is_real is True:
                     lösungen_liste.append(_runde_wert(lösung, runden))
                 else:
-                    # Komplexe Zahlen werden immer zu floats konvertiert
-                    komplex_wert = complex(lösung)
-                    if runden is not None:
-                        # Runde Real- und Imaginärteil
-                        komplex_wert = complex(
-                            round(komplex_wert.real, runden),
-                            round(komplex_wert.imag, runden),
-                        )
-                    lösungen_liste.append(komplex_wert)
+                    # Symbolische Lösungen oder komplexe Zahlen
+                    # Bei symbolischen Lösungen: als SymPy-Expr belassen
+                    # Bei komplexen Zahlen: zu float konvertieren
+                    if lösung.is_real is None:
+                        # Symbolische Lösung - behalte als SymPy-Expr
+                        lösungen_liste.append(lösung)
+                    else:
+                        # Komplexe Zahl
+                        komplex_wert = complex(lösung)
+                        if runden is not None:
+                            # Runde Real- und Imaginärteil
+                            komplex_wert = complex(
+                                round(komplex_wert.real, runden),
+                                round(komplex_wert.imag, runden),
+                            )
+                        lösungen_liste.append(komplex_wert)
 
-            # Sortiere Lösungen (reelle zuerst, dann komplexe nach Realteil)
-            reelle_lösungen = [
-                x for x in lösungen_liste if hasattr(x, "is_real") and x.is_real
-            ]
-            komplexe_lösungen = [
-                x for x in lösungen_liste if not hasattr(x, "is_real") or not x.is_real
-            ]
+            # Sortiere Lösungen (reelle zuerst, dann symbolische, dann komplexe nach Realteil)
+            reelle_lösungen = []
+            komplexe_lösungen = []
+            symbolische_lösungen = []
+
+            for x in lösungen_liste:
+                if hasattr(x, "is_real"):
+                    if x.is_real is True:
+                        reelle_lösungen.append(x)
+                    elif x.is_real is False:
+                        komplexe_lösungen.append(x)
+                    else:
+                        # Symbolische Ausdrücke
+                        symbolische_lösungen.append(x)
+                else:
+                    # Komplexe Zahlen (als Python complex)
+                    komplexe_lösungen.append(x)
 
             # Sortiere reelle Lösungen
             reelle_lösungen.sort(key=lambda x: float(x))
@@ -565,7 +833,9 @@ class GanzrationaleFunktion:
             # Sortiere komplexe Lösungen nach Realteil
             komplexe_lösungen.sort(key=lambda x: complex(x).real)
 
-            return reelle_lösungen + komplexe_lösungen
+            # Symbolische Lösungen unverändert lassen (kann nicht sortiert werden)
+
+            return reelle_lösungen + symbolische_lösungen + komplexe_lösungen
         except Exception as e:
             print(f"Fehler bei Gleichungslösung f(x) = {ziel_wert}: {e}")
             return []
@@ -614,24 +884,28 @@ class GanzrationaleFunktion:
             typ: Wenn True, liefert (x_wert, art) Tupel. Wenn False, nur x_werte.
             runden: Anzahl Nachkommastellen für Rundung (None = exakt)
         """
-        stationäre_stellen = self._berechne_stationäre_stellen()
+        try:
+            stationäre_stellen = self._berechne_stationäre_stellen()
 
-        # Wende Rundung an wenn nötig
-        if runden is not None:
-            stationäre_stellen = [
-                _runde_wert(stelle, runden) for stelle in stationäre_stellen
-            ]
+            # Wende Rundung an wenn nötig
+            if runden is not None:
+                stationäre_stellen = [
+                    _runde_wert(stelle, runden) for stelle in stationäre_stellen
+                ]
 
-        if not typ:
-            return stationäre_stellen
+            if not typ:
+                return stationäre_stellen
 
-        # Mit Klassifikation
-        extremstellen = []
-        for x_wert in stationäre_stellen:
-            art = self._klassifiziere_extremum(x_wert)
-            extremstellen.append((x_wert, art))
+            # Mit Klassifikation
+            extremstellen = []
+            for x_wert in stationäre_stellen:
+                art = self._klassifiziere_extremum(x_wert)
+                extremstellen.append((x_wert, art))
 
-        return extremstellen
+            return extremstellen
+        except (TypeError, ValueError, sp.SympifyError) as e:
+            logging.warning(f"Konnte Extremstellen nicht berechnen: {e}")
+            return []
 
     def _berechne_wendestellen(self) -> list[sp.Basic]:
         """Berechnet alle Wendestellen (f''(x) = 0)."""
@@ -1044,13 +1318,32 @@ class GanzrationaleFunktion:
 
     def _ist_differenz_von_quadraten(self, term: sp.Basic) -> bool:
         """Prüft, ob der Term eine Differenz von Quadraten ist."""
-        if term.is_polynomial():
-            try:
-                # Prüfe auf Form a² - b² durch Koeffizientenanalyse
+        try:
+            # Verwende sympy.factor() für robuste Erkennung
+            faktorisiert = sp.factor(term)
+
+            # Prüfe auf (a+b)(a-b) oder (a-b)(a+b) Struktur
+            if isinstance(faktorisiert, sp.Mul):
+                faktoren = sp.Mul.make_args(faktorisiert)
+                if len(faktoren) == 2:
+                    f1, f2 = faktoren
+                    # Prüfe ob es sich um (A+B)(A-B) oder (A-B)(A+B) handelt
+                    # wobei A und B beliebige Ausdrücke sein können
+                    try:
+                        # Rekonstruiere (f1 + f2) und (f1 - f2)
+                        # Wenn f1 * f2 = A² - B², dann sollte factor(f1*f2) dies zeigen
+                        erweitert = sp.expand((f1 + f2) * (f1 - f2))
+                        if sp.simplify(erweitert - term) == 0:
+                            return True
+                    except Exception:
+                        pass
+
+            # Alternative Prüfung: Suche nach Mustern in der expandierten Form
+            if term.is_polynomial():  # type: ignore
+                # Prüfe auf einfache Formen wie x^n - a
                 koeffizienten = self.koeffizienten
                 grad = len(koeffizienten) - 1
 
-                # Differenz von Quadraten: x^n - a (wobei n gerade)
                 if grad % 2 == 0 and grad >= 2:
                     # Prüfe ob nur zwei von null verschiedene Koeffizienten existieren
                     nicht_null = [i for i, k in enumerate(koeffizienten) if k != 0]
@@ -1060,28 +1353,9 @@ class GanzrationaleFunktion:
                             nicht_null[0] == grad and nicht_null[1] == 0
                         )
 
-                # Prüfe durch Faktorisierung
-                faktorisiert = factor(term)
-                if isinstance(faktorisiert, sp.Mul):
-                    faktoren = sp.Mul.make_args(faktorisiert)
-                    if len(faktoren) == 2:
-                        f1, f2 = faktoren
-                        # Prüfe auf (a+b)(a-b) Form
-                        if (
-                            f1.is_Add
-                            and len(f1.args) == 2
-                            and f2.is_Add
-                            and len(f2.args) == 2
-                        ):
-                            # Extrahiere Terme aus beiden Faktoren
-                            f1_terme = [arg for arg in f1.args if arg.has(self.x)]
-                            f2_terme = [arg for arg in f2.args if arg.has(self.x)]
-                            if len(f1_terme) == 1 and len(f2_terme) == 1:
-                                # Prüfe ob einer negativ des anderen ist
-                                return f1_terme[0] == -f2_terme[0]
-            except Exception:
-                pass
-        return False
+            return False
+        except Exception:
+            return False
 
     def _ist_perfekte_potenz(self, faktorisiert: sp.Basic) -> bool:
         """Prüft, ob es sich um eine perfekte Potenz handelt."""
@@ -1257,9 +1531,29 @@ class GanzrationaleFunktion:
         except (ValueError, TypeError, IndexError):
             return []
 
-    def _berechne_quadratische_nullstellen(self, faktor: sp.Basic) -> list[sp.Expr]:
-        """Berechnet reelle Nullstellen für quadratischen Faktor."""
+    def _berechne_quadratische_nullstellen(
+        self, faktor: sp.Basic, symbolisch: bool = False
+    ) -> list[sp.Expr]:
+        """Berechnet Nullstellen für quadratischen Faktor.
+
+        Args:
+            faktor: Der quadratische Faktor
+            symbolisch: Bei True, werden symbolische Lösungen zurückgegeben (auch komplexe)
+                       Bei False, nur reelle Lösungen
+
+        Returns:
+            Liste der Nullstellen
+        """
         try:
+            # Prüfe, ob der Faktor Parameter enthält
+            hat_parameter = len(faktor.free_symbols - {self.x}) > 0
+
+            if hat_parameter or symbolisch:
+                # Bei Parametern oder expliziter Anfrage: Verwende solve für symbolische Lösungen
+                lösungen = sp.solve(faktor, self.x)
+                return lösungen if lösungen else []
+
+            # Standardfall: Reelle Lösungen mit Diskriminanten-Prüfung
             a, b, c = Poly(faktor, self.x).all_coeffs()
             if a == 0:
                 return []
@@ -1270,7 +1564,12 @@ class GanzrationaleFunktion:
                 return sorted({x1, x2})
             return []
         except (ValueError, TypeError, IndexError):
-            return []
+            # Fallback bei Problemen mit Poly: Verwende solve
+            try:
+                lösungen = sp.solve(faktor, self.x)
+                return lösungen if lösungen else []
+            except Exception:
+                return []
 
     def nullstellen_weg(self) -> str:
         """Gibt detaillierten Lösungsweg für Nullstellen als Markdown zurück."""
@@ -1851,7 +2150,9 @@ class GanzrationaleFunktion:
         # Marimo-spezifisches Wrapping
         return mo.ui.plotly(fig)
 
-    def zeige_funktion_plotly(self, x_range: tuple = None, punkte: int = 200) -> Any:
+    def zeige_funktion_plotly(
+        self, x_range: tuple | None = None, punkte: int = 200
+    ) -> Any:
         """[DEPRECATED] Zeigt interaktiven Funktionsgraph mit Plotly - MATHEMATISCH KORREKT
         Bitte verwende stattdessen f.graph() für konsistente API.
         """

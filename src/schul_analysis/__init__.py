@@ -8,6 +8,13 @@ import numpy as np
 import plotly.graph_objects as go
 
 from .config import config
+from .funktion import (
+    Achsensymmetrie,
+    Funktion,
+    PruefeAchsensymmetrie,
+    PruefePunktsymmetrie,
+    Punktsymmetrie,
+)
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
 from .lineare_gleichungssysteme import (
@@ -1745,7 +1752,9 @@ Integral = Integral
 Limit = Grenzwert
 AsymptoticBehavior = AsymptotischesVerhalten
 
+
 __all__ = [
+    "Funktion",
     "GanzrationaleFunktion",
     "GebrochenRationaleFunktion",
     "Schmiegkurve",
@@ -1784,5 +1793,15 @@ __all__ = [
     "Konvergenzradius",
     "TaylorVergleich",
     "TaylorStandardbeispiele",
+    # 🔥 SYMMETRIE-FUNKTIONEN 🔥
+    "Achsensymmetrie",
+    "Punktsymmetrie",
+    "PruefeAchsensymmetrie",
+    "PruefePunktsymmetrie",
+    # Lineare Gleichungssysteme
+    "LGS",
+    "LineareGleichung",
+    "interpolationspolynom",
+    "plotte_loesung",
 ]
 __version__ = "0.1.0"
