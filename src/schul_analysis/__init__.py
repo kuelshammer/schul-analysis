@@ -10,7 +10,12 @@ import plotly.graph_objects as go
 from .config import config
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
-from .lineare_gleichungssysteme import LGS
+from .lineare_gleichungssysteme import (
+    LGS,
+    LineareGleichung,
+    interpolationspolynom,
+    plotte_loesung,
+)
 from .parametrisch import Parameter, ParametrischeFunktion, Variable
 from .schmiegkurven import Schmiegkurve
 from .taylorpolynom import Taylorpolynom
