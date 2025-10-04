@@ -6,7 +6,7 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import re
-from typing import Any, Union
+from typing import Any
 
 import plotly.graph_objects as go
 import sympy as sp
@@ -816,7 +816,7 @@ class GebrochenRationaleFunktion:
         schritte.append(
             {
                 "titel": "Schritt 1: Grade von Zähler und Nenner bestimmen",
-                "beschreibung": f"Wir bestimmen zunächst die Grade des Zählers und Nenners.",
+                "beschreibung": "Wir bestimmen zunächst die Grade des Zählers und Nenners.",
                 "formel": f"grad(Zähler) = {grad_z}, grad(Nenner) = {grad_n}",
                 "erklaerung": "Der Grad sagt uns, wie das asymptotische Verhalten aussieht.",
             }
@@ -1288,7 +1288,7 @@ class ExponentialRationaleFunktion:
 
     def _transformiere_zurueck(
         self,
-        rationale_funktion: Union[GanzrationaleFunktion, GebrochenRationaleFunktion],
+        rationale_funktion: GanzrationaleFunktion | GebrochenRationaleFunktion,
     ) -> "ExponentialRationaleFunktion":
         """
         Transformiert eine rationale Funktion zurück zu exponential-rationaler Funktion.

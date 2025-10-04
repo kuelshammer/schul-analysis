@@ -11,7 +11,6 @@ import plotly.graph_objects as go
 from .config import config
 from .funktion import Funktion
 
-
 # ====================
 # Hilfsfunktionen für intelligente Skalierung
 # ====================

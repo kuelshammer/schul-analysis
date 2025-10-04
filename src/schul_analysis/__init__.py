@@ -15,69 +15,57 @@ PÄDAGOGISCHE KERNPRINZIPIEN:
 # =============================================================================
 
 from .api import (
-    # Analyse-Funktionen - unterrichtsnahe Syntax
-    nullstellen,
-    ableitung,
-    integral,
-    extrema,
-    wendepunkte,
-    symmetrie,
-    # Visualisierung
-    zeichne,
-    # Werteberechnung
-    auswerten,
-    # Helper-Funktionen für einfache Anwendung
-    erstelle_polynom,
-    erstelle_funktion,
-    erstelle_lineares_gleichungssystem,
-    erstelle_exponential_rationale_funktion,
-    # Komfort-Funktionen für den Unterricht
-    analysiere_funktion,
-    zeige_analyse,
+    LGS,
+    ExponentialRationaleFunktion,
     # Funktionstypen für fortgeschrittene Nutzer
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
-    ExponentialRationaleFunktion,
     ParametrischeFunktion,
-    LGS,
     Taylor,
+    ableitung,
+    # Komfort-Funktionen für den Unterricht
+    analysiere_funktion,
+    # Werteberechnung
+    auswerten,
+    erstelle_exponential_rationale_funktion,
+    erstelle_funktion,
+    erstelle_lineares_gleichungssystem,
+    # Helper-Funktionen für einfache Anwendung
+    erstelle_polynom,
+    extrema,
+    integral,
+    # Analyse-Funktionen - unterrichtsnahe Syntax
+    nullstellen,
+    symmetrie,
+    wendepunkte,
+    # Visualisierung
+    zeichne,
+    zeige_analyse,
 )
 
 # =============================================================================
 # FUNKTIONSKLASSEN (für direkte Verwendung)
 # =============================================================================
-
 from .funktion import (
-    Funktion,
     Achsensymmetrie,
-    Punktsymmetrie,
+    Funktion,
     PruefeAchsensymmetrie,
     PruefePunktsymmetrie,
+    Punktsymmetrie,
     erstelle_funktion_automatisch,
 )
-
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import (
-    GebrochenRationaleFunktion,
     ExponentialRationaleFunktion,
+    GebrochenRationaleFunktion,
 )
-from .parametrisch import ParametrischeFunktion
 from .lineare_gleichungssysteme import (
     LGS,
     LineareGleichung,
     interpolationspolynom,
     plotte_loesung,
 )
-from .taylor import (
-    Taylor,
-    MacLaurin,
-    Taylorpolynom,
-    TaylorKoeffizienten,
-    TaylorRestglied,
-    Konvergenzradius,
-    TaylorVergleich,
-    TaylorStandardbeispiele,
-)
+from .parametrisch import ParametrischeFunktion
 from .schmiegkurven import Schmiegkurve
 from .schmiegung import (
     Graph_parametrisiert,
@@ -91,8 +79,17 @@ from .schmiegung import (
 # =============================================================================
 # SYMBOLISCHE KOMPONENTEN
 # =============================================================================
-
 from .symbolic import Parameter, Variable
+from .taylor import (
+    Konvergenzradius,
+    MacLaurin,
+    Taylor,
+    TaylorKoeffizienten,
+    Taylorpolynom,
+    TaylorRestglied,
+    TaylorStandardbeispiele,
+    TaylorVergleich,
+)
 
 # Vordefinierte Variablen und Parameter für schnellen Zugriff
 x = Variable("x")
@@ -105,18 +102,18 @@ k = Parameter("k")
 # =============================================================================
 
 from .analysis import (
-    AsymptotischesVerhalten,
     Ableitung,
-    Extremstellen,
+    AsymptotischesVerhalten,
     Extrempunkte,
+    Extremstellen,
     Grenzwert,
     Integral,
     Kürzen,
     Polstellen,
     Schnittpunkt,
-    Wert,
     Wendepunkte,
     Wendestellen,
+    Wert,
 )
 from .visualisierung import Graph
 

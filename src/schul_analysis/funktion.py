@@ -103,8 +103,8 @@ class Funktion:
 
 
 def erstelle_funktion_automatisch(
-    eingabe: Union[str, sp.Basic, tuple[str, str]],
-    nenner: Union[str, sp.Basic] | None = None,
+    eingabe: str | sp.Basic | tuple[str, str],
+    nenner: str | sp.Basic | None = None,
 ):
     """
     Factory-Funktion zur automatischen Erkennung und Erstellung der richtigen Funktionsklasse.
@@ -148,7 +148,7 @@ def erstelle_funktion_automatisch(
     return GanzrationaleFunktion(eingabe)
 
 
-def _ist_exponential_funktion_static(eingabe: Union[str, sp.Basic]) -> bool:
+def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
     """Statische Methode zur Prüfung auf Exponentialfunktionen"""
     if isinstance(eingabe, str):
         # Prüfe auf exp() in String

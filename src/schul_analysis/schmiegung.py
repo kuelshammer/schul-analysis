@@ -5,8 +5,8 @@ Dieses Modul enthält Funktionen zur Erzeugung und Analyse von Schmiegkurven,
 die durch Punkte mit optionalen Tangenten- oder Normalenbedingungen definiert sind.
 """
 
-from .schmiegkurven import Schmiegkurve
 from .parametrisch import ParametrischeFunktion
+from .schmiegkurven import Schmiegkurve
 
 
 # Import Graph from parent module (it's still in __init__.py)

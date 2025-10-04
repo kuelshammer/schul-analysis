@@ -8,19 +8,21 @@ Alle Funktionen unterstützen Duck-Typing und funktionieren mit allen
 verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
 """
 
-from typing import Any, Union, List, Dict, Optional, Tuple
+from typing import Any, Union
+
 import numpy as np
+
+from .errors import SchulAnalysisError, UngueltigeFunktionError
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import (
-    GebrochenRationaleFunktion,
     ExponentialRationaleFunktion,
+    GebrochenRationaleFunktion,
 )
-from .parametrisch import ParametrischeFunktion
 from .lineare_gleichungssysteme import LGS
+from .parametrisch import ParametrischeFunktion
 from .taylor import Taylor
-from .errors import SchulAnalysisError, UngueltigeFunktionError
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = Union[
@@ -37,8 +39,8 @@ Funktionstyp = Union[
 
 
 def nullstellen(
-    funktion: Funktionstyp, real: bool = True, runden: Optional[int] = None
-) -> List[Any]:
+    funktion: Funktionstyp, real: bool = True, runden: int | None = None
+) -> list[Any]:
     """
     Berechnet die Nullstellen einer Funktion.
 
@@ -129,7 +131,7 @@ def integral(funktion: Funktionstyp, ordnung: int = 1) -> Any:
         raise SchulAnalysisError(f"Fehler bei der Integrationsberechnung: {str(e)}")
 
 
-def extrema(funktion: Funktionstyp) -> List[Tuple[Any, str]]:
+def extrema(funktion: Funktionstyp) -> list[tuple[Any, str]]:
     """
     Findet die Extrempunkte einer Funktion.
 
@@ -155,7 +157,7 @@ def extrema(funktion: Funktionstyp) -> List[Tuple[Any, str]]:
         raise SchulAnalysisError(f"Fehler bei der Extrema-Berechnung: {str(e)}")
 
 
-def wendepunkte(funktion: Funktionstyp) -> List[Tuple[Any, str]]:
+def wendepunkte(funktion: Funktionstyp) -> list[tuple[Any, str]]:
     """
     Findet die Wendepunkte einer Funktion.
 
@@ -219,8 +221,8 @@ def symmetrie(funktion: Funktionstyp) -> str:
 
 def zeichne(
     funktion: Any,
-    x_bereich: Optional[tuple[float, float]] = None,
-    y_bereich: Optional[tuple[float, float]] = None,
+    x_bereich: tuple[float, float] | None = None,
+    y_bereich: tuple[float, float] | None = None,
     **kwargs,
 ) -> Any:
     """
@@ -278,8 +280,8 @@ def zeichne(
 
 
 def auswerten(
-    funktion: Any, x_wert: Union[float, np.ndarray]
-) -> Union[float, np.ndarray]:
+    funktion: Any, x_wert: float | np.ndarray
+) -> float | np.ndarray:
     """
     Wertet eine Funktion an einem Punkt oder Array aus.
 
@@ -306,7 +308,7 @@ def auswerten(
 # =============================================================================
 
 
-def erstelle_polynom(koeffizienten: List[Union[float, int]]) -> GanzrationaleFunktion:
+def erstelle_polynom(koeffizienten: list[float | int]) -> GanzrationaleFunktion:
     """
     Erstellt ein Polynom aus Koeffizienten.
 
@@ -351,7 +353,7 @@ def erstelle_funktion(term: str) -> GanzrationaleFunktion:
 
 
 def erstelle_lineares_gleichungssystem(
-    koeffizienten: List[List[Union[float, int]]], ergebnisse: List[Union[float, int]]
+    koeffizienten: list[list[float | int]], ergebnisse: list[float | int]
 ) -> LGS:
     """
     Erstellt ein lineares Gleichungssystem.
@@ -374,8 +376,8 @@ def erstelle_lineares_gleichungssystem(
 
 
 def erstelle_exponential_rationale_funktion(
-    zaehler: Union[GanzrationaleFunktion, str],
-    nenner: Union[GanzrationaleFunktion, str],
+    zaehler: GanzrationaleFunktion | str,
+    nenner: GanzrationaleFunktion | str,
     exponent_param: float = 1.0,
 ) -> ExponentialRationaleFunktion:
     """
@@ -402,7 +404,7 @@ def erstelle_exponential_rationale_funktion(
 # =============================================================================
 
 
-def analysiere_funktion(funktion: Funktionstyp) -> Dict[str, Any]:
+def analysiere_funktion(funktion: Funktionstyp) -> dict[str, Any]:
     """
     Führt eine vollständige Funktionsanalyse durch.
 

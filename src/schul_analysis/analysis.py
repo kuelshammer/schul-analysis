@@ -9,7 +9,6 @@ import sympy as sp
 
 from .funktion import Funktion
 
-
 # ====================
 # Grundlegende Analyse-Funktionen
 # ====================
