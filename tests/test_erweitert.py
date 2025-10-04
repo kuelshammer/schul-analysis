@@ -6,12 +6,12 @@ import time
 
 import pytest
 
-from src.schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
 
 
 def test_sicherheit():
     """Teste Sicherheitsvalidierung"""
-    from schul_analysis.gebrochen_rationale import (
+    from schul_analysis.errors import (
         DivisionDurchNullError,
         SicherheitsError,
     )

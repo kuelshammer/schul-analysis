@@ -26,15 +26,6 @@ from .errors import (
 from .ganzrationale import GanzrationaleFunktion
 
 
-class GebrochenRationaleFunktionError(Exception):
-    """Basisklasse für gebrochen-rationale Funktionsfehler"""
-
-    pass
-    """Fehler bei Sicherheitsverletzungen"""
-
-    pass
-
-
 def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
     """Validiert, ob ein Ausdruck sicher für mathematische Auswertung ist"""
     # Erlaubte mathematische Zeichen und Funktionen
@@ -113,6 +104,9 @@ class GebrochenRationaleFunktion:
             _validiere_mathematischen_ausdruck(zaehler)
         if isinstance(nenner, str):
             _validiere_mathematischen_ausdruck(nenner)
+            # Spezielle Prüfung für Division durch Null
+            if nenner.strip() == "0":
+                raise DivisionDurchNullError()
 
         self.x = symbols("x")
 
@@ -290,14 +284,18 @@ class GebrochenRationaleFunktion:
             # Bei Fehlern: keine Polstelle erkennbar
             return False
 
-    def nullstellen(self) -> list[float]:
+    def nullstellen(self, real: bool = True, runden=None) -> list[float]:
         """
         Berechnet die Nullstellen der Funktion (Zähler-Nullstellen).
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
         Returns:
             Liste der Nullstellen, wobei Definitionslücken entfernt wurden
         """
-        zaehler_nullstellen = self.zaehler.nullstellen()
+        zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
         polstellen = self.polstellen()
 
         # Entferne Nullstellen, die gleichzeitig Polstellen sind

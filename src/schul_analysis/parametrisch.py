@@ -5,79 +5,10 @@ Dieses Modul ermöglicht die Arbeit mit parametrischen Funktionen wie
 f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 """
 
-from abc import ABC
-from dataclasses import dataclass
-
 import sympy as sp
 
 from .ganzrationale import GanzrationaleFunktion
-
-
-@dataclass
-class SymbolischeGroesse(ABC):
-    """
-    Abstrakte Basisklasse für symbolische Größen (Variable und Parameter)
-
-    Args:
-        name: Name der symbolischen Größe (z.B. "x" oder "a")
-    """
-
-    name: str
-
-    def __post_init__(self):
-        """Erstellt ein SymPy-Symbol bei der Initialisierung"""
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self) -> sp.Symbol:
-        """Gibt das SymPy-Symbol zurück"""
-        return self._symbol
-
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__}('{self.name}')"
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __eq__(self, other) -> bool:
-        if isinstance(other, self.__class__):
-            return self.name == other.name
-        return False
-
-    def __hash__(self) -> int:
-        return hash(self.name)
-
-
-@dataclass
-class Variable(SymbolischeGroesse):
-    """
-    Repräsentiert eine symbolische Variable (z.B. x, y, t)
-
-    Args:
-        name: Name der Variable (z.B. "x")
-
-    Beispiele:
-        >>> x = Variable("x")
-        >>> t = Variable("t")
-    """
-
-    pass
-
-
-@dataclass
-class Parameter(SymbolischeGroesse):
-    """
-    Repräsentiert einen symbolischen Parameter (z.B. a, b, c)
-
-    Args:
-        name: Name des Parameters (z.B. "a")
-
-    Beispiele:
-        >>> a = Parameter("a")
-        >>> b = Parameter("b")
-    """
-
-    pass
+from .symbolic import Parameter, Variable
 
 
 class Funktionsaufruf:
@@ -846,28 +777,3 @@ def create_variable(name: str) -> Variable:
 def create_parameter(name: str) -> Parameter:
     """Erstellt einen Parameter (Convenience-Funktion)"""
     return Parameter(name)
-
-
-# Didaktische Exception-Klassen
-class SchulAnalysisError(Exception):
-    """Basis-Exception für das Schul-Analysis Framework"""
-
-    pass
-
-
-class ParameterFehler(SchulAnalysisError):
-    """Exception für Parameter-bezogene Fehler"""
-
-    pass
-
-
-class EingabeFehler(SchulAnalysisError):
-    """Exception für Eingabefehler"""
-
-    pass
-
-
-class BerechnungsFehler(SchulAnalysisError):
-    """Exception für Berechnungsfehler"""
-
-    pass

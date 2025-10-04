@@ -7,40 +7,12 @@ in einer einzigen, konsistenten API.
 
 import random
 import re
-from dataclasses import dataclass
 from typing import Union
 
 import sympy as sp
 from sympy import diff, factor, latex, solve, symbols
 
-
-# Interne Klassen zur Vermeidung von zirkulären Imports
-@dataclass
-class _Variable:
-    """Interne Variable-Klasse für Funktion"""
-
-    name: str
-
-    def __post_init__(self):
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self):
-        return self._symbol
-
-
-@dataclass
-class _Parameter:
-    """Interne Parameter-Klasse für Funktion"""
-
-    name: str
-
-    def __post_init__(self):
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self):
-        return self._symbol
+from .symbolic import _Parameter, _Variable
 
 
 class Funktion:

@@ -6,7 +6,6 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import logging
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Union
 
 import numpy as np
@@ -21,48 +20,7 @@ from plotly.subplots import make_subplots
 from sympy import Poly, Rational, diff, factor, latex, solve, symbols, sympify
 
 from .config import config
-
-
-# Einfache Versionen von Variable und Parameter zur Vermeidung zirkulärer Importe
-@dataclass
-class _Variable:
-    """Interne Variable-Klasse für GanzrationaleFunktion"""
-
-    name: str
-
-    def __post_init__(self):
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self) -> sp.Symbol:
-        return self._symbol
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f"Variable('{self.name}')"
-
-
-@dataclass
-class _Parameter:
-    """Interne Parameter-Klasse für GanzrationaleFunktion"""
-
-    name: str
-
-    def __post_init__(self):
-        self._symbol = sp.Symbol(self.name)
-
-    @property
-    def symbol(self) -> sp.Symbol:
-        return self._symbol
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return f"Parameter('{self.name}')"
-
+from .symbolic import _Parameter, _Variable
 
 # Logger instance for the module
 log = logging.getLogger(__name__)

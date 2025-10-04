@@ -43,14 +43,14 @@ def test_schmiegparabel_mit_tangente():
     print("=== Test 2: Schmiegparabel mit Tangentenbedingung ===")
 
     # Parabel durch (0,0) mit horizontaler Tangente und (2,0)
-#     parabel = Schmiegparabel((0, 0), (1, -1), (2, 0), tangente1=0)
-#     print(f"Erzeugte Parabel: f(x) = {parabel.term}")
-#     print(f"Erwartet: x² - 2x")
-#
-#     # Prüfe Tangente bei x=0
-#     ableitung = parabel.ableitung()
-#     tangente_0 = ableitung.wert(0)
-#     print(f"Tangente bei x=0: {tangente_0:.6f} (erwartet: 0)")
+    #     parabel = Schmiegparabel((0, 0), (1, -1), (2, 0), tangente1=0)
+    #     print(f"Erzeugte Parabel: f(x) = {parabel.term}")
+    #     print(f"Erwartet: x² - 2x")
+    #
+    #     # Prüfe Tangente bei x=0
+    #     ableitung = parabel.ableitung()
+    #     tangente_0 = ableitung.wert(0)
+    #     print(f"Tangente bei x=0: {tangente_0:.6f} (erwartet: 0)")
 
     print()
 
@@ -163,7 +163,7 @@ def test_paedagogisches_beispiel():
     # Zeige wichtige Eigenschaften
     print("\nEigenschaften der Parabel:")
     print(f"- Scheitelpunktform: {parabel.term}")
-    print(f"- Nullstellen: {Nullstellen(parabel)}")
+    print(f"- Nullstellen: {parabel.nullstellen()}")
     print(f"- y-Achsenabschnitt: {parabel.wert(0)}")
 
     ableitung = parabel.ableitung()
