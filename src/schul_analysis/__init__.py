@@ -36,6 +36,7 @@ from .api import (
     # Funktionstypen für fortgeschrittene Nutzer
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
+    ExponentialRationaleFunktion,
     ParametrischeFunktion,
     LGS,
     Taylor,
@@ -54,7 +55,10 @@ from .funktion import (
 )
 
 from .ganzrationale import GanzrationaleFunktion
-from .gebrochen_rationale import GebrochenRationaleFunktion
+from .gebrochen_rationale import (
+    GebrochenRationaleFunktion,
+    ExponentialRationaleFunktion,
+)
 from .parametrisch import ParametrischeFunktion
 from .lineare_gleichungssysteme import (
     LGS,
@@ -151,6 +155,7 @@ __all__ = [
     "Funktion",
     "GanzrationaleFunktion",
     "GebrochenRationaleFunktion",
+    "ExponentialRationaleFunktion",
     "ParametrischeFunktion",
     "LGS",
     "Taylorpolynom",
