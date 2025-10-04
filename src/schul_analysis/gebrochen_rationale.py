@@ -1006,74 +1006,6 @@ class GebrochenRationaleFunktion:
 
         return analyse
 
-    def spezialisiere_parameter(self, **werte) -> "ExponentialRationaleFunktion":
-        """
-        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
-
-        Args:
-            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
-
-        Returns:
-            ExponentialRationaleFunktion: Neue Funktion mit spezialisierten Parametern
-
-        Examples:
-            >>> f = ExponentialRationaleFunktion("a*x^2 + b", "x + c", exponent_param=1)
-            >>> f2 = f.spezialisiere_parameter(a=1, b=2, c=3)
-            >>> print(f2.term())  # x^2 + 2 / (x + 3)
-        """
-        # Ersetze Parameter durch die gegebenen Werte
-        neuer_zaehler = self.zaehler.term_sympy
-        neuer_nenner = self.nenner.term_sympy
-
-        for param_name, wert in werte.items():
-            # Finde das passende Parameter-Symbol
-            param_symbol = None
-            for p in self.parameter:
-                if p.name == param_name:
-                    param_symbol = p.symbol
-                    break
-
-            if param_symbol is not None:
-                neuer_zaehler = neuer_zaehler.subs(param_symbol, wert)
-                neuer_nenner = neuer_nenner.subs(param_symbol, wert)
-
-        # Erstelle neue Funktion mit spezialisierten Werten
-        return ExponentialRationaleFunktion(neuer_zaehler, neuer_nenner, self.a)
-
-    def spezialisiere_parameter(self, **werte) -> "ExponentialRationaleFunktion":
-        """
-        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
-
-        Args:
-            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
-
-        Returns:
-            ExponentialRationaleFunktion: Neue Funktion mit spezialisierten Parametern
-
-        Examples:
-            >>> f = ExponentialRationaleFunktion("a*x^2 + b", "x + c", exponent_param=1)
-            >>> f2 = f.spezialisiere_parameter(a=1, b=2, c=3)
-            >>> print(f2.term())  # x^2 + 2 / (x + 3)
-        """
-        # Ersetze Parameter durch die gegebenen Werte
-        neuer_zaehler = self.zaehler.term_sympy
-        neuer_nenner = self.nenner.term_sympy
-
-        for param_name, wert in werte.items():
-            # Finde das passende Parameter-Symbol
-            param_symbol = None
-            for p in self.parameter:
-                if p.name == param_name:
-                    param_symbol = p.symbol
-                    break
-
-            if param_symbol is not None:
-                neuer_zaehler = neuer_zaehler.subs(param_symbol, wert)
-                neuer_nenner = neuer_nenner.subs(param_symbol, wert)
-
-        # Erstelle neue Funktion mit spezialisierten Werten
-        return ExponentialRationaleFunktion(neuer_zaehler, neuer_nenner, self.a)
-
     def spezialisiere_parameter(self, **werte) -> "GebrochenRationaleFunktion":
         """
         Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
@@ -1240,6 +1172,39 @@ class GebrochenRationaleFunktion:
             },
             "didaktischer_hinweis": "Vergleichen Sie, wie sich verschiedene Koeffizienten auf das asymptotische Verhalten auswirken.",
         }
+
+    def ableitung(self, ordnung: int = 1) -> "GebrochenRationaleFunktion":
+        """
+        Berechnet die Ableitung gebrochen-rationaler Funktionen mit Quotientenregel.
+
+        Args:
+            ordnung: Ordnung der Ableitung (Standard: 1)
+
+        Returns:
+            GebrochenRationaleFunktion: Die abgeleitete Funktion
+
+        Examples:
+            >>> f = GebrochenRationaleFunktion("x^2 + 1", "x - 1")
+            >>> f1 = f.ableitung()
+            >>> print(f1.term())  # (x^2 - 2x - 1)/(x^2 - 2x + 1)
+        """
+        from sympy import diff
+
+        if ordnung == 1:
+            # Quotientenregel: (u/v)' = (u'v - uv')/v^2
+            u = self.zaehler.term_sympy
+            v = self.nenner.term_sympy
+            u_strich = diff(u, self.x)
+            v_strich = diff(v, self.x)
+
+            zaehler_ableitung = u_strich * v - u * v_strich
+            nenner_ableitung = v**2
+
+            return GebrochenRationaleFunktion(zaehler_ableitung, nenner_ableitung)
+        else:
+            # Höhere Ableitungen durch rekursive Anwendung
+            erste_ableitung = self.ableitung(1)
+            return erste_ableitung.ableitung(ordnung - 1)
 
 
 # =============================================================================
@@ -1806,3 +1771,103 @@ class ExponentialRationaleFunktion:
             }
 
         return analyse
+
+    def spezialisiere_parameter(self, **werte) -> "ExponentialRationaleFunktion":
+        """
+        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            ExponentialRationaleFunktion: Neue Funktion mit spezialisierten Parametern
+
+        Examples:
+            >>> f = ExponentialRationaleFunktion("a*x^2 + b", "x + c", exponent_param=1)
+            >>> f2 = f.spezialisiere_parameter(a=1, b=2, c=3)
+            >>> print(f2.term())  # x^2 + 2 / (x + 3)
+        """
+        # Ersetze Parameter durch die gegebenen Werte
+        neuer_zaehler = self.zaehler.term_sympy
+        neuer_nenner = self.nenner.term_sympy
+
+        for param_name, wert in werte.items():
+            # Finde das passende Parameter-Symbol
+            param_symbol = None
+            for p in self.parameter:
+                if p.name == param_name:
+                    param_symbol = p.symbol
+                    break
+
+            if param_symbol is not None:
+                neuer_zaehler = neuer_zaehler.subs(param_symbol, wert)
+                neuer_nenner = neuer_nenner.subs(param_symbol, wert)
+
+        # Erstelle neue Funktion mit spezialisierten Werten
+        return ExponentialRationaleFunktion(neuer_zaehler, neuer_nenner, self.a)
+
+    def nullstellen(self, real: bool = True, runden=None) -> list[float]:
+        """
+        Berechnet die Nullstellen der Funktion (Zähler-Nullstellen).
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben
+            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
+
+        Returns:
+            Liste der Nullstellen, wobei Definitionslücken entfernt wurden
+        """
+        # Für exponential-rationale Funktionen: löse P(e^{ax}) = 0
+        # Zuerst finde die Nullstellen des Zählerpolynoms P
+        zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
+
+        # Transformiere zurück: wenn P(u) = 0, dann u = e^{ax} = nullstelle
+        # Also x = ln(nullstelle) / a, für nullstelle > 0
+        import sympy as sp
+
+        exponential_nullstellen = []
+
+        for zs in zaehler_nullstellen:
+            if zs > 0:  # e^{ax} ist immer positiv
+                # Konvertiere zu float für numerische Berechnung
+                zs_float = float(zs) if hasattr(zs, "__float__") else zs.evalf()
+                x_wert = sp.log(zs_float) / self.a
+                if runden is not None:
+                    x_wert = round(float(x_wert), runden)
+                else:
+                    x_wert = float(x_wert)
+                exponential_nullstellen.append(x_wert)
+
+        return exponential_nullstellen
+
+    def ableitung(self, ordnung: int = 1) -> "ExponentialRationaleFunktion":
+        """
+        Berechnet die Ableitung exponential-rationaler Funktionen.
+
+        Für f(x) = P(e^{ax})/Q(e^{ax}) verwenden wir die Kettenregel.
+
+        Args:
+            ordnung: Ordnung der Ableitung (Standard: 1)
+
+        Returns:
+            ExponentialRationaleFunktion: Die abgeleitete Funktion
+
+        Examples:
+            >>> f = ExponentialRationaleFunktion("x^2 + 1", "x - 1", exponent_param=1)
+            >>> f1 = f.ableitung()
+            >>> print(f1.term())  # Ableitung mit exp-Funktionen
+        """
+        from sympy import diff, exp
+
+        if ordnung == 1:
+            # Für f(x) = P(e^{ax})/Q(e^{ax}) brauchen wir die Kettenregel
+            # Transformiere zu rationaler Funktion, ableiten, dann zurücktransformieren
+            rationale_funktion = self._transformiere_zu_rational()
+            rationale_ableitung = rationale_funktion.ableitung(1)
+
+            # Transformiere die Ableitung zurück zu exponential-rational
+            return self._transformiere_zurueck(rationale_ableitung)
+        else:
+            # Höhere Ableitungen durch rekursive Anwendung
+            erste_ableitung = self.ableitung(1)
+            return erste_ableitung.ableitung(ordnung - 1)
