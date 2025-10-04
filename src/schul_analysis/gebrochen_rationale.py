@@ -6,7 +6,7 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import re
-from typing import Any
+from typing import Any, Union
 
 import plotly.graph_objects as go
 import sympy as sp
@@ -173,11 +173,13 @@ class GebrochenRationaleFunktion:
         self.nenner = GanzrationaleFunktion(nenner_str)
 
     def _convert_to_ganzrationale(
-        self, eingabe: GanzrationaleFunktion | sp.Basic
+        self, eingabe: GanzrationaleFunktion | str | sp.Basic
     ) -> GanzrationaleFunktion:
         """Konvertiert Eingabe zu GanzrationaleFunktion"""
         if isinstance(eingabe, GanzrationaleFunktion):
             return eingabe
+        elif isinstance(eingabe, str):
+            return GanzrationaleFunktion(eingabe)
         elif isinstance(eingabe, sp.Basic):
             return GanzrationaleFunktion(eingabe)
         else:
@@ -1162,11 +1164,13 @@ class ExponentialRationaleFunktion:
         self.term_sympy = self._erzeuge_exponential_funktion()
 
     def _convert_to_ganzrationale(
-        self, eingabe: GanzrationaleFunktion | sp.Basic
+        self, eingabe: GanzrationaleFunktion | str | sp.Basic
     ) -> GanzrationaleFunktion:
         """Konvertiert Eingabe zu GanzrationaleFunktion"""
         if isinstance(eingabe, GanzrationaleFunktion):
             return eingabe
+        elif isinstance(eingabe, str):
+            return GanzrationaleFunktion(eingabe)
         elif isinstance(eingabe, sp.Basic):
             return GanzrationaleFunktion(eingabe)
         else:
@@ -1225,19 +1229,34 @@ class ExponentialRationaleFunktion:
         self._cache["zerlegung_berechnet"] = True
 
     def _transformiere_zurueck(
-        self, ggf: GanzrationaleFunktion
+        self,
+        rationale_funktion: Union[GanzrationaleFunktion, GebrochenRationaleFunktion],
     ) -> "ExponentialRationaleFunktion":
         """
-        Transformiert eine ganzrationale Funktion zurück zu exponential-rationaler Funktion.
+        Transformiert eine rationale Funktion zurück zu exponential-rationaler Funktion.
 
         Args:
-            ggf: GanzrationaleFunktion, die transformiert werden soll
+            rationale_funktion: GanzrationaleFunktion oder GebrochenRationaleFunktion,
+                              die transformiert werden soll
 
         Returns:
             ExponentialRationaleFunktion: Transformierte Funktion
         """
-        # Erstelle neue exponential-rationale Funktion mit gleichen Koeffizienten
-        return ExponentialRationaleFunktion(ggf, GanzrationaleFunktion("1"), self.a)
+        if isinstance(rationale_funktion, GanzrationaleFunktion):
+            # Für ganzrationale Funktionen: Nenner = 1
+            return ExponentialRationaleFunktion(
+                rationale_funktion, GanzrationaleFunktion("1"), self.a
+            )
+        elif isinstance(rationale_funktion, GebrochenRationaleFunktion):
+            # Für gebrochen-rationale Funktionen: Zähler und Nenner extrahieren
+            return ExponentialRationaleFunktion(
+                rationale_funktion.zaehler, rationale_funktion.nenner, self.a
+            )
+        else:
+            raise TypeError(
+                f"Kann {type(rationale_funktion)} nicht transformieren. "
+                "Nur GanzrationaleFunktion oder GebrochenRationaleFunktion unterstützt."
+            )
 
     def schmiegkurve(self) -> "ExponentialRationaleFunktion":
         """
@@ -1318,21 +1337,53 @@ class ExponentialRationaleFunktion:
             float: Funktionswert
 
         Raises:
-            ValueError: Wenn der Wert nicht berechnet werden kann
+            ValueError: Wenn der Wert nicht berechnet werden kann oder Polstelle vorliegt
         """
+        # Prüfe, ob x_wert eine Polstelle ist
+        if self._ist_polstelle(x_wert):
+            raise ValueError(f"x = {x_wert} ist eine Polstelle der Funktion")
+
         try:
             # Substituiere x-Wert in den SymPy-Ausdruck
             result = self.term_sympy.subs(self.x, x_wert)
 
             # Versuche, zu float zu konvertieren
             if hasattr(result, "evalf"):
-                return float(result.evalf())
+                eval_result = result.evalf()
+                # Prüfe auf komplexe Ergebnisse
+                if hasattr(eval_result, "imag") and abs(eval_result.imag) > 1e-10:
+                    raise ValueError(f"Komplexes Ergebnis bei x = {x_wert}")
+                return float(eval_result)
             else:
                 return float(result)
         except Exception as e:
             raise ValueError(
                 f"Kann Funktionswert bei x = {x_wert} nicht berechnen: {e}"
             )
+
+    def _ist_polstelle(self, x_wert: float) -> bool:
+        """
+        Prüft, ob x_wert eine Polstelle der exponential-rationalen Funktion ist.
+        Für exponential-rationale Funktionen f(x) = P(e^{ax})/Q(e^{ax}) ist x eine
+        Polstelle, wenn Q(e^{ax}) = 0.
+        """
+        try:
+            # Berechne e^{ax} für den gegebenen x-Wert
+            exp_wert = sp.exp(self.a * x_wert)
+
+            # Substituiere in den Nenner
+            nenner_bei_exp = self.nenner.term_sympy.subs(self.x, exp_wert)
+
+            # Prüfe, ob der Nenner nahe bei Null ist
+            if hasattr(nenner_bei_exp, "evalf"):
+                nenner_float = float(nenner_bei_exp.evalf())
+            else:
+                nenner_float = float(nenner_bei_exp)
+
+            return abs(nenner_float) < 1e-10
+        except (ValueError, TypeError, AttributeError):
+            # Bei Fehlern: Polstelle nicht erkennbar
+            return False
 
     def __call__(self, x_wert: float) -> float:
         """
@@ -1460,8 +1511,12 @@ class ExponentialRationaleFunktion:
             if grad_z < grad_n:
                 verhalten_pos = "0 (horizontale Asymptote y = 0)"
             elif grad_z == grad_n:
-                lkh_z = self.zaehler.leitkoeffizient()
-                lkh_n = self.nenner.leitkoeffizient()
+                lkh_z = (
+                    self.zaehler.koeffizienten[-1] if self.zaehler.koeffizienten else 0
+                )
+                lkh_n = (
+                    self.nenner.koeffizienten[-1] if self.nenner.koeffizienten else 1
+                )
                 verhalten_pos = f"{lkh_z / lkh_n} (horizontale Asymptote)"
             else:
                 verhalten_pos = f"{s_rational.term().replace('x', f'e^{{{self.a}x}}')} (Wachstum wie Polynom in e^{{{self.a}x}})"
@@ -1496,8 +1551,12 @@ class ExponentialRationaleFunktion:
             if grad_z < grad_n:
                 verhalten_neg = "0 (horizontale Asymptote y = 0)"
             elif grad_z == grad_n:
-                lkh_z = self.zaehler.leitkoeffizient()
-                lkh_n = self.nenner.leitkoeffizient()
+                lkh_z = (
+                    self.zaehler.koeffizienten[-1] if self.zaehler.koeffizienten else 0
+                )
+                lkh_n = (
+                    self.nenner.koeffizienten[-1] if self.nenner.koeffizienten else 1
+                )
                 verhalten_neg = f"{lkh_z / lkh_n} (horizontale Asymptote)"
             else:
                 verhalten_neg = f"{s_rational.term().replace('x', f'e^{{{self.a}x}}')} (Wachstum wie Polynom in e^{{{self.a}x}})"

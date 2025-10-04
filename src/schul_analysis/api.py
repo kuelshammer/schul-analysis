@@ -13,7 +13,10 @@ import numpy as np
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
-from .gebrochen_rationale import GebrochenRationaleFunktion
+from .gebrochen_rationale import (
+    GebrochenRationaleFunktion,
+    ExponentialRationaleFunktion,
+)
 from .parametrisch import ParametrischeFunktion
 from .lineare_gleichungssysteme import LGS
 from .taylor import Taylor
@@ -21,7 +24,10 @@ from .errors import SchulAnalysisError, UngueltigeFunktionError
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = Union[
-    GanzrationaleFunktion, GebrochenRationaleFunktion, ParametrischeFunktion
+    GanzrationaleFunktion,
+    GebrochenRationaleFunktion,
+    ExponentialRationaleFunktion,
+    ParametrischeFunktion,
 ]
 
 
@@ -365,6 +371,30 @@ def erstelle_lineares_gleichungssystem(
         >>> lösung = lgs.loese()        # [2, 1.333...]
     """
     return LGS(koeffizienten, ergebnisse)
+
+
+def erstelle_exponential_rationale_funktion(
+    zaehler: Union[GanzrationaleFunktion, str],
+    nenner: Union[GanzrationaleFunktion, str],
+    exponent_param: float = 1.0,
+) -> ExponentialRationaleFunktion:
+    """
+    Erstellt eine exponential-rationale Funktion f(x) = P(e^{ax})/Q(e^{ax}).
+
+    Args:
+        zaehler: Polynom in e^{ax} als GanzrationaleFunktion oder String
+        nenner: Polynom in e^{ax} als GanzrationaleFunktion oder String
+        exponent_param: Parameter a in e^{ax} (Standard: 1.0)
+
+    Returns:
+        ExponentialRationaleFunktion
+
+    Beispiele:
+        >>> f = erstelle_exponential_rationale_funktion("x+1", "x-1")
+        >>> s = f.schmiegkurve()  # Schmiegkurve berechnen
+        >>> r = f.stoerfunktion()  # Störfunktion berechnen
+    """
+    return ExponentialRationaleFunktion(zaehler, nenner, exponent_param)
 
 
 # =============================================================================

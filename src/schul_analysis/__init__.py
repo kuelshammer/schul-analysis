@@ -30,6 +30,7 @@ from .api import (
     erstelle_polynom,
     erstelle_funktion,
     erstelle_lineares_gleichungssystem,
+    erstelle_exponential_rationale_funktion,
     # Komfort-Funktionen für den Unterricht
     analysiere_funktion,
     zeige_analyse,
@@ -149,6 +150,7 @@ __all__ = [
     "erstelle_polynom",
     "erstelle_funktion",
     "erstelle_lineares_gleichungssystem",
+    "erstelle_exponential_rationale_funktion",
     "analysiere_funktion",
     "zeige_analyse",
     # 🏗️ FUNKTIONSKLASSEN
