@@ -116,6 +116,10 @@ class GebrochenRationaleFunktion:
             "asymptoten": None,
             "nullstellen": None,
             "term_str": None,
+            # Cache für Schmiegkurve/Störfunktion Zerlegung
+            "_schmiegkurve": None,
+            "_stoerfunktion": None,
+            "_zerlegung_berechnet": False,
         }
 
         # Parser für String-Eingabe im Format "(zaehler)/(nenner)"
@@ -642,6 +646,37 @@ class GebrochenRationaleFunktion:
     # NEUE METHODEN: SCHMIEGKURVE UND STÖRFUNKTION
     # =============================================================================
 
+    def _berechne_zerlegung(self) -> None:
+        """
+        Private Methode zur effizienten Berechnung der Zerlegung.
+        Berechnet Schmiegkurve und Störfunktion einmal und cacht die Ergebnisse.
+        Vermeidet redundante Polynomdivisionen.
+        """
+        if self._cache["_zerlegung_berechnet"]:
+            return
+
+        # Bestimme Grade von Zähler und Nenner
+        grad_zaehler = self.zaehler.grad()
+        grad_nenner = self.nenner.grad()
+
+        quotient_sympy = sp.S(0)
+        rest_sympy = self.zaehler.term_sympy
+
+        if grad_zaehler >= grad_nenner:
+            # sp.div gibt sowohl Quotient als auch Rest zurück - effizient!
+            quotient_sympy, rest_sympy = sp.div(
+                self.zaehler.term_sympy, self.nenner.term_sympy, domain="QQ"
+            )
+
+        # Cache die Ergebnisse
+        self._cache["_schmiegkurve"] = GanzrationaleFunktion(quotient_sympy)
+
+        # Erstelle Störfunktion aus Rest und Nenner
+        self._cache["_stoerfunktion"] = GebrochenRationaleFunktion(
+            rest_sympy, self.nenner.term_sympy
+        )
+        self._cache["_zerlegung_berechnet"] = True
+
     def schmiegkurve(self) -> "GanzrationaleFunktion":
         """
         Gibt die Schmiegkurve (polynomialer Teil) der gebrochen-rationalen Funktion zurück.
@@ -665,25 +700,9 @@ class GebrochenRationaleFunktion:
             Die Schmiegkurve ist die Funktion, an die sich f(x) für große |x| annähert.
             Sie beschreibt das "globale" Verhalten der Funktion.
         """
-        # Bestimme Grade von Zähler und Nenner
-        grad_zaehler = self.zaehler.grad()
-        grad_nenner = self.nenner.grad()
-
-        if grad_zaehler < grad_nenner:
-            # Horizontale Asymptote y = 0
-            return GanzrationaleFunktion([0])
-        elif grad_zaehler == grad_nenner:
-            # Horizontale Asymptote y = Leitkoeffizienten-Verhältnis
-            lkh_zaehler = self.zaehler.leitkoeffizient()
-            lkh_nenner = self.nenner.leitkoeffizient()
-            y_asymptote = lkh_zaehler / lkh_nenner
-            return GanzrationaleFunktion([y_asymptote])
-        else:
-            # grad(Z) > grad(N): Polynomdivision durchführen
-            quotient, rest = sp.div(
-                self.zaehler.term_sympy, self.nenner.term_sympy, domain="QQ"
-            )
-            return GanzrationaleFunktion(quotient)
+        # Berechne Zerlegung nur einmal und verwende Cache
+        self._berechne_zerlegung()
+        return self._cache["_schmiegkurve"]
 
     def stoerfunktion(self) -> "GebrochenRationaleFunktion":
         """
@@ -705,17 +724,9 @@ class GebrochenRationaleFunktion:
             Die Störfunktion beschreibt die "lokale" Abweichung von der Schmiegkurve
             und bestimmt das Verhalten in der Nähe von Polstellen.
         """
-        # Berechne Schmiegkurve
-        schmiegkurve_expr = self.schmiegkurve().term_sympy
-
-        # Störfunktion = f(x) - Schmiegkurve(x)
-        stoerfunktion_expr = self.term_sympy - schmiegkurve_expr
-
-        # Extrahiere Zähler und Nenner
-        zaehler_expr, nenner_expr = fraction(stoerfunktion_expr)
-
-        # Erstelle neue Funktion
-        return GebrochenRationaleFunktion(zaehler_expr, nenner_expr)
+        # Berechne Zerlegung nur einmal und verwende Cache
+        self._berechne_zerlegung()
+        return self._cache["_stoerfunktion"]
 
     def validiere_zerlegung(self) -> bool:
         """
