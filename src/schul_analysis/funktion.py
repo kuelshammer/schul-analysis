@@ -28,6 +28,52 @@ class Funktion:
         >>> h = Funktion("x^2", "1")               # explizite Trennung
     """
 
+    def _ist_exponential_funktion(self, eingabe: str | sp.Basic) -> bool:
+        """Prüft, ob die Eingabe eine Exponentialfunktion enthält"""
+        if isinstance(eingabe, str):
+            # Prüfe auf exp() in String
+            return "exp(" in eingabe or "e^" in eingabe
+        elif hasattr(eingabe, "has"):
+            # Prüfe auf exp() in SymPy-Ausdruck
+            return eingabe.has(sp.exp)
+        return False
+
+    def _parse_exponential_funktion(self, eingabe: str | sp.Basic):
+        """Parst eine Exponentialfunktion und erstellt das entsprechende Objekt"""
+        from .gebrochen_rationale import ExponentialRationaleFunktion
+
+        if isinstance(eingabe, str):
+            # Extrahiere den Exponentialparameter und erstelle ExponentialRationaleFunktion
+            # Einfache Heuristik: Suche nach exp(x) oder exp(kx)
+            import re
+
+            # Finde alle exp() Ausdrücke
+            exp_matches = re.findall(r"exp\(([^)]+)\)", eingabe)
+            if exp_matches:
+                # Bestimme den Exponentialparameter (vereinfacht: nehme den ersten)
+                exp_arg = exp_matches[0].strip()
+
+                # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
+                if exp_arg == "x":
+                    a_param = 1.0
+                elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
+                    # Form wie k*x oder kx
+                    coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
+                    if coeff_match:
+                        a_param = float(
+                            coeff_match.group(1) if coeff_match.group(1) else "1"
+                        )
+                    else:
+                        a_param = 1.0
+                else:
+                    # Komplexerer Ausdruck - Standardwert verwenden
+                    a_param = 1.0
+
+                # Erstelle ExponentialRationaleFunktion
+                return ExponentialRationaleFunktion._erstelle_aus_string(eingabe)
+
+        return None
+
     def __init__(
         self,
         eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
@@ -100,6 +146,10 @@ class Funktion:
 
         # Vereinfache wenn möglich
         self.kürzen()
+
+        # 🔥 PHASE 2: Intelligente Funktionsklassifizierung 🔥
+        self._klassifiziere_funktion()
+        self._erstelle_metadaten()
 
 
 def erstelle_funktion_automatisch(
@@ -503,6 +553,846 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
 
         self.term_str = str(self.term_sympy)
         return self
+
+    # 🔥 PHASE 2: Intelligente Funktionsklassifizierung 🔥
+
+    def _klassifiziere_funktion(self):
+        """Klassifiziert die Funktion mit erweiterten Analysemethoden"""
+        # Erweiterte Funktionstyp-Analyse
+        self.funktionstyp = self._bestimme_funktionstyp()
+        self.komplexität = self._berechne_komplexität()
+        self.eigenschaften = self._analysiere_eigenschaften()
+
+    def _bestimme_funktionstyp(self) -> str:
+        """Bestimmt den detaillierten Funktionstyp"""
+        if self.ist_ganzrational:
+            grad = self.zaehler.grad()
+            if grad == 0:
+                return "Konstante Funktion"
+            elif grad == 1:
+                return "Lineare Funktion"
+            elif grad == 2:
+                return "Quadratische Funktion"
+            elif grad == 3:
+                return "Kubische Funktion"
+            else:
+                return f"Polynom {grad}. Grades"
+        else:
+            zaehler_grad = self.zaehler.grad()
+            nenner_grad = self.nenner.grad()
+
+            if zaehler_grad < nenner_grad:
+                return "Gebrochen-rationale Funktion (echt gebrochen)"
+            elif zaehler_grad == nenner_grad:
+                return "Gebrochen-rationale Funktion (unecht gebrochen)"
+            else:
+                return "Gebrochen-rationale Funktion (unecht gebrochen)"
+
+    def _berechne_komplexität(self) -> dict:
+        """Berechnet verschiedene Komplexitätsmaße für die Funktion"""
+        from sympy import count_ops, preorder_traversal
+
+        # Anzahl der Operationen
+        operationen = count_ops(self.term_sympy)
+
+        # Anzahl der Terme
+        if self.ist_ganzrational:
+            terme = len(self.term_sympy.as_ordered_terms())
+        else:
+            zaehler_terme = len(self.zaehler.term_sympy.as_ordered_terms())
+            nenner_terme = len(self.nenner.term_sympy.as_ordered_terms())
+            terme = zaehler_terme + nenner_terme
+
+        # Maximale Koeffizienten-Größe
+        def max_koeffizient(ausdruck):
+            if hasattr(ausdruck, "coeffs"):
+                return max(abs(float(c)) for c in ausdruck.coeffs() if c.is_number)
+            return 0
+
+        max_koeff = max(
+            max_koeffizient(self.zaehler.term_sympy),
+            max_koeffizient(self.nenner.term_sympy),
+        )
+
+        return {
+            "operationen": operationen,
+            "terme": terme,
+            "max_koeffizient": max_koeff,
+            "schwierigkeit": self._bestimme_schwierigkeit(
+                operationen, terme, max_koeff
+            ),
+        }
+
+    def _bestimme_schwierigkeit(
+        self, operationen: int, terme: int, max_koeff: float
+    ) -> str:
+        """Bestimmt die Schwierigkeitsstufe für Schüler"""
+        if operationen <= 2 and terme <= 2 and max_koeff <= 5:
+            return "Anfänger"
+        elif operationen <= 5 and terme <= 4 and max_koeff <= 10:
+            return "Mittel"
+        elif operationen <= 10 and terme <= 6 and max_koeff <= 20:
+            return "Fortgeschritten"
+        else:
+            return "Experte"
+
+    def _analysiere_eigenschaften(self) -> dict:
+        """Analysiert mathematische Eigenschaften der Funktion"""
+        eigenschaften = {}
+
+        # Symmetrie
+        try:
+            from .analysis import prüfe_achsensymmetrie, prüfe_punktsymmetrie
+
+            eigenschaften["achsensymmetrie"] = prüfe_achsensymmetrie(
+                self, self.hauptvariable.symbol if self.hauptvariable else "x"
+            )
+            eigenschaften["punktsymmetrie"] = prüfe_punktsymmetrie(
+                self, self.hauptvariable.symbol if self.hauptvariable else "x", 0
+            )
+        except:
+            # Fallback zu einfacher Prüfung
+            x_sym = sp.symbols("x")
+            test_expr = (
+                self.term_sympy.subs(self.hauptvariable.symbol, x_sym)
+                if self.hauptvariable
+                else self.term_sympy
+            )
+            eigenschaften["achsensymmetrie"] = test_expr.equals(
+                test_expr.subs(x_sym, -x_sym)
+            )
+            eigenschaften["punktsymmetrie"] = test_expr.equals(
+                -test_expr.subs(x_sym, -x_sym)
+            )
+
+        # Monotonie (einfache Prüfung)
+        try:
+            ableitung = diff(
+                self.term_sympy,
+                self.hauptvariable.symbol if self.hauptvariable else "x",
+            )
+            eigenschaften["monotonie_check"] = "komplex"  # Vereinfachte Darstellung
+        except:
+            eigenschaften["monotonie_check"] = "nicht bestimmbar"
+
+        return eigenschaften
+
+    def _erstelle_metadaten(self):
+        """Erstellt umfassende Metadaten für die Funktion"""
+        self.metadaten = {
+            "erstellungszeitpunkt": self._get_aktuelle_zeit(),
+            "original_eingabe": self.original_eingabe,
+            "funktionstyp": self.funktionstyp,
+            "komplexität": self.komplexität,
+            "eigenschaften": self.eigenschaften,
+            "parameter_info": self._erstelle_parameter_info(),
+            "empfehlungen": self._erstelle_empfehlungen(),
+        }
+
+    def _get_aktuelle_zeit(self) -> str:
+        """Gibt den aktuellen Zeitstempel zurück"""
+        from datetime import datetime
+
+        return datetime.now().isoformat()
+
+    def _erstelle_parameter_info(self) -> dict:
+        """Erstellt detaillierte Informationen über Parameter"""
+        info = {}
+
+        if self.parameter:
+            info["vorhandene_parameter"] = [p.name for p in self.parameter]
+            info["parameter_bereiche"] = {p.name: "reell" for p in self.parameter}
+        else:
+            info["vorhandene_parameter"] = []
+            info["parameter_bereiche"] = {}
+
+        return info
+
+    def _erstelle_empfehlungen(self) -> list:
+        """Erstellt Lernempfehlungen basierend auf der Funktion"""
+        empfehlungen = []
+
+        # Basierend auf Funktionstyp
+        if "linear" in self.funktionstyp:
+            empfehlungen.append(
+                "Lineare Funktionen: Steigung und y-Achsenabschnitt interpretieren"
+            )
+        elif "quadratisch" in self.funktionstyp:
+            empfehlungen.append(
+                "Quadratische Funktionen: Scheitelpunktform und Nullstellen berechnen"
+            )
+        elif "gebrochen" in self.funktionstyp:
+            empfehlungen.append(
+                "Gebrochen-rationale Funktionen: Polstellen und Definitionslücken beachten"
+            )
+
+        # Basierend auf Schwierigkeit
+        schwierigkeit = self.komplexität.get("schwierigkeit", "Mittel")
+        if schwierigkeit == "Anfänger":
+            empfehlungen.append(
+                "Perfekt für Einsteiger: Einfache Berechnungen und Graphen"
+            )
+        elif schwierigkeit == "Fortgeschritten":
+            empfehlungen.append("Herausfordernd: Kombinierte Analysemethoden anwenden")
+
+        return empfehlungen
+
+    # 🔥 PHASE 2: Metadaten-Methoden 🔥
+
+    def get_metadaten(self) -> dict:
+        """Gibt die vollständigen Metadaten zurück"""
+        return self.metadaten
+
+    def get_info(self) -> str:
+        """Gibt eine übersichtliche Zusammenfassung der Funktion zurück"""
+        info = []
+        info.append(f"📊 Funktion: {self.term()}")
+        info.append(f"📝 Typ: {self.funktionstyp}")
+        info.append(
+            f"🎯 Schwierigkeit: {self.komplexität.get('schwierigkeit', 'Unbekannt')}"
+        )
+        info.append(f"🔢 Operationen: {self.komplexität.get('operationen', 0)}")
+        info.append(f"📐 Terme: {self.komplexität.get('terme', 0)}")
+
+        if self.metadaten["parameter_info"]["vorhandene_parameter"]:
+            info.append(
+                f"🔤 Parameter: {', '.join(self.metadaten['parameter_info']['vorhandene_parameter'])}"
+            )
+
+        if self.eigenschaften.get("achsensymmetrie"):
+            info.append("✅ Achsensymmetrisch")
+
+        if self.eigenschaften.get("punktsymmetrie"):
+            info.append("🔄 Punktsymmetrisch")
+
+        return "\n".join(info)
+
+    def analysiere(self) -> dict:
+        """Führt eine umfassende Analyse der Funktion durch"""
+        analyse = {
+            "grundlegende_eigenschaften": {
+                "term": self.term(),
+                "typ": self.funktionstyp,
+                "schwierigkeit": self.komplexität.get("schwierigkeit"),
+                "operationen": self.komplexität.get("operationen"),
+                "terme": self.komplexität.get("terme"),
+            },
+            "symmetrie": self.eigenschaften,
+            "parameter": self.metadaten["parameter_info"],
+            "empfehlungen": self.metadaten["empfehlungen"],
+        }
+
+        # Füge spezifische Analysen hinzu
+        if self.ist_ganzrational:
+            analyse["ganzrationale_eigenschaften"] = {
+                "grad": self.zaehler.grad(),
+                "nullstellen": len(self.nullstellen())
+                if hasattr(self, "nullstellen")
+                else "nicht berechnet",
+                "extremstellen": "zu berechnen",  # Könnte später ergänzt werden
+            }
+        else:
+            analyse["gebrochen_rationale_eigenschaften"] = {
+                "zaehler_grad": self.zaehler.grad(),
+                "nenner_grad": self.nenner.grad(),
+                "polstellen": len(self.polstellen())
+                if hasattr(self, "polstellen")
+                else "nicht berechnet",
+                "definitionsluecken": "vorhanden"
+                if self.nenner.grad() > 0
+                else "keine",
+            }
+
+        return analyse
+
+    # 🔥 PHASE 2: Transformations- und Konvertierungs-Utilities 🔥
+
+    def transformiere(self, art: str, **kwargs) -> "Funktion":
+        """
+        Transformiert die Funktion in verschiedene Formen.
+
+        Args:
+            art: Art der Transformation
+                 - 'expandiert': Expandiert alle Terme
+                 - 'faktorisiert': Faktorisiert die Funktion
+                 - 'partialbruch': Zerlegt in Partialbrüche (nur gebrochen-rational)
+                 - 'polynomdivision': Führt Polynomdivision durch
+                 - 'vereinfacht': Vereinfacht den Ausdruck
+            **kwargs: Zusätzliche Parameter für die Transformation
+
+        Returns:
+            Neue Funktion mit transformiertem Ausdruck
+        """
+        from sympy import expand, factor, apart, pquo, prem, simplify
+
+        if art == "expandiert":
+            neuer_zaehler = expand(self.zaehler.term_sympy)
+            neuer_nenner = expand(self.nenner.term_sympy)
+        elif art == "faktorisiert":
+            neuer_zaehler = factor(self.zaehler.term_sympy)
+            neuer_nenner = factor(self.nenner.term_sympy)
+        elif art == "partialbruch" and not self.ist_ganzrational:
+            # Partialbruchzerlegung
+            try:
+                zerlegt = apart(self.term_sympy)
+                # Erstelle neue Funktion aus dem Ergebnis
+                from .ganzrationale import GanzrationaleFunktion
+
+                return Funktion(zerlegt)
+            except:
+                raise ValueError("Partialbruchzerlegung nicht möglich")
+        elif art == "polynomdivision" and not self.ist_ganzrational:
+            # Polynomdivision
+            try:
+                quotient, rest = pquo(self.zaehler.term_sympy, self.nenner.term_sympy)
+                # Gib Ergebnis als Summe von ganzrationalem und gebrochen-rationalem Teil zurück
+                if rest == 0:
+                    return Funktion(quotient)
+                else:
+                    return Funktion(f"{quotient} + ({rest})/({self.nenner.term_sympy})")
+            except:
+                raise ValueError("Polynomdivision nicht möglich")
+        elif art == "vereinfacht":
+            neuer_zaehler = simplify(self.zaehler.term_sympy)
+            neuer_nenner = simplify(self.nenner.term_sympy)
+        else:
+            raise ValueError(f"Unbekannte Transformation: {art}")
+
+        # Erstelle neue Funktion
+        if self.ist_ganzrational:
+            return Funktion(neuer_zaehler)
+        else:
+            return Funktion((str(neuer_zaehler), str(neuer_nenner)))
+
+    def konvertiere_zu(self, zieltyp: str) -> "Funktion":
+        """
+        Konvertiert die Funktion in einen anderen Typ.
+
+        Args:
+            zieltyp: Zieltyp der Konvertierung
+                     - 'ganzrational': Konvertiert zu ganzrationaler Funktion
+                     - 'gebrochen_rational': Konvertiert zu gebrochen-rationaler Funktion
+                     - 'exponential': Konvertiert zu exponential-rationaler Funktion (wenn möglich)
+
+        Returns:
+            Neue Funktion des Zieltyps
+        """
+        if zieltyp == "ganzrational":
+            if self.ist_ganzrational:
+                return self  # Bereits ganzrational
+            else:
+                # Versuche, zu einer ganzrationalen Funktion zu konvertieren
+                # (nur möglich, wenn Nenner = 1)
+                if self.nenner.term_sympy == 1:
+                    return Funktion(self.zaehler.term_sympy)
+                else:
+                    raise ValueError(
+                        "Konvertierung zu ganzrational nicht möglich: Nenner ≠ 1"
+                    )
+
+        elif zieltyp == "gebrochen_rational":
+            if not self.ist_ganzrational:
+                return self  # Bereits gebrochen-rational
+            else:
+                # Konvertiere ganzrationale zu gebrochen-rationaler
+                return Funktion((self.zaehler.term_sympy, 1))
+
+        elif zieltyp == "exponential":
+            # Versuche, eine exponentiale Darstellung zu finden
+            # Dies ist komplex und nur für bestimmte Funktionen möglich
+            try:
+                from .gebrochen_rationale import ExponentialRationaleFunktion
+
+                # Vereinfachte Heuristik: suche nach exp() im Ausdruck
+                if "exp" in str(self.term_sympy):
+                    return ExponentialRationaleFunktion._erstelle_aus_string(
+                        str(self.term_sympy)
+                    )
+                else:
+                    raise ValueError("Keine exponentiale Form erkannt")
+            except:
+                raise ValueError("Konvertierung zu Exponentialfunktion nicht möglich")
+
+        else:
+            raise ValueError(f"Unbekannter Zieltyp: {zieltyp}")
+
+    def kombiniere_mit(self, andere_funktion: "Funktion", operation: str) -> "Funktion":
+        """
+        Kombiniert diese Funktion mit einer anderen Funktion.
+
+        Args:
+            andere_funktion: Zweite Funktion für die Kombination
+            operation: Art der Kombination
+                       - 'addition': f + g
+                       - 'subtraktion': f - g
+                       - 'multiplikation': f * g
+                       - 'division': f / g
+                       - 'komposition': f(g(x))
+
+        Returns:
+            Neue Funktion mit dem kombinierten Ausdruck
+        """
+        from sympy import Add, Mul, Pow
+
+        if operation == "addition":
+            neuer_term = Add(self.term_sympy, andere_funktion.term_sympy)
+        elif operation == "subtraktion":
+            neuer_term = Add(self.term_sympy, -andere_funktion.term_sympy)
+        elif operation == "multiplikation":
+            neuer_term = Mul(self.term_sympy, andere_funktion.term_sympy)
+        elif operation == "division":
+            neuer_term = Mul(self.term_sympy, Pow(andere_funktion.term_sympy, -1))
+        elif operation == "komposition":
+            # Ersetze x durch g(x)
+            x_sym = self.hauptvariable.symbol if self.hauptvariable else sp.symbols("x")
+            neuer_term = self.term_sympy.subs(x_sym, andere_funktion.term_sympy)
+        else:
+            raise ValueError(f"Unbekannte Operation: {operation}")
+
+        return Funktion(neuer_term)
+
+    def spezialisiere_parameter(self, **werte) -> "Funktion":
+        """
+        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            Neue Funktion mit spezifizierten Parameterwerten
+        """
+        # Ersetze Parameter durch die gegebenen Werte
+        neuer_term = self.term_sympy
+
+        for param_name, wert in werte.items():
+            # Finde das passende Parameter-Symbol
+            param_symbol = None
+            for p in self.parameter:
+                if p.name == param_name:
+                    param_symbol = p.symbol
+                    break
+
+            if param_symbol is not None:
+                neuer_term = neuer_term.subs(param_symbol, wert)
+
+        return Funktion(neuer_term)
+
+    def erstelle_umkehrfunktion(self) -> "Funktion":
+        """
+        Versucht, die Umkehrfunktion zu erstellen.
+
+        Returns:
+            Umkehrfunktion, wenn sie existiert und gefunden werden kann
+
+        Raises:
+            ValueError: Wenn keine Umkehrfunktion gefunden werden kann
+        """
+        try:
+            x_sym = self.hauptvariable.symbol if self.hauptvariable else sp.symbols("x")
+            y_sym = sp.symbols("y")
+
+            # Löse y = f(x) nach x auf
+            gleichung = sp.Eq(y_sym, self.term_sympy)
+            umkehr_geloest = solve(gleichung, x_sym)
+
+            if umkehr_geloest:
+                # Nehme die erste Lösung (einfacher Fall)
+                if isinstance(umkehr_geloest, list) and len(umkehr_geloest) > 0:
+                    umkehr_funktion = umkehr_geloest[0]
+                    # Ersetze y durch x für die Standardnotation
+                    umkehr_funktion = umkehr_funktion.subs(y_sym, x_sym)
+                    return Funktion(umkehr_funktion)
+
+            raise ValueError("Umkehrfunktion konnte nicht gefunden werden")
+
+        except Exception as e:
+            raise ValueError(f"Umkehrfunktion konnte nicht erstellt werden: {e}")
+
+    def vergleiche_mit(self, andere_funktion: "Funktion") -> dict:
+        """
+        Vergleicht diese Funktion mit einer anderen Funktion.
+
+        Args:
+            andere_funktion: Funktion zum Vergleich
+
+        Returns:
+            Dictionary mit Vergleichsergebnissen
+        """
+        vergleich = {
+            "gleichheit": self.term_sympy.equals(andere_funktion.term_sympy),
+            "typ_gleich": type(self).__name__ == type(andere_funktion).__name__,
+            "komplexitaetsvergleich": {
+                "eigen": self.komplexität,
+                "anderer": andere_funktion.komplexität,
+            },
+            "eigenschaften_gleich": self.eigenschaften == andere_funktion.eigenschaften,
+            "differenz": None,
+        }
+
+        # Berechne die Differenz der Funktionen
+        try:
+            differenz_term = self.term_sympy - andere_funktion.term_sympy
+            vergleich["differenz"] = {
+                "term": str(differenz_term),
+                "ist_null": differenz_term.equals(0),
+            }
+        except:
+            pass
+
+        return vergleich
+
+    # 🔥 PHASE 2: Unified Visualization Interface 🔥
+
+    def zeige(self, modus: str = "standard", **kwargs) -> Any:
+        """
+        Einheitliche Visualisierungsmethode für alle Funktionstypen.
+
+        Args:
+            modus: Visualisierungsmodus
+                   - 'standard': Standard-Graph der Funktion
+                   - 'mit_analyse': Graph mit Analyse-Informationen
+                   - 'vergleich': Vergleich mit anderer Funktion
+                   - 'details': Detaillierte Analyse mit mehreren Graphen
+                   - 'interaktiv': Interaktiver Plot (falls marimo verfügbar)
+            **kwargs: Zusätzliche Parameter:
+                     - x_bereich: Tuple (von, bis) für x-Achse
+                     - punkte: Anzahl der zu berechnenden Punkte
+                     - titel: Titel für den Graphen
+                     - andere_funktion: Funktion für Vergleichsmodus
+                     - zeige_analysis: Boolean für Analyse-Informationen
+
+        Returns:
+            Plotly-Figur oder marimo-Widget (abhängig von Verfügbarkeit)
+        """
+        from typing import Any
+
+        # Standardparameter setzen
+        x_bereich = kwargs.get("x_bereich", (-10, 10))
+        punkte = kwargs.get("punkte", 200)
+        titel = kwargs.get("titel", f"Funktion: {self.term()}")
+        zeige_analysis = kwargs.get("zeige_analysis", False)
+
+        if modus == "standard":
+            return self._zeige_standard_graph(x_bereich, punkte, titel)
+        elif modus == "mit_analyse":
+            return self._zeige_mit_analyse(x_bereich, punkte, titel)
+        elif modus == "vergleich":
+            andere_funktion = kwargs.get("andere_funktion")
+            if andere_funktion is None:
+                raise ValueError("Für Vergleichsmodus wird 'andere_funktion' benötigt")
+            return self._zeige_vergleich(andere_funktion, x_bereich, punkte, titel)
+        elif modus == "details":
+            return self._zeige_details(x_bereich, punkte, titel)
+        elif modus == "interaktiv":
+            return self._zeige_interaktiv(x_bereich, punkte, titel)
+        else:
+            raise ValueError(f"Unbekannter Visualisierungsmodus: {modus}")
+
+    def _zeige_standard_graph(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
+        """Erstellt einen Standard-Graphen der Funktion"""
+        try:
+            import numpy as np
+            import plotly.graph_objects as go
+
+            # Berechne Punkte
+            x_werte = np.linspace(x_bereich[0], x_bereich[1], punkte)
+            y_werte = []
+
+            for x in x_werte:
+                try:
+                    y = float(self.wert(x))
+                    y_werte.append(y)
+                except (ZeroDivisionError, ValueError, OverflowError):
+                    y_werte.append(None)
+
+            # Erstelle Plot
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=x_werte,
+                    y=y_werte,
+                    mode="lines",
+                    name=self.term(),
+                    line=dict(color="blue", width=2),
+                )
+            )
+
+            # Layout anpassen
+            fig.update_layout(
+                title=titel,
+                xaxis_title="x",
+                yaxis_title="f(x)",
+                showlegend=True,
+                hovermode="x unified",
+            )
+
+            # Aspect Ratio Control
+            fig.update_yaxes(scaleanchor="x", scaleratio=1)
+
+            return fig
+
+        except ImportError:
+            raise ImportError("Plotly wird für die Visualisierung benötigt")
+
+    def _zeige_mit_analyse(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
+        """Erstellt einen Graphen mit Analyse-Informationen"""
+        fig = self._zeige_standard_graph(x_bereich, punkte, titel)
+
+        # Füge wichtige Punkte hinzu
+        try:
+            if hasattr(self, "nullstellen") and self.ist_ganzrational:
+                nullstellen = self.nullstellen()
+                for ns in nullstellen:
+                    if (
+                        isinstance(ns, (int, float))
+                        and x_bereich[0] <= ns <= x_bereich[1]
+                    ):
+                        fig.add_vline(
+                            x=ns,
+                            line_dash="dash",
+                            line_color="red",
+                            annotation_text=f"Nullstelle: x={ns:.2f}",
+                        )
+
+            # Füge y-Achsenabschnitt hinzu
+            y_achse = self.wert(0)
+            fig.add_hline(
+                y=y_achse,
+                line_dash="dot",
+                line_color="green",
+                annotation_text=f"y-Achsenabschnitt: {y_achse:.2f}",
+            )
+
+        except:
+            pass  # Ignoriere Fehler bei der Analyse
+
+        # Füge Analyse-Informationen als Annotation hinzu
+        info_text = self.get_info()
+        fig.add_annotation(
+            text=info_text,
+            xref="paper",
+            yref="paper",
+            x=0.02,
+            y=0.98,
+            showarrow=False,
+            bgcolor="rgba(255,255,255,0.8)",
+            bordercolor="black",
+            borderwidth=1,
+        )
+
+        return fig
+
+    def _zeige_vergleich(
+        self, andere_funktion: "Funktion", x_bereich: tuple, punkte: int, titel: str
+    ) -> Any:
+        """Erstellt einen Vergleichsgraphen mit zwei Funktionen"""
+        try:
+            import numpy as np
+            import plotly.graph_objects as go
+
+            # Berechne Punkte für beide Funktionen
+            x_werte = np.linspace(x_bereich[0], x_bereich[1], punkte)
+            y1_werte = []
+            y2_werte = []
+
+            for x in x_werte:
+                try:
+                    y1 = float(self.wert(x))
+                    y1_werte.append(y1)
+                except:
+                    y1_werte.append(None)
+
+                try:
+                    y2 = float(andere_funktion.wert(x))
+                    y2_werte.append(y2)
+                except:
+                    y2_werte.append(None)
+
+            # Erstelle Plot mit beiden Funktionen
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=x_werte,
+                    y=y1_werte,
+                    mode="lines",
+                    name=f"f₁(x) = {self.term()}",
+                    line=dict(color="blue", width=2),
+                )
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=x_werte,
+                    y=y2_werte,
+                    mode="lines",
+                    name=f"f₂(x) = {andere_funktion.term()}",
+                    line=dict(color="red", width=2),
+                )
+            )
+
+            # Layout anpassen
+            fig.update_layout(
+                title=f"Vergleich: {titel}",
+                xaxis_title="x",
+                yaxis_title="f(x)",
+                showlegend=True,
+                hovermode="x unified",
+            )
+
+            # Aspect Ratio Control
+            fig.update_yaxes(scaleanchor="x", scaleratio=1)
+
+            return fig
+
+        except ImportError:
+            raise ImportError("Plotly wird für die Visualisierung benötigt")
+
+    def _zeige_details(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
+        """Erstellt eine detaillierte Visualisierung mit mehreren Subplots"""
+        try:
+            import numpy as np
+            import plotly.graph_objects as go
+            from plotly.subplots import make_subplots
+
+            # Erstelle Subplots: Funktion, 1. Ableitung, 2. Ableitung
+            fig = make_subplots(
+                rows=3,
+                cols=1,
+                subplot_titles=("Funktion", "1. Ableitung", "2. Ableitung"),
+                vertical_spacing=0.08,
+            )
+
+            # Berechne Punkte
+            x_werte = np.linspace(x_bereich[0], x_bereich[1], punkte)
+
+            # Originalfunktion
+            y_werte = []
+            for x in x_werte:
+                try:
+                    y = float(self.wert(x))
+                    y_werte.append(y)
+                except:
+                    y_werte.append(None)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=x_werte,
+                    y=y_werte,
+                    mode="lines",
+                    name=self.term(),
+                    line=dict(color="blue", width=2),
+                ),
+                row=1,
+                col=1,
+            )
+
+            # Erste Ableitung (numerisch)
+            dy1_werte = []
+            for i in range(len(x_werte)):
+                if i == 0 or i == len(x_werte) - 1:
+                    dy1_werte.append(None)
+                else:
+                    try:
+                        h = x_werte[1] - x_werte[0]
+                        dy1 = (
+                            self.wert(x_werte[i] + h) - self.wert(x_werte[i] - h)
+                        ) / (2 * h)
+                        dy1_werte.append(float(dy1))
+                    except:
+                        dy1_werte.append(None)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=x_werte,
+                    y=dy1_werte,
+                    mode="lines",
+                    name="f'(x)",
+                    line=dict(color="red", width=2),
+                ),
+                row=2,
+                col=1,
+            )
+
+            # Zweite Ableitung (numerisch)
+            dy2_werte = []
+            for i in range(1, len(x_werte) - 1):
+                try:
+                    h = x_werte[1] - x_werte[0]
+                    dy2 = (
+                        self.wert(x_werte[i] + h)
+                        - 2 * self.wert(x_werte[i])
+                        + self.wert(x_werte[i] - h)
+                    ) / (h**2)
+                    dy2_werte.append(float(dy2))
+                except:
+                    dy2_werte.append(None)
+
+            fig.add_trace(
+                go.Scatter(
+                    x=x_werte[1:-1],
+                    y=dy2_werte,
+                    mode="lines",
+                    name="f''(x)",
+                    line=dict(color="green", width=2),
+                ),
+                row=3,
+                col=1,
+            )
+
+            # Layout anpassen
+            fig.update_layout(
+                title=f"Detaillierte Analyse: {titel}",
+                height=800,
+                showlegend=True,
+                hovermode="x unified",
+            )
+
+            # Aspect Ratio Control für alle Subplots
+            for i in range(1, 4):
+                fig.update_yaxes(scaleanchor="x", scaleratio=1, row=i, col=1)
+
+            return fig
+
+        except ImportError:
+            raise ImportError("Plotly wird für die Visualisierung benötigt")
+
+    def _zeige_interaktiv(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
+        """Erstellt einen interaktiven Plot (falls marimo verfügbar)"""
+        try:
+            import marimo as mo
+
+            # Erstelle zuerst einen Standard-Plotly-Graphen
+            fig = self._zeige_standard_graph(x_bereich, punkte, titel)
+
+            # Wandle in marimo-Widget um
+            return mo.ui.plotly(fig)
+
+        except ImportError:
+            # Fallback zu normalem Plotly-Graphen
+            return self._zeige_standard_graph(x_bereich, punkte, titel)
+
+    def exportiere_visualisierung(self, dateiname: str, format: str = "html", **kwargs):
+        """
+        Exportiert die Visualisierung in verschiedene Formate.
+
+        Args:
+            dateiname: Name der Ausgabedatei
+            format: Ausgabeformat ('html', 'png', 'pdf', 'svg')
+            **kwargs: Zusätzliche Parameter für die Visualisierung
+        """
+        fig = self.zeige(**kwargs)
+
+        if format == "html":
+            fig.write_html(dateiname)
+        elif format == "png":
+            fig.write_image(dateiname)
+        elif format == "pdf":
+            fig.write_image(dateiname)
+        elif format == "svg":
+            fig.write_image(dateiname)
+        else:
+            raise ValueError(f"Unbekanntes Format: {format}")
+
+        print(f"Visualisierung exportiert als: {dateiname}")
 
     def __call__(self, x_wert: float) -> float | sp.Basic:
         """
