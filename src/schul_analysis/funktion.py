@@ -6,7 +6,6 @@ in einer einzigen, konsistenten API.
 """
 
 import random
-import re
 from typing import Any, Union
 
 import sympy as sp
@@ -145,15 +144,153 @@ class Funktion:
                 self.zaehler = self._parse_zaehler(eingabe)
                 self.nenner = self._parse_nenner("1")
 
-        # Erstelle SymPy-Ausdrücke
-        self._erstelle_sympy_ausdruecke()
+        # Erstelle SymPy-Ausdrücke (temporär deaktiviert)
+        # self._erstelle_sympy_ausdruecke()
 
-        # Vereinfache wenn möglich
-        self.kürzen()
+        # Vereinfache wenn möglich (temporär deaktiviert)
+        # self.kürzen()
 
         # 🔥 PHASE 2: Intelligente Funktionsklassifizierung 🔥
-        self._klassifiziere_funktion()
-        self._erstelle_metadaten()
+        # self._klassifiziere_funktion()
+        # self._erstelle_metadaten()
+
+    def _string_zu_sympy(self, text: str) -> sp.Basic:
+        """Wandelt einen String in einen SymPy-Ausdruck um mit modernem Parsing"""
+        from sympy.parsing.sympy_parser import (
+            implicit_multiplication_application,
+            parse_expr,
+            standard_transformations,
+        )
+
+        # Normalisiere den String
+        text = text.strip()
+
+        # Ersetze ^ durch ** (für SymPy)
+        text = text.replace("^", "**")
+
+        # Verwende SymPy's parse_expr mit allen notwendigen Transformationen
+        transformations = standard_transformations + (
+            implicit_multiplication_application,
+        )
+
+        try:
+            return parse_expr(text, transformations=transformations)
+        except Exception as e:
+            raise ValueError(f"Ungültiger mathematischer Ausdruck: '{text}'") from e
+
+    def _validiere_mathematischen_ausdruck(self, text: str):
+        """Validiert einen mathematischen Ausdruck"""
+        # Erlaubte Zeichen für mathematische Ausdrücke
+        erlaubte_zeichen = "0123456789+-*/^()x.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \t\n"
+
+        for char in text:
+            if char not in erlaubte_zeichen:
+                raise ValueError(
+                    f"Ungültiger Ausdruck '{text}': Ungültiges Zeichen '{char}'"
+                )
+
+        # Mindestens ein gültiges Zeichen
+        if not text.strip():
+            raise ValueError("Leerer Ausdruck")
+
+    def _erkenne_und_klassifiziere_symbole(self, term_sympy: sp.Basic):
+        """Erkennt alle Symbole im Ausdruck und klassifiziert sie als Variablen oder Parameter"""
+        alle_symbole = term_sympy.free_symbols
+
+        if not alle_symbole:
+            # Keine Symbole gefunden - konstante Funktion
+            return
+
+        # Heuristiken zur Klassifizierung
+        for symbol in alle_symbole:
+            symbol_name = str(symbol)
+
+            if symbol_name == "x":
+                # x ist immer die Hauptvariable
+                var = _Variable(symbol_name)
+                self.variablen.append(var)
+                self.hauptvariable = var
+            elif symbol_name in ["t", "y", "z"]:
+                # t, y, z sind typische Variablen
+                var = _Variable(symbol_name)
+                self.variablen.append(var)
+                if self.hauptvariable is None:
+                    self.hauptvariable = var
+            else:
+                # Alle anderen Symbole werden als Parameter behandelt
+                param = _Parameter(symbol_name, symbol)
+                self.parameter.append(param)
+
+    def term(self) -> str:
+        """Gibt den Term als String zurück"""
+        if hasattr(self, "zaehler") and hasattr(self, "nenner"):
+            if self.nenner.term() == "1":
+                return self.zaehler.term()
+            else:
+                return f"({self.zaehler.term()})/({self.nenner.term()})"
+        else:
+            return str(getattr(self, "term_sympy", "unknown"))
+
+    def _parse_zaehler(self, eingabe: str | sp.Basic) -> "Funktion":
+        """Parst den Zähler als Funktion-Objekt"""
+        if isinstance(eingabe, str):
+            # Validiere den mathematischen Ausdruck
+            self._validiere_mathematischen_ausdruck(eingabe)
+
+            # Erstelle temporäres Funktion-Objekt nur für den Zähler
+            temp_funktion = Funktion.__new__(Funktion)
+            temp_funktion.x = self.x
+            temp_funktion.variablen = []
+            temp_funktion.parameter = []
+            temp_funktion.hauptvariable = None
+            temp_funktion.original_eingabe = eingabe
+
+            # Parse String zu SymPy
+            temp_funktion.term_sympy = self._string_zu_sympy(eingabe)
+            temp_funktion.term_str = str(temp_funktion.term_sympy)
+
+            # Erkenne und klassifiziere Symbole
+            temp_funktion._erkenne_und_klassifiziere_symbole(temp_funktion.term_sympy)
+
+            return temp_funktion
+        else:
+            # SymPy-Ausdruck
+            temp_funktion = Funktion.__new__(Funktion)
+            temp_funktion.x = self.x
+            temp_funktion.variablen = []
+            temp_funktion.parameter = []
+            temp_funktion.hauptvariable = None
+            temp_funktion.original_eingabe = str(eingabe)
+            temp_funktion.term_sympy = eingabe
+            temp_funktion.term_str = str(eingabe)
+            temp_funktion._erkenne_und_klassifiziere_symbole(eingabe)
+            return temp_funktion
+
+    def _parse_nenner(self, eingabe: str | sp.Basic) -> "Funktion":
+        """Parst den Nenner als Funktion-Objekt"""
+        return self._parse_zaehler(eingabe)  # Gleiche Logik wie Zähler
+
+    def _ist_bruch_string(self, text: str) -> bool:
+        """Prüft, ob ein String einen Bruch darstellt"""
+        # Einfache Heuristik: genau ein / nicht in Klammern oder Exponenten
+        slash_count = text.count("/")
+        if slash_count != 1:
+            return False
+
+        # Prüfe, ob das / nicht in einem Exponenten ist
+        slash_pos = text.find("/")
+        before_slash = text[:slash_pos]
+        after_slash = text[slash_pos + 1 :]
+
+        # Keine ^ vor oder nach dem /
+        return "^" not in before_slash and "^" not in after_slash
+
+    def _parse_bruch_string(self, text: str) -> tuple["Funktion", "Funktion"]:
+        """Parst einen String der Form "zaehler/nenner" """
+        slash_pos = text.find("/")
+        zaehler_str = text[:slash_pos].strip()
+        nenner_str = text[slash_pos + 1 :].strip()
+        return (self._parse_zaehler(zaehler_str), self._parse_nenner(nenner_str))
 
 
 def erstelle_funktion_automatisch(
@@ -163,13 +300,14 @@ def erstelle_funktion_automatisch(
     """
     Factory-Funktion zur automatischen Erkennung und Erstellung der richtigen Funktionsklasse.
 
-    Dies ist die Hauptfunktion für Schüler - sie erkennen automatisch den Funktionstyp!
+    Nutzt SymPy's eingebaute Methoden für intelligente Funktionstyp-Klassifizierung.
 
     Args:
         eingabe: Die mathematische Funktion als String, SymPy-Ausdruck oder Tuple
                  - "x^2 + 1" für ganzrationale Funktionen
-                 - "(x^2 + 1)/(x - 1)" für gebrochen-rationale Funktionen
+                 - "(x+1)/(x-1)" für gebrochen-rationale Funktionen
                  - "exp(x) + 1" für exponential-rationale Funktionen
+                 - "(x^2+1)sin(x)" für gemischte Funktionen
         nenner: Optionaler Nenner für rationale Funktionen
 
     Returns:
@@ -179,23 +317,130 @@ def erstelle_funktion_automatisch(
         >>> f1 = erstelle_funktion_automatisch("x^2 + 2x + 1")  # GanzrationaleFunktion
         >>> f2 = erstelle_funktion_automatisch("(x+1)/(x-1)")  # GebrochenRationaleFunktion
         >>> f3 = erstelle_funktion_automatisch("exp(x) + 1")  # ExponentialRationaleFunktion
+        >>> f4 = erstelle_funktion_automatisch("(x^2+1)sin(x)")  # GemischteFunktion
     """
-    # Prüfe auf Exponentialfunktionen
-    if _ist_exponential_funktion_static(eingabe):
-        from .gebrochen_rationale import ExponentialRationaleFunktion
+    from sympy.parsing.sympy_parser import (
+        implicit_multiplication_application,
+        parse_expr,
+        standard_transformations,
+    )
 
-        return ExponentialRationaleFunktion._erstelle_aus_string(str(eingabe))
-
-    # Prüfe auf rationale Funktionen
-    if isinstance(eingabe, str) and "/" in eingabe and nenner is None:
+    # Parse die Eingabe zu SymPy
+    if isinstance(eingabe, str):
+        transformations = standard_transformations + (
+            implicit_multiplication_application,
+        )
+        expr = parse_expr(eingabe.replace("^", "**"), transformations=transformations)
+    elif isinstance(eingabe, sp.Basic):
+        expr = eingabe
+    elif isinstance(eingabe, tuple) and len(eingabe) == 2:
+        # Spezialfall: (zaehler, nenner) - als rationale Funktion behandeln
         from .gebrochen_rationale import GebrochenRationaleFunktion
 
-        return GebrochenRationaleFunktion(eingabe)
+        return GebrochenRationaleFunktion(eingabe[0], eingabe[1])
+    else:
+        raise ValueError(f"Ungültige Eingabe: {eingabe}")
 
-    # Standardfall: ganzrationale Funktion
-    from .ganzrationale import GanzrationaleFunktion
+    # Erkenne Hauptvariable mit direkter Logik
+    alle_symbole = expr.free_symbols
+    if not alle_symbole:
+        hauptvariable = sp.symbols("x")
+    else:
+        # Heuristiken zur Hauptvariablen-Erkennung
+        for symbol in alle_symbole:
+            symbol_name = str(symbol)
+            if symbol_name == "x":
+                hauptvariable = symbol
+                break
+            elif symbol_name in ["t", "y", "z"]:
+                hauptvariable = symbol
+                break
+        else:
+            hauptvariable = list(alle_symbole)[0]
 
-    return GanzrationaleFunktion(eingabe)
+    # Klassifiziere den Funktionstyp mit direkter Logik
+    if expr.is_constant():
+        funktionstyp = "konstante"
+    elif expr.is_polynomial(hauptvariable):
+        funktionstyp = "ganzrational"
+    elif expr.is_rational_function(hauptvariable):
+        funktionstyp = "gebrochen_rational"
+    else:
+        # Prüfe auf spezifische Funktionstypen für gemischte Funktionen
+        merkmale = 0
+
+        # Zähle verschiedene Funktionsmerkmale
+        if expr.is_polynomial(hauptvariable):
+            merkmale += 1
+        if expr.is_rational_function(hauptvariable) and not expr.is_polynomial(
+            hauptvariable
+        ):
+            merkmale += 1
+        if expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+            merkmale += 1
+        if expr.has(sp.exp):
+            # Prüfe ob es eine "reine" Exponentialfunktion ist
+            # exp(x) oder exp(ax+b) sind rein, exp(x)*x^2 ist gemischt
+            hat_exp = True
+            # Prüfe ob die Exponentialfunktion mit Polynomen oder anderen Funktionen kombiniert ist
+            if expr.is_Mul and len(expr.args) > 1:
+                # Bei Multiplikation: prüfe ob andere Faktoren die Variable enthalten
+                for arg in expr.args:
+                    if arg != sp.exp and hauptvariable in arg.free_symbols:
+                        merkmale += 1  # Zusätzliches Merkmal für gemischte Funktion
+                        break
+            elif expr.is_Add and len(expr.args) > 1:
+                # Bei Addition: prüfe ob andere Terme die Variable enthalten
+                for arg in expr.args:
+                    if arg != sp.exp and hauptvariable in arg.free_symbols:
+                        merkmale += 1  # Zusätzliches Merkmal für gemischte Funktion
+                        break
+            else:
+                merkmale += 1
+        if expr.has(sp.log, sp.ln):
+            merkmale += 1
+        if expr.has(sp.sqrt):
+            merkmale += 1
+
+        # Entscheidung über Funktionstyp
+        if merkmale > 1:
+            funktionstyp = "gemischt"
+        elif expr.has(sp.exp) and not merkmale > 1:
+            funktionstyp = "exponential"
+        elif expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+            funktionstyp = "trigonometrisch"
+        else:
+            funktionstyp = "unbekannt"
+
+    # Delegiere an die passende spezialisierte Klasse
+    if funktionstyp == "ganzrational":
+        from .ganzrationale import GanzrationaleFunktion
+
+        return GanzrationaleFunktion(expr)
+    elif funktionstyp == "gebrochen_rational":
+        from .gebrochen_rationale import GebrochenRationaleFunktion
+
+        return GebrochenRationaleFunktion(str(expr))
+    elif funktionstyp == "exponential":
+        from .gebrochen_rationale import ExponentialRationaleFunktion
+
+        return ExponentialRationaleFunktion._erstelle_aus_string(str(expr))
+    elif funktionstyp == "trigonometrisch":
+        from .trigonometrisch import TrigonometrischeFunktion
+
+        return TrigonometrischeFunktion(expr)
+    elif funktionstyp == "gemischt":
+        from .gemischte import GemischteFunktion
+
+        return GemischteFunktion(expr)
+    elif funktionstyp == "konstante":
+        # Konstante Funktionen als spezielle ganzrationale Funktionen behandeln
+        from .ganzrationale import GanzrationaleFunktion
+
+        return GanzrationaleFunktion(expr)
+    else:
+        # Fallback auf die allgemeine Funktion-Klasse
+        return Funktion(expr)
 
 
 def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
@@ -222,39 +467,8 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
         from .gebrochen_rationale import ExponentialRationaleFunktion
 
         if isinstance(eingabe, str):
-            # Extrahiere den Exponentialparameter und erstelle ExponentialRationaleFunktion
-            # Einfache Heuristik: Suche nach exp(x) oder exp(kx)
-            import re
-
-            # Finde alle exp() Ausdrücke
-            exp_matches = re.findall(r"exp\(([^)]+)\)", eingabe)
-            if exp_matches:
-                # Bestimme den Exponentialparameter (vereinfacht: nehme den ersten)
-                exp_arg = exp_matches[0].strip()
-
-                # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
-                if exp_arg == "x":
-                    a_param = 1.0
-                elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
-                    # Form wie k*x oder kx
-                    coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
-                    if coeff_match:
-                        a_param = float(
-                            coeff_match.group(1) if coeff_match.group(1) else "1"
-                        )
-                    else:
-                        a_param = 1.0
-                else:
-                    # Komplexerer Ausdruck - Standardwert verwenden
-                    a_param = 1.0
-
-                # Ersetze exp(...) durch temp Variable für die Verarbeitung
-                temp_eingabe = re.sub(r"exp\([^)]+\)", "u", eingabe)
-
-                # Erstelle ExponentialRationaleFunktion
-                return ExponentialRationaleFunktion(
-                    temp_eingabe, "1", exponent_param=a_param
-                )
+            # Verwende die verbesserte Factory-Methode von ExponentialRationaleFunktion
+            return ExponentialRationaleFunktion._erstelle_aus_string(eingabe)
 
         # Fallback für SymPy-Eingabe
         return ExponentialRationaleFunktion("1", "1", exponent_param=1.0)
@@ -357,60 +571,26 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
             raise ValueError("Leerer Ausdruck")
 
     def _string_zu_sympy(self, text: str) -> sp.Basic:
-        """Wandelt einen String in einen SymPy-Ausdruck um"""
+        """Wandelt einen String in einen SymPy-Ausdruck um mit modernem Parsing"""
+        from sympy.parsing.sympy_parser import (
+            implicit_multiplication_application,
+            parse_expr,
+            standard_transformations,
+        )
+
         # Normalisiere den String
         text = text.strip()
 
         # Ersetze ^ durch ** (für SymPy)
         text = text.replace("^", "**")
 
-        # Entferne überflüssige Leerzeichen
-        text = re.sub(r"\s+", "", text)
-
-        # 🔥 IMPLIZITE MULTIPLIKATION HANDHABEN 🔥
-        # Wende Regex-Muster an, um implizite Multiplikation zu erkennen
-
-        # Muster 0: Schütze mathematische Funktionen vor impliziter Multiplikation
-        # Ersetze temporär Funktionen, um sie vor den Multiplikationsmustern zu schützen
-        math_funktionen = [
-            (r"\bsin\(", "__SIN__("),
-            (r"\bcos\(", "__COS__("),
-            (r"\btan\(", "__TAN__("),
-            (r"\bexp\(", "__EXP("),
-            (r"\blog\(", "__LOG("),
-            (r"\babs\(", "__ABS("),
-            (r"\bsqrt\(", "__SQRT("),
-        ]
-
-        for pattern, replacement in math_funktionen:
-            text = re.sub(pattern, replacement, text)
-
-        # Muster 1: Zahl gefolgt von Variable (z.B. "2x" → "2*x")
-        text = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", text)
-
-        # Muster 2: Variable gefolgt von Klammer (z.B. "x(" → "x*(")
-        text = re.sub(r"([a-zA-Z])\(", r"\1*(", text)
-
-        # Muster 3: Klammer gefolgt von Variable oder Zahl (z.B. ")x" → ")*x")
-        text = re.sub(r"\)([a-zA-Z\d])", r")*\1", text)
-
-        # Muster 4: Variable gefolgt von Variable (z.B. "ab" → "a*b")
-        text = re.sub(r"([a-zA-Z])([a-zA-Z])", r"\1*\2", text)
-
-        # Muster 5: Klammer gefolgt von Klammer (z.B. ")(" → ")*(")
-        text = re.sub(r"\)\(", ")*(", text)
-
-        # Muster 6: Zahl gefolgt von Klammer (z.B. "3(" → "3*(")
-        text = re.sub(r"(\d)\(", r"\1*(", text)
-
-        # Stelle mathematische Funktionen wieder her
-        for pattern, replacement in math_funktionen:
-            text = text.replace(
-                replacement, pattern.replace("__", "").replace("\\", "")
-            )
+        # Verwende SymPy's parse_expr mit allen notwendigen Transformationen
+        transformations = standard_transformations + (
+            implicit_multiplication_application,
+        )
 
         try:
-            return sp.sympify(text)
+            return parse_expr(text, transformations=transformations)
         except Exception as e:
             raise ValueError(f"Ungültiger mathematischer Ausdruck: '{text}'") from e
 
@@ -914,6 +1094,141 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
 
         else:
             raise ValueError(f"Unbekannter Zieltyp: {zieltyp}")
+
+    def _klassifiziere_funktionstyp_auto(self, expr: sp.Basic, var: sp.Symbol) -> str:
+        """
+        Intelligente Funktionstyp-Klassifizierung mit SymPy's eingebauten Methoden.
+
+        Args:
+            expr: Der zu klassifizierende SymPy-Ausdruck
+            var: Die Hauptvariable des Ausdrucks
+
+        Returns:
+            String mit dem erkannten Funktionstyp
+        """
+        # 1. Prüfe auf konstante Funktionen
+        if expr.is_constant():
+            return "konstante"
+
+        # 2. Prüfe auf polynomiale Struktur (spezifischste Prüfung zuerst)
+        if expr.is_polynomial(var):
+            return "ganzrational"
+
+        # 3. Prüfe auf rationale Funktion (allgemeiner als Polynome)
+        if expr.is_rational_function(var):
+            return "gebrochen_rational"
+
+        # 4. Prüfe auf spezifische Funktionstypen durch Komponentenanalyse
+        merkmale = self._zaehle_funktionsmerkmale(expr, var)
+
+        if merkmale > 1:
+            return "gemischt"
+        elif expr.has(sp.exp):
+            return "exponential"
+        elif expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+            return "trigonometrisch"
+        elif expr.has(sp.log):
+            return "logarithmisch"
+        elif expr.has(sp.sqrt):
+            return "wurzel"
+
+        return "unbekannt"
+
+    def _hat_exponentielle_komponente(self, expr: sp.Basic, var: sp.Symbol) -> bool:
+        """
+        Prüft, ob der Ausdruck exponentielle Komponenten enthält.
+
+        Args:
+            expr: Zu prüfender SymPy-Ausdruck
+            var: Hauptvariable
+
+        Returns:
+            True wenn exponentielle Komponenten vorhanden
+        """
+        # Prüfe auf exp() Funktionen
+        if expr.has(sp.exp):
+            return True
+
+        # Prüfe auf Potenzen der Form a**x oder a**(f(x))
+        # wobei die Variable im Exponenten vorkommt
+        for potenz in expr.atoms(sp.Pow):
+            basis, exponent = potenz.as_base_exp()
+            if var in exponent.free_symbols:
+                return True
+
+        return False
+
+    def _zaehle_funktionsmerkmale(self, expr: sp.Basic, var: sp.Symbol) -> int:
+        """
+        Zählt die Anzahl verschiedener Funktionsmerkmale im Ausdruck.
+
+        Args:
+            expr: Zu analysierender SymPy-Ausdruck
+            var: Hauptvariable
+
+        Returns:
+            Anzahl der erkannten Funktionsmerkmale
+        """
+        merkmale = 0
+
+        # Polynomiale Anteile
+        if expr.is_polynomial(var):
+            merkmale += 1
+
+        # Rationale Anteile (nicht polynomiale rationale Funktionen)
+        if expr.is_rational_function(var) and not expr.is_polynomial(var):
+            merkmale += 1
+
+        # Trigonometrische Funktionen
+        if expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+            merkmale += 1
+
+        # Exponentielle Funktionen
+        if self._hat_exponentielle_komponente(expr, var):
+            merkmale += 1
+
+        # Logarithmische Funktionen
+        if expr.has(sp.log, sp.ln):
+            merkmale += 1
+
+        # Wurzelfunktionen
+        if expr.has(sp.sqrt):
+            merkmale += 1
+
+        return merkmale
+
+    def _erkenne_hauptvariable(self, expr: sp.Basic) -> sp.Symbol:
+        """
+        Erkennt automatisch die Hauptvariable in einem SymPy-Ausdruck.
+
+        Args:
+            expr: SymPy-Ausdruck
+
+        Returns:
+            Die erkannte Hauptvariable als SymPy-Symbol
+        """
+        alle_symbole = expr.free_symbols
+
+        if not alle_symbole:
+            # Keine Symbole - konstante Funktion
+            return sp.symbols("x")
+
+        # Heuristiken zur Hauptvariablen-Erkennung
+        for symbol in alle_symbole:
+            symbol_name = str(symbol)
+
+            # x hat höchste Priorität
+            if symbol_name == "x":
+                return symbol
+            # t, y, z haben mittlere Priorität
+            elif symbol_name in ["t", "y", "z"]:
+                continue
+            # Andere einzelne Buchstaben sind eher Parameter
+            elif len(symbol_name) == 1:
+                continue
+
+        # Falls x nicht gefunden wurde, nimm das erste Symbol
+        return list(alle_symbole)[0]
 
     def kombiniere_mit(self, andere_funktion: "Funktion", operation: str) -> "Funktion":
         """
