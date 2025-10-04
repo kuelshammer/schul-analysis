@@ -8,7 +8,7 @@ Alle Funktionen unterstützen Duck-Typing und funktionieren mit allen
 verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
 """
 
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 
@@ -25,12 +25,12 @@ from .parametrisch import ParametrischeFunktion
 from .taylor import Taylor
 
 # Type Hint für alle unterstützten Funktionstypen
-Funktionstyp = Union[
-    GanzrationaleFunktion,
-    GebrochenRationaleFunktion,
-    ExponentialRationaleFunktion,
-    ParametrischeFunktion,
-]
+Funktionstyp = (
+    GanzrationaleFunktion
+    | GebrochenRationaleFunktion
+    | ExponentialRationaleFunktion
+    | ParametrischeFunktion
+)
 
 
 # =============================================================================
@@ -279,9 +279,7 @@ def zeichne(
 # =============================================================================
 
 
-def auswerten(
-    funktion: Any, x_wert: float | np.ndarray
-) -> float | np.ndarray:
+def auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
     """
     Wertet eine Funktion an einem Punkt oder Array aus.
 
@@ -425,27 +423,27 @@ def analysiere_funktion(funktion: Funktionstyp) -> dict[str, Any]:
 
     try:
         ergebnisse["term"] = funktion.term()
-    except:
+    except Exception:
         ergebnisse["term"] = str(funktion)
 
     try:
         ergebnisse["nullstellen"] = nullstellen(funktion)
-    except:
+    except Exception:
         ergebnisse["nullstellen"] = "Nicht berechenbar"
 
     try:
         ergebnisse["extrema"] = extrema(funktion)
-    except:
+    except Exception:
         ergebnisse["extrema"] = "Nicht berechenbar"
 
     try:
         ergebnisse["wendepunkte"] = wendepunkte(funktion)
-    except:
+    except Exception:
         ergebnisse["wendepunkte"] = "Nicht berechenbar"
 
     try:
         ergebnisse["symmetrie"] = symmetrie(funktion)
-    except:
+    except Exception:
         ergebnisse["symmetrie"] = "Nicht bestimmbar"
 
     return ergebnisse

@@ -7,7 +7,7 @@ in einer einzigen, konsistenten API.
 
 import random
 import re
-from typing import Union
+from typing import Any, Union
 
 import sympy as sp
 from sympy import diff, factor, latex, solve, symbols
@@ -55,19 +55,23 @@ class Funktion:
 
                 # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
                 if exp_arg == "x":
-                    a_param = 1.0
+                    # a_param = 1.0
+                    pass
                 elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
                     # Form wie k*x oder kx
                     coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
                     if coeff_match:
-                        a_param = float(
-                            coeff_match.group(1) if coeff_match.group(1) else "1"
-                        )
+                        # a_param = float(
+                        #     coeff_match.group(1) if coeff_match.group(1) else "1"
+                        # )
+                        pass
                     else:
-                        a_param = 1.0
+                        # a_param = 1.0  # Nicht verwendet
+                        pass
                 else:
                     # Komplexerer Ausdruck - Standardwert verwenden
-                    a_param = 1.0
+                    # a_param = 1.0  # Nicht verwendet
+                    pass
 
                 # Erstelle ExponentialRationaleFunktion
                 return ExponentialRationaleFunktion._erstelle_aus_string(eingabe)
@@ -186,11 +190,7 @@ def erstelle_funktion_automatisch(
     if isinstance(eingabe, str) and "/" in eingabe and nenner is None:
         from .gebrochen_rationale import GebrochenRationaleFunktion
 
-        try:
-            return GebrochenRationaleFunktion(eingabe)
-        except:
-            # Fallback: Versuche es als ganzrationale Funktion
-            pass
+        return GebrochenRationaleFunktion(eingabe)
 
     # Standardfall: ganzrationale Funktion
     from .ganzrationale import GanzrationaleFunktion
@@ -590,7 +590,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
 
     def _berechne_komplexität(self) -> dict:
         """Berechnet verschiedene Komplexitätsmaße für die Funktion"""
-        from sympy import count_ops, preorder_traversal
+        from sympy import count_ops
 
         # Anzahl der Operationen
         operationen = count_ops(self.term_sympy)
@@ -650,7 +650,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
             eigenschaften["punktsymmetrie"] = prüfe_punktsymmetrie(
                 self, self.hauptvariable.symbol if self.hauptvariable else "x", 0
             )
-        except:
+        except Exception:
             # Fallback zu einfacher Prüfung
             x_sym = sp.symbols("x")
             test_expr = (
@@ -667,12 +667,12 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
 
         # Monotonie (einfache Prüfung)
         try:
-            ableitung = diff(
-                self.term_sympy,
-                self.hauptvariable.symbol if self.hauptvariable else "x",
-            )
+            # ableitung = diff(  # Nicht verwendet
+            #     self.term_sympy,
+            #     self.hauptvariable.symbol if self.hauptvariable else "x",
+            # )
             eigenschaften["monotonie_check"] = "komplex"  # Vereinfachte Darstellung
-        except:
+        except Exception:
             eigenschaften["monotonie_check"] = "nicht bestimmbar"
 
         return eigenschaften
@@ -823,7 +823,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
         Returns:
             Neue Funktion mit transformiertem Ausdruck
         """
-        from sympy import expand, factor, apart, pquo, prem, simplify
+        from sympy import apart, expand, factor, pquo, simplify
 
         if art == "expandiert":
             neuer_zaehler = expand(self.zaehler.term_sympy)
@@ -836,10 +836,9 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
             try:
                 zerlegt = apart(self.term_sympy)
                 # Erstelle neue Funktion aus dem Ergebnis
-                from .ganzrationale import GanzrationaleFunktion
 
                 return Funktion(zerlegt)
-            except:
+            except Exception:
                 raise ValueError("Partialbruchzerlegung nicht möglich")
         elif art == "polynomdivision" and not self.ist_ganzrational:
             # Polynomdivision
@@ -850,7 +849,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     return Funktion(quotient)
                 else:
                     return Funktion(f"{quotient} + ({rest})/({self.nenner.term_sympy})")
-            except:
+            except Exception:
                 raise ValueError("Polynomdivision nicht möglich")
         elif art == "vereinfacht":
             neuer_zaehler = simplify(self.zaehler.term_sympy)
@@ -910,7 +909,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     )
                 else:
                     raise ValueError("Keine exponentiale Form erkannt")
-            except:
+            except Exception:
                 raise ValueError("Konvertierung zu Exponentialfunktion nicht möglich")
 
         else:
@@ -1036,7 +1035,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                 "term": str(differenz_term),
                 "ist_null": differenz_term.equals(0),
             }
-        except:
+        except Exception:
             pass
 
         return vergleich
@@ -1064,13 +1063,12 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
         Returns:
             Plotly-Figur oder marimo-Widget (abhängig von Verfügbarkeit)
         """
-        from typing import Any
 
         # Standardparameter setzen
         x_bereich = kwargs.get("x_bereich", (-10, 10))
         punkte = kwargs.get("punkte", 200)
         titel = kwargs.get("titel", f"Funktion: {self.term()}")
-        zeige_analysis = kwargs.get("zeige_analysis", False)
+        # zeige_analysis = kwargs.get("zeige_analysis", False)  # Nicht verwendet
 
         if modus == "standard":
             return self._zeige_standard_graph(x_bereich, punkte, titel)
@@ -1113,7 +1111,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     y=y_werte,
                     mode="lines",
                     name=self.term(),
-                    line=dict(color="blue", width=2),
+                    line={"color": "blue", "width": 2},
                 )
             )
 
@@ -1163,7 +1161,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                 annotation_text=f"y-Achsenabschnitt: {y_achse:.2f}",
             )
 
-        except:
+        except Exception:
             pass  # Ignoriere Fehler bei der Analyse
 
         # Füge Analyse-Informationen als Annotation hinzu
@@ -1199,13 +1197,13 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                 try:
                     y1 = float(self.wert(x))
                     y1_werte.append(y1)
-                except:
+                except Exception:
                     y1_werte.append(None)
 
                 try:
                     y2 = float(andere_funktion.wert(x))
                     y2_werte.append(y2)
-                except:
+                except Exception:
                     y2_werte.append(None)
 
             # Erstelle Plot mit beiden Funktionen
@@ -1216,7 +1214,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     y=y1_werte,
                     mode="lines",
                     name=f"f₁(x) = {self.term()}",
-                    line=dict(color="blue", width=2),
+                    line={"color": "blue", "width": 2},
                 )
             )
             fig.add_trace(
@@ -1225,7 +1223,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     y=y2_werte,
                     mode="lines",
                     name=f"f₂(x) = {andere_funktion.term()}",
-                    line=dict(color="red", width=2),
+                    line={"color": "red", "width": 2},
                 )
             )
 
@@ -1270,7 +1268,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                 try:
                     y = float(self.wert(x))
                     y_werte.append(y)
-                except:
+                except Exception:
                     y_werte.append(None)
 
             fig.add_trace(
@@ -1279,7 +1277,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     y=y_werte,
                     mode="lines",
                     name=self.term(),
-                    line=dict(color="blue", width=2),
+                    line={"color": "blue", "width": 2},
                 ),
                 row=1,
                 col=1,
@@ -1297,7 +1295,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                             self.wert(x_werte[i] + h) - self.wert(x_werte[i] - h)
                         ) / (2 * h)
                         dy1_werte.append(float(dy1))
-                    except:
+                    except Exception:
                         dy1_werte.append(None)
 
             fig.add_trace(
@@ -1306,7 +1304,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     y=dy1_werte,
                     mode="lines",
                     name="f'(x)",
-                    line=dict(color="red", width=2),
+                    line={"color": "red", "width": 2},
                 ),
                 row=2,
                 col=1,
@@ -1323,7 +1321,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                         + self.wert(x_werte[i] - h)
                     ) / (h**2)
                     dy2_werte.append(float(dy2))
-                except:
+                except Exception:
                     dy2_werte.append(None)
 
             fig.add_trace(
@@ -1332,7 +1330,7 @@ def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
                     y=dy2_werte,
                     mode="lines",
                     name="f''(x)",
-                    line=dict(color="green", width=2),
+                    line={"color": "green", "width": 2},
                 ),
                 row=3,
                 col=1,

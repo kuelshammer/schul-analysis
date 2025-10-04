@@ -24,12 +24,13 @@ from .errors import (
     UngueltigerAusdruckError,
 )
 from .ganzrationale import GanzrationaleFunktion
+from .symbolic import Parameter, Variable
 
 
 def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
     """Validiert, ob ein Ausdruck sicher für mathematische Auswertung ist"""
     # Erlaubte mathematische Zeichen und Funktionen
-    erlaubte_muster = r"^[0-9+\-*/^()x\s.]+$|^[a-zA-Z_][a-zA-Z0-9_]*\s*\("
+    erlaubte_muster = r"^[0-9+\-*/^()x\s.a-zA-Z]+$|^[a-zA-Z_][a-zA-Z0-9_]*\s*\("
 
     # Gefährliche Muster
     gefaehrliche_muster = [
@@ -149,6 +150,10 @@ class GebrochenRationaleFunktion:
         # Erstelle SymPy-Ausdruck für die gesamte Funktion
         self.term_sympy = self.zaehler.term_sympy / self.nenner.term_sympy
 
+        # Initialisiere Parameter-Liste
+        self.parameter: list[Parameter] = []
+        self._extrahiere_parameter()
+
         # Kürze die Funktion automatisch
         self._kuerzen()
 
@@ -156,6 +161,39 @@ class GebrochenRationaleFunktion:
         """Leert den Cache nach Änderungen an der Funktion"""
         for key in self._cache:
             self._cache[key] = None
+
+    def _extrahiere_parameter(self):
+        """Extrahiert Parameter aus Zähler und Nenner"""
+        # Sammle alle Symbole aus Zähler und Nenner
+        alle_symbole = (
+            self.zaehler.term_sympy.free_symbols | self.nenner.term_sympy.free_symbols
+        ) - {self.x}
+
+        # Klassifiziere Symbole als Parameter (häufige Parameternamen)
+        parameter_kandidaten = []
+        for symbol in alle_symbole:
+            symbol_name = str(symbol)
+            if symbol_name in [
+                "a",
+                "b",
+                "c",
+                "d",
+                "k",
+                "m",
+                "n",
+                "p",
+                "q",
+                "r",
+                "s",
+                "α",
+                "β",
+                "γ",
+            ]:
+                parameter_kandidaten.append(symbol)
+
+        # Erstelle Parameter-Objekte
+        for symbol in parameter_kandidaten:
+            self.parameter.append(Parameter(str(symbol)))
 
     def _parse_string_eingabe(self, eingabe: str):
         """Parst String-Eingabe im Format '(x^2+1)/(x-1)'"""
@@ -968,6 +1006,110 @@ class GebrochenRationaleFunktion:
 
         return analyse
 
+    def spezialisiere_parameter(self, **werte) -> "ExponentialRationaleFunktion":
+        """
+        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            ExponentialRationaleFunktion: Neue Funktion mit spezialisierten Parametern
+
+        Examples:
+            >>> f = ExponentialRationaleFunktion("a*x^2 + b", "x + c", exponent_param=1)
+            >>> f2 = f.spezialisiere_parameter(a=1, b=2, c=3)
+            >>> print(f2.term())  # x^2 + 2 / (x + 3)
+        """
+        # Ersetze Parameter durch die gegebenen Werte
+        neuer_zaehler = self.zaehler.term_sympy
+        neuer_nenner = self.nenner.term_sympy
+
+        for param_name, wert in werte.items():
+            # Finde das passende Parameter-Symbol
+            param_symbol = None
+            for p in self.parameter:
+                if p.name == param_name:
+                    param_symbol = p.symbol
+                    break
+
+            if param_symbol is not None:
+                neuer_zaehler = neuer_zaehler.subs(param_symbol, wert)
+                neuer_nenner = neuer_nenner.subs(param_symbol, wert)
+
+        # Erstelle neue Funktion mit spezialisierten Werten
+        return ExponentialRationaleFunktion(neuer_zaehler, neuer_nenner, self.a)
+
+    def spezialisiere_parameter(self, **werte) -> "ExponentialRationaleFunktion":
+        """
+        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            ExponentialRationaleFunktion: Neue Funktion mit spezialisierten Parametern
+
+        Examples:
+            >>> f = ExponentialRationaleFunktion("a*x^2 + b", "x + c", exponent_param=1)
+            >>> f2 = f.spezialisiere_parameter(a=1, b=2, c=3)
+            >>> print(f2.term())  # x^2 + 2 / (x + 3)
+        """
+        # Ersetze Parameter durch die gegebenen Werte
+        neuer_zaehler = self.zaehler.term_sympy
+        neuer_nenner = self.nenner.term_sympy
+
+        for param_name, wert in werte.items():
+            # Finde das passende Parameter-Symbol
+            param_symbol = None
+            for p in self.parameter:
+                if p.name == param_name:
+                    param_symbol = p.symbol
+                    break
+
+            if param_symbol is not None:
+                neuer_zaehler = neuer_zaehler.subs(param_symbol, wert)
+                neuer_nenner = neuer_nenner.subs(param_symbol, wert)
+
+        # Erstelle neue Funktion mit spezialisierten Werten
+        return ExponentialRationaleFunktion(neuer_zaehler, neuer_nenner, self.a)
+
+    def spezialisiere_parameter(self, **werte) -> "GebrochenRationaleFunktion":
+        """
+        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            Neue GebrochenRationaleFunktion mit spezifizierten Parameterwerten
+        """
+        # Ersetze Parameter durch die gegebenen Werte
+        neuer_zaehler = self.zaehler.term_sympy
+        neuer_nenner = self.nenner.term_sympy
+
+        for param_name, wert in werte.items():
+            # Finde das passende Parameter-Symbol in Zähler
+            param_symbol = None
+            for p in self.zaehler.parameter:
+                if p.name == param_name:
+                    param_symbol = p.symbol
+                    break
+
+            # Wenn nicht im Zähler, im Nenner suchen
+            if param_symbol is None:
+                for p in self.nenner.parameter:
+                    if p.name == param_name:
+                        param_symbol = p.symbol
+                        break
+
+            if param_symbol is not None:
+                neuer_zaehler = neuer_zaehler.subs(param_symbol, wert)
+                neuer_nenner = neuer_nenner.subs(param_symbol, wert)
+
+        # Erstelle neue Funktion mit spezialisierten Werten
+        return GebrochenRationaleFunktion(neuer_zaehler, neuer_nenner)
+
     def erstelle_uebungsaufgabe(self, schwierigkeit: str = "mittel") -> dict:
         """
         Erstellt eine Übungsaufgabe zur Zerlegung gebrochen-rationaler Funktionen.
@@ -1220,6 +1362,44 @@ class ExponentialRationaleFunktion:
 
         # Erstelle SymPy-Ausdruck für die gesamte Funktion
         self.term_sympy = self._erzeuge_exponential_funktion()
+
+        # Initialisiere Parameter-Liste
+        self.parameter: list[Parameter] = []
+        self._extrahiere_parameter_exponential()
+
+    def _extrahiere_parameter_exponential(self):
+        """Extrahiert Parameter aus Zähler und Nenner der exponential-rationalen Funktion"""
+        # Sammle alle Symbole aus Zähler und Nenner
+        alle_symbole = (
+            self.zaehler.term_sympy.free_symbols | self.nenner.term_sympy.free_symbols
+        ) - {self.x}
+
+        # Klassifiziere Symbole als Parameter (häufige Parameternamen)
+        parameter_kandidaten = []
+        for symbol in alle_symbole:
+            symbol_name = str(symbol)
+            # Erweitere die Liste der Parameternamen
+            if symbol_name in [
+                "a",
+                "b",
+                "c",
+                "d",
+                "k",
+                "m",
+                "n",
+                "p",
+                "q",
+                "r",
+                "s",
+                "α",
+                "β",
+                "γ",
+            ]:
+                parameter_kandidaten.append(symbol)
+
+        # Erstelle Parameter-Objekte
+        for symbol in parameter_kandidaten:
+            self.parameter.append(Parameter(str(symbol)))
 
     def _convert_to_ganzrationale(
         self, eingabe: GanzrationaleFunktion | str | sp.Basic
@@ -1549,7 +1729,7 @@ class ExponentialRationaleFunktion:
         """
         rationale_funktion = self._transformiere_zu_rational()
         s_rational = rationale_funktion.schmiegkurve()
-        r_rational = rationale_funktion.stoerfunktion()
+        # r_rational = rationale_funktion.stoerfunktion()  # Nicht verwendet
 
         analyse = {
             "funktion": self.term(),

@@ -14,6 +14,20 @@ PÄDAGOGISCHE KERNPRINZIPIEN:
 # SCHÜLERFREUNDLICHE WRAPPER-API (Haupt-Import für Schüler)
 # =============================================================================
 
+from .analysis import (
+    Ableitung,
+    AsymptotischesVerhalten,
+    Extrempunkte,
+    Extremstellen,
+    Grenzwert,
+    Integral,
+    Kürzen,
+    Polstellen,
+    Schnittpunkt,
+    Wendepunkte,
+    Wendestellen,
+    Wert,
+)
 from .api import (
     LGS,
     ExponentialRationaleFunktion,
@@ -54,18 +68,9 @@ from .funktion import (
     Punktsymmetrie,
     erstelle_funktion_automatisch,
 )
-from .ganzrationale import GanzrationaleFunktion
-from .gebrochen_rationale import (
-    ExponentialRationaleFunktion,
-    GebrochenRationaleFunktion,
-)
-from .lineare_gleichungssysteme import (
-    LGS,
-    LineareGleichung,
-    interpolationspolynom,
-    plotte_loesung,
-)
-from .parametrisch import ParametrischeFunktion
+
+# Duplicate imports removed - these are already imported from .api above
+# Duplicate import removed - already imported from .api
 from .schmiegkurven import Schmiegkurve
 from .schmiegung import (
     Graph_parametrisiert,
@@ -83,13 +88,13 @@ from .symbolic import Parameter, Variable
 from .taylor import (
     Konvergenzradius,
     MacLaurin,
-    Taylor,
     TaylorKoeffizienten,
     Taylorpolynom,
     TaylorRestglied,
     TaylorStandardbeispiele,
     TaylorVergleich,
 )
+from .visualisierung import Graph
 
 # Vordefinierte Variablen und Parameter für schnellen Zugriff
 x = Variable("x")
@@ -100,22 +105,7 @@ k = Parameter("k")
 # =============================================================================
 # LEGACY-KOMPONENTEN (für Abwärtskompatibilität)
 # =============================================================================
-
-from .analysis import (
-    Ableitung,
-    AsymptotischesVerhalten,
-    Extrempunkte,
-    Extremstellen,
-    Grenzwert,
-    Integral,
-    Kürzen,
-    Polstellen,
-    Schnittpunkt,
-    Wendepunkte,
-    Wendestellen,
-    Wert,
-)
-from .visualisierung import Graph
+# Imports moved to top for proper order
 
 # Typ-Aliases für bessere Lesbarkeit
 Polstellen = Polstellen  # Englische Variante auch verfügbar

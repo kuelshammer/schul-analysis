@@ -2597,4 +2597,29 @@ class GanzrationaleFunktion:
             yaxis2={"zeroline": True, "showgrid": True, "title": f"f^{ordnung}(x)"},
         )
 
-        return mo.ui.plotly(fig)
+    def spezialisiere_parameter(self, **werte) -> "GanzrationaleFunktion":
+        """
+        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            Neue GanzrationaleFunktion mit spezifizierten Parameterwerten
+        """
+        # Ersetze Parameter durch die gegebenen Werte
+        neuer_term = self.term_sympy
+
+        for param_name, wert in werte.items():
+            # Finde das passende Parameter-Symbol
+            param_symbol = None
+            for p in self.parameter:
+                if p.name == param_name:
+                    param_symbol = p.symbol
+                    break
+
+            if param_symbol is not None:
+                neuer_term = neuer_term.subs(param_symbol, wert)
+
+        # Erstelle neue Funktion mit spezialisierten Werten
+        return GanzrationaleFunktion(neuer_term)
