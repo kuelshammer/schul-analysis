@@ -102,10 +102,11 @@ t = Variable("t")
 a = Parameter("a")
 k = Parameter("k")
 
-# =============================================================================
-# LEGACY-KOMPONENTEN (für Abwärtskompatibilität)
-# =============================================================================
-# Imports moved to top for proper order
+from .lineare_gleichungssysteme import (
+    LineareGleichung,
+    interpolationspolynom,
+    plotte_loesung,
+)
 
 # Typ-Aliases für bessere Lesbarkeit
 Polstellen = Polstellen  # Englische Variante auch verfügbar

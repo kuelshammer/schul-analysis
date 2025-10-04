@@ -1206,6 +1206,75 @@ class GebrochenRationaleFunktion:
             erste_ableitung = self.ableitung(1)
             return erste_ableitung.ableitung(ordnung - 1)
 
+    def extrempunkte(self) -> list[tuple[float, float, str]]:
+        """
+        Berechnet die Extrempunkte der gebrochen-rationalen Funktion.
+
+        Returns:
+            Liste von Tupeln (x_wert, y_wert, art) wobei art 'Maximum' oder 'Minimum' ist
+
+        Examples:
+            >>> f = GebrochenRationaleFunktion("x^3 - 3x", "x^2 + 1")
+            >>> ext = f.extrempunkte()
+            >>> print(f'Extrempunkt bei x={ext[0][0]}: {ext[0][2]}')
+        """
+        # Extrempunkte liegen bei f'(x) = 0
+        f1 = self.ableitung(1)
+        kritische_punkte = f1.nullstellen()
+
+        extrempunkte = []
+
+        for x_krit in kritische_punkte:
+            # Zweite Ableitung für Artbestimmung
+            f2 = self.ableitung(2)
+            y_wert = f2(x_krit)
+
+            if y_wert > 0:
+                art = "Minimum"
+            elif y_wert < 0:
+                art = "Maximum"
+            else:
+                # Bei zweiter Ableitung = 0, höhere Ableitungen prüfen
+                f3 = self.ableitung(3)
+                y_wert3 = f3(x_krit)
+                if y_wert3 != 0:
+                    art = "Maximum" if y_wert3 < 0 else "Minimum"
+                else:
+                    art = "Sattelpunkt"
+
+            # Funktionswert am Extrempunkt
+            y_funktionswert = self(x_krit)
+            extrempunkte.append((x_krit, y_funktionswert, art))
+
+        return sorted(extrempunkte, key=lambda p: p[0])
+
+    def wendepunkte(self) -> list[tuple[float, float, str]]:
+        """
+        Berechnet die Wendepunkte der gebrochen-rationalen Funktion.
+
+        Returns:
+            Liste von Tupeln (x_wert, y_wert, art) wobei art 'Wendepunkt' ist
+
+        Examples:
+            >>> f = GebrochenRationaleFunktion("x^4 - 4x^2", "1")
+            >>> wendep = f.wendepunkte()
+            >>> print(f'Wendepunkt bei x={wendep[0][0]}')
+        """
+        # Wendepunkte liegen bei f''(x) = 0
+        f2 = self.ableitung(2)
+        kritische_punkte = f2.nullstellen()
+
+        wendepunkte = []
+
+        for x_krit in kritische_punkte:
+            # Dritte Ableitung zur Bestätigung
+            f3 = self.ableitung(3)
+            if f3(x_krit) != 0:  # Nur wenn dritte Ableitung ungleich null
+                y_funktionswert = self(x_krit)
+                wendepunkte.append((x_krit, y_funktionswert, "Wendepunkt"))
+
+        return sorted(wendepunkte, key=lambda p: p[0])
+
 
 # =============================================================================
 # PHASE 3: EXPONENTIALL-RATIONALE FUNKTIONEN
@@ -1871,3 +1940,72 @@ class ExponentialRationaleFunktion:
             # Höhere Ableitungen durch rekursive Anwendung
             erste_ableitung = self.ableitung(1)
             return erste_ableitung.ableitung(ordnung - 1)
+
+    def extrempunkte(self) -> list[tuple[float, float, str]]:
+        """
+        Berechnet die Extrempunkte der exponential-rationalen Funktion.
+
+        Returns:
+            Liste von Tupeln (x_wert, y_wert, art) wobei art 'Maximum' oder 'Minimum' ist
+
+        Examples:
+            >>> f = ExponentialRationaleFunktion("x^2 - 4", "1", exponent_param=1)
+            >>> ext = f.extrempunkte()
+            >>> print(f'Extrempunkt bei x={ext[0][0]}: {ext[0][2]}')
+        """
+        # Extrempunkte liegen bei f'(x) = 0
+        f1 = self.ableitung(1)
+        kritische_punkte = f1.nullstellen()
+
+        extrempunkte = []
+
+        for x_krit in kritische_punkte:
+            # Zweite Ableitung für Artbestimmung
+            f2 = self.ableitung(2)
+            y_wert = f2(x_krit)
+
+            if y_wert > 0:
+                art = "Minimum"
+            elif y_wert < 0:
+                art = "Maximum"
+            else:
+                # Bei zweiter Ableitung = 0, höhere Ableitungen prüfen
+                f3 = self.ableitung(3)
+                y_wert3 = f3(x_krit)
+                if y_wert3 != 0:
+                    art = "Maximum" if y_wert3 < 0 else "Minimum"
+                else:
+                    art = "Sattelpunkt"
+
+            # Funktionswert am Extrempunkt
+            y_funktionswert = self(x_krit)
+            extrempunkte.append((x_krit, y_funktionswert, art))
+
+        return sorted(extrempunkte, key=lambda p: p[0])
+
+    def wendepunkte(self) -> list[tuple[float, float, str]]:
+        """
+        Berechnet die Wendepunkte der exponential-rationalen Funktion.
+
+        Returns:
+            Liste von Tupeln (x_wert, y_wert, art) wobei art 'Wendepunkt' ist
+
+        Examples:
+            >>> f = ExponentialRationaleFunktion("x^3", "1", exponent_param=1)
+            >>> wendep = f.wendepunkte()
+            >>> print(f'Wendepunkt bei x={wendep[0][0]}')
+        """
+        # Wendepunkte liegen bei f''(x) = 0
+        f2 = self.ableitung(2)
+        kritische_punkte = f2.nullstellen()
+
+        wendepunkte = []
+
+        for x_krit in kritische_punkte:
+            # Dritte Ableitung zur Bestätigung
+            f3 = self.ableitung(3)
+            if f3(x_krit) != 0:  # Nur wenn dritte Ableitung ungleich null
+                y_funktionswert = self(x_krit)
+                wendepunkte.append((x_krit, y_funktionswert, "Wendepunkt"))
+
+        return sorted(wendepunkte, key=lambda p: p[0])
