@@ -53,6 +53,7 @@ from .funktion import (
     Punktsymmetrie,
     PruefeAchsensymmetrie,
     PruefePunktsymmetrie,
+    erstelle_funktion_automatisch,
 )
 
 from .ganzrationale import GanzrationaleFunktion
@@ -151,6 +152,7 @@ __all__ = [
     "erstelle_funktion",
     "erstelle_lineares_gleichungssystem",
     "erstelle_exponential_rationale_funktion",
+    "erstelle_funktion_automatisch",
     "analysiere_funktion",
     "zeige_analyse",
     # 🏗️ FUNKTIONSKLASSEN

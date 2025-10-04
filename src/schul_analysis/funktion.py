@@ -38,12 +38,22 @@ class Funktion:
 
         Args:
             eingabe: Kann sein:
-                     - String: "x^2 + 1" oder "(x^2 + 1)/(x - 1)"
+                     - String: "x^2 + 1", "(x^2 + 1)/(x - 1)", "exp(x) + 1"
                      - SymPy-Ausdruck
                      - Funktion-Objekt (für Kopien)
                      - Tuple: (zaehler_string, nenner_string)
             nenner: Optionaler Nenner (wenn eingabe nur Zähler ist)
         """
+        # 🔥 AUTOMATISCHE FUNKTIONSTYP-ERKENNUNG 🔥
+
+        # Prüfe zuerst auf Exponentialfunktionen
+        if self._ist_exponential_funktion(eingabe):
+            exp_funktion = self._parse_exponential_funktion(eingabe)
+            # Delegiere alle Eigenschaften an die ExponentialRationaleFunktion
+            self.__class__ = type(exp_funktion)
+            self.__dict__ = exp_funktion.__dict__
+            return
+
         self.x = symbols("x")
 
         # Interne Symbol-Verwaltung
@@ -90,6 +100,114 @@ class Funktion:
 
         # Vereinfache wenn möglich
         self.kürzen()
+
+
+def erstelle_funktion_automatisch(
+    eingabe: Union[str, sp.Basic, tuple[str, str]],
+    nenner: Union[str, sp.Basic] | None = None,
+):
+    """
+    Factory-Funktion zur automatischen Erkennung und Erstellung der richtigen Funktionsklasse.
+
+    Dies ist die Hauptfunktion für Schüler - sie erkennen automatisch den Funktionstyp!
+
+    Args:
+        eingabe: Die mathematische Funktion als String, SymPy-Ausdruck oder Tuple
+                 - "x^2 + 1" für ganzrationale Funktionen
+                 - "(x^2 + 1)/(x - 1)" für gebrochen-rationale Funktionen
+                 - "exp(x) + 1" für exponential-rationale Funktionen
+        nenner: Optionaler Nenner für rationale Funktionen
+
+    Returns:
+        Die passende Funktionsklasse mit voller Funktionalität
+
+    Examples:
+        >>> f1 = erstelle_funktion_automatisch("x^2 + 2x + 1")  # GanzrationaleFunktion
+        >>> f2 = erstelle_funktion_automatisch("(x+1)/(x-1)")  # GebrochenRationaleFunktion
+        >>> f3 = erstelle_funktion_automatisch("exp(x) + 1")  # ExponentialRationaleFunktion
+    """
+    # Prüfe auf Exponentialfunktionen
+    if _ist_exponential_funktion_static(eingabe):
+        from .gebrochen_rationale import ExponentialRationaleFunktion
+
+        return ExponentialRationaleFunktion._erstelle_aus_string(str(eingabe))
+
+    # Prüfe auf rationale Funktionen
+    if isinstance(eingabe, str) and "/" in eingabe and nenner is None:
+        from .gebrochen_rationale import GebrochenRationaleFunktion
+
+        try:
+            return GebrochenRationaleFunktion(eingabe)
+        except:
+            # Fallback: Versuche es als ganzrationale Funktion
+            pass
+
+    # Standardfall: ganzrationale Funktion
+    from .ganzrationale import GanzrationaleFunktion
+
+    return GanzrationaleFunktion(eingabe)
+
+
+def _ist_exponential_funktion_static(eingabe: Union[str, sp.Basic]) -> bool:
+    """Statische Methode zur Prüfung auf Exponentialfunktionen"""
+    if isinstance(eingabe, str):
+        # Prüfe auf exp() in String
+        return "exp(" in eingabe.lower() or "e^" in eingabe.lower()
+    elif hasattr(eingabe, "has"):
+        # Prüfe auf exp() in SymPy-Ausdruck
+        return eingabe.has(sp.exp)
+
+    def _ist_exponential_funktion(self, eingabe: str | sp.Basic) -> bool:
+        """Prüft, ob die Eingabe eine Exponentialfunktion enthält"""
+        if isinstance(eingabe, str):
+            # Prüfe auf exp() in String
+            return "exp(" in eingabe or "e^" in eingabe
+        elif hasattr(eingabe, "has"):
+            # Prüfe auf exp() in SymPy-Ausdruck
+            return eingabe.has(sp.exp)
+        return False
+
+    def _parse_exponential_funktion(self, eingabe: str | sp.Basic):
+        """Parst eine Exponentialfunktion und erstellt das entsprechende Objekt"""
+        from .gebrochen_rationale import ExponentialRationaleFunktion
+
+        if isinstance(eingabe, str):
+            # Extrahiere den Exponentialparameter und erstelle ExponentialRationaleFunktion
+            # Einfache Heuristik: Suche nach exp(x) oder exp(kx)
+            import re
+
+            # Finde alle exp() Ausdrücke
+            exp_matches = re.findall(r"exp\(([^)]+)\)", eingabe)
+            if exp_matches:
+                # Bestimme den Exponentialparameter (vereinfacht: nehme den ersten)
+                exp_arg = exp_matches[0].strip()
+
+                # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
+                if exp_arg == "x":
+                    a_param = 1.0
+                elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
+                    # Form wie k*x oder kx
+                    coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
+                    if coeff_match:
+                        a_param = float(
+                            coeff_match.group(1) if coeff_match.group(1) else "1"
+                        )
+                    else:
+                        a_param = 1.0
+                else:
+                    # Komplexerer Ausdruck - Standardwert verwenden
+                    a_param = 1.0
+
+                # Ersetze exp(...) durch temp Variable für die Verarbeitung
+                temp_eingabe = re.sub(r"exp\([^)]+\)", "u", eingabe)
+
+                # Erstelle ExponentialRationaleFunktion
+                return ExponentialRationaleFunktion(
+                    temp_eingabe, "1", exponent_param=a_param
+                )
+
+        # Fallback für SymPy-Eingabe
+        return ExponentialRationaleFunktion("1", "1", exponent_param=1.0)
 
     def _parse_zaehler(self, eingabe: str | sp.Basic) -> "Funktion":
         """Parst den Zähler als Funktion-Objekt"""
@@ -365,6 +483,11 @@ class Funktion:
     def hat_polstellen(self) -> bool:
         """True wenn die Funktion Polstellen hat (echt gebrochen-rational)"""
         return not self.ist_ganzrational
+
+    @property
+    def ist_exponential_rational(self) -> bool:
+        """True wenn die Funktion eine Exponentialfunktion ist"""
+        return self._ist_exponential_funktion(self.original_eingabe)
 
     def kürzen(self) -> "Funktion":
         """Kürzt die Funktion durch Faktorisierung"""

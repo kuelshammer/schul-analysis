@@ -4,7 +4,16 @@ Test für die neuen Analyse-Funktionen: Integral, Grenzwert, AsymptotischesVerha
 
 import numpy as np
 
-from src.schul_analysis import *
+from src.schul_analysis import (
+    GanzrationaleFunktion,
+    GebrochenRationaleFunktion,
+    Integral,
+    Grenzwert,
+    AsymptotischesVerhalten,
+    Ableitung,
+    Kürzen,
+    nullstellen,
+)
 
 
 def test_integral_funktion():
@@ -127,11 +136,11 @@ def test_kombinierte_anwendung():
     print(f"  Gekürzt: f(x) = {f_gekürzt.term()}")
 
     # Nullstellen
-    nullstellen = Nullstellen(f_gekürzt)
+    nullstellen = nullstellen(f_gekürzt)
     print(f"  Nullstellen: {nullstellen}")
 
-    # Polstellen
-    polstellen = Polstellen(f)
+    # Polstellen (Verwendung der eingebauten Methode)
+    polstellen = f.polstellen()
     print(f"  Polstellen: {polstellen}")
 
     # Asymptotisches Verhalten

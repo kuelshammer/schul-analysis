@@ -211,6 +211,8 @@ class GebrochenRationaleFunktion:
     def kürzen(self) -> "GebrochenRationaleFunktion":
         """Kürzt die Funktion und gibt sich selbst zurück"""
         self._kuerzen()
+        # Stelle sicher, dass der Cache immer geleert wird, auch wenn keine Änderung
+        self._clear_cache()
         return self
 
     def term(self) -> str:
@@ -1111,6 +1113,62 @@ class ExponentialRationaleFunktion:
     Diese Funktionen lassen sich durch Substitution u = e^{ax} in rationale
     Funktionen transformieren, was die Analyse asymptotischen Verhaltens ermöglicht.
     """
+
+    @classmethod
+    def _erstelle_aus_string(cls, eingabe: str):
+        """
+        Factory-Methode zur Erstellung aus einem String mit exp()-Funktionen.
+
+        Args:
+            eingabe: String wie "exp(x) + 1", "(exp(x)+1)/(exp(x)-1)", etc.
+
+        Returns:
+            ExponentialRationaleFunktion
+        """
+        # Finde alle exp() Ausdrücke
+        import re
+
+        # Finde alle exp() Ausdrücke und extrahiere deren Argumente
+        exp_matches = re.findall(r"exp\(([^)]+)\)", eingabe)
+        if not exp_matches:
+            raise ValueError(f"Keine exp() Funktion in Eingabe gefunden: {eingabe}")
+
+        # Bestimme den Exponentialparameter (vereinfacht: nehme den ersten)
+        exp_arg = exp_matches[0].strip()
+
+        # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
+        if exp_arg == "x":
+            a_param = 1.0
+        elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
+            # Form wie k*x oder kx
+            coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
+            if coeff_match:
+                a_param = float(coeff_match.group(1) if coeff_match.group(1) else "1")
+            else:
+                a_param = 1.0
+        else:
+            # Komplexerer Ausdruck - Standardwert verwenden
+            a_param = 1.0
+
+        # Ersetze exp(...) durch x für die rationale Funktion
+        verarbeitete_eingabe = re.sub(r"exp\([^)]+\)", "x", eingabe)
+
+        # Prüfe ob es ein Bruch ist
+        if "/" in verarbeitete_eingabe:
+            # Trenne in Zähler und Nenner
+            teile = verarbeitete_eingabe.split("/", 1)
+            zaehler_str = teile[0].strip()
+            nenner_str = teile[1].strip()
+
+            # Entferne Klammern wenn vorhanden
+            zaehler_str = zaehler_str.strip("()")
+            nenner_str = nenner_str.strip("()")
+
+            return cls(zaehler_str, nenner_str, exponent_param=a_param)
+        else:
+            # Nur Zähler
+            zaehler_str = verarbeitete_eingabe.strip("()")
+            return cls(zaehler_str, "1", exponent_param=a_param)
 
     def __init__(
         self,

@@ -185,7 +185,7 @@ def Integral(funktion, a: float, b: float) -> float:
     """Berechnet das bestimmtes Integral einer Funktion
 
     Args:
-        funktion: Eine integrierbare Funktion
+        funktion: Eine integrierbare Funktion (GanzrationaleFunktion, GebrochenRationaleFunktion, etc.)
         a: Untere Integrationsgrenze
         b: Obere Integrationsgrenze
 
@@ -197,8 +197,11 @@ def Integral(funktion, a: float, b: float) -> float:
         >>> Integral(f, 0, 1)
         0.3333333333333333
     """
-    if not isinstance(funktion, Funktion):
-        raise TypeError("Argument muss eine Funktion sein")
+    # Prüfe ob die Funktion die benötigten Methoden hat
+    if not (hasattr(funktion, "term_sympy") and hasattr(funktion, "wert")):
+        raise TypeError(
+            "Argument muss eine Funktion mit term_sympy und wert Methoden sein"
+        )
 
     # Symbolische Integration
     x = sp.Symbol("x")
@@ -305,7 +308,7 @@ def Grenzwert(funktion, zielpunkt: float, richtung: str = "beidseitig") -> float
     """Berechnet den Grenzwert einer Funktion
 
     Args:
-        funktion: Eine Funktion
+        funktion: Eine Funktion mit term_sympy Methode
         zielpunkt: Punkt für den der Grenzwert berechnet werden soll
         richtung: "links", "rechts" oder "beidseitig" (Standard)
 
@@ -317,8 +320,9 @@ def Grenzwert(funktion, zielpunkt: float, richtung: str = "beidseitig") -> float
         >>> Grenzwert(f, 2)
         4.0
     """
-    if not isinstance(funktion, Funktion):
-        raise TypeError("Argument muss eine Funktion sein")
+    # Prüfe ob die Funktion die benötigten Methoden hat
+    if not hasattr(funktion, "term_sympy"):
+        raise TypeError("Argument muss eine Funktion mit term_sympy Methode sein")
 
     x = sp.Symbol("x")
     expr = funktion.term_sympy
@@ -364,7 +368,7 @@ def AsymptotischesVerhalten(funktion) -> dict:
     """Analysiert das asymptotische Verhalten einer Funktion
 
     Args:
-        funktion: Eine Funktion
+        funktion: Eine Funktion mit term_sympy Methode
 
     Returns:
         dict: Dictionary mit Grenzwerten für x->∞ und x->-∞
@@ -375,8 +379,9 @@ def AsymptotischesVerhalten(funktion) -> dict:
         >>> print(verhalten)
         {'x->inf': 'oo', 'x->-inf': 'oo'}
     """
-    if not isinstance(funktion, Funktion):
-        raise TypeError("Argument muss eine Funktion sein")
+    # Prüfe ob die Funktion die benötigten Methoden hat
+    if not hasattr(funktion, "term_sympy"):
+        raise TypeError("Argument muss eine Funktion mit term_sympy Methode sein")
 
     x = sp.Symbol("x")
     expr = funktion.term_sympy

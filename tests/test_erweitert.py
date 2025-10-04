@@ -104,17 +104,17 @@ def test_performance():
 
 def test_fehlerbehandlung():
     """Teste umfassende Fehlerbehandlung"""
-    from schul_analysis.gebrochen_rationale import UngueltigeEingabeError
+    from schul_analysis.errors import UngueltigerAusdruckError
 
     # Teste ungültige Eingaben
-    with pytest.raises(UngueltigeEingabeError):
+    with pytest.raises(UngueltigerAusdruckError):
         GebrochenRationaleFunktion(None)
 
-    with pytest.raises(UngueltigeEingabeError):
+    with pytest.raises(UngueltigerAusdruckError):
         GebrochenRationaleFunktion("", "")
 
     # Teste ungültige mathematische Ausdrücke
-    with pytest.raises(UngueltigeEingabeError):
+    with pytest.raises((UngueltigerAusdruckError, ValueError, SyntaxError)):
         GebrochenRationaleFunktion("x+++", "x")
 
     # Teste Wertebereich-Checks

@@ -358,7 +358,8 @@ class GanzrationaleFunktion:
         # Auch mit Koeffizienten: k(x±a)
         # Auch mit expliziten Multiplikationszeichen: (x±a)*(x±b)
         # Auch mit impliziten Multiplikationszeichen: (x±a)(x±b)
-        pattern = r"^(\d*\(x[+\-]\d+\)(\^\d+)?[*]*)*\d*\(x[+\-]\d+\)(\^\d+)?$"
+        # Auch mit Brüchen: (x±1/2), (x±2/3)
+        pattern = r"^(\d*\(x[+\-](\d+/\d+|\d+)\)(\^\d+)?[*]*)*\d*\(x[+\-](\d+/\d+|\d+)\)(\^\d+)?$"
 
         return bool(re.match(pattern, eingabe.replace(" ", "")))
 
@@ -371,7 +372,7 @@ class GanzrationaleFunktion:
 
         # Entferne explizite Multiplikationszeichen und extrahiere alle Faktoren
         bereinigt = bereinigt.replace("*", "")
-        faktoren = re.findall(r"(\d*)\(x([+\-])(\d+)\)(\^\d+)?", bereinigt)
+        faktoren = re.findall(r"(\d*)\(x([+\-])((\d+/\d+)|\d+)\)(\^\d+)?", bereinigt)
 
         if not faktoren:
             raise ValueError(f"Ungültiges Linearfaktoren-Format: '{eingabe}'")
@@ -380,18 +381,25 @@ class GanzrationaleFunktion:
         x_var = self.hauptvariable.symbol if self.hauptvariable else symbols("x")
         ergebnis = 1
 
-        for koeff, vorzeichen, zahl, potenz in faktoren:
+        for koeff, vorzeichen, zahl, bruch, potenz in faktoren:
             # Koeffizient verarbeiten
             if koeff:
                 koeff_int = sp.Integer(int(koeff))
             else:
                 koeff_int = sp.Integer(1)
 
-            # Vorzeichen und Zahl verarbeiten
-            if vorzeichen == "+":
-                konstante = -sp.Integer(int(zahl))  # (x+1) bedeutet (x - (-1))
+            # Zahl verarbeiten (entweder Bruch oder ganze Zahl)
+            if bruch:
+                # Bruch verarbeiten: "1/2" -> Rational(1, 2)
+                zaehler, nenner = bruch.split("/")
+                konstante = sp.Rational(int(zaehler), int(nenner))
             else:
-                konstante = sp.Integer(int(zahl))  # (x-1) bedeutet (x - 1)
+                konstante = sp.Integer(int(zahl))
+
+            # Vorzeichen verarbeiten
+            if vorzeichen == "+":
+                konstante = -konstante  # (x+1) bedeutet (x - (-1))
+            # else: (x-1) bedeutet (x - 1) - keine Änderung nötig
 
             # Linearfaktor erstellen
             linearfaktor = x_var - konstante
