@@ -83,6 +83,9 @@ class GanzrationaleFunktion:
         self._explizite_variable = variable
         self._explizite_parameter = parameter or []
 
+        # Performance-Cache für lambdify und andere Berechnungen
+        self._cache: dict[str, Any] = {}
+
         if isinstance(eingabe, str):
             # String-Konstruktor mit robuster Verarbeitung und automatischer Symbolerkennung
             self.term_str, self.term_sympy = self._parse_string_eingabe_mit_symbols(
@@ -575,15 +578,15 @@ class GanzrationaleFunktion:
                 f"Fehler bei der Werteberechnung bei x={x_wert}: {e}"
             ) from e
 
-    def __call__(self, x_wert: float) -> float | sp.Basic:
+    def __call__(self, x_wert: float | np.ndarray) -> float | np.ndarray | sp.Basic:
         """
-        Macht die Funktion aufrufbar: f(2), f(0.5), etc.
+        Macht die Funktion aufrufbar: f(2), f(0.5), etc. mit Performance-Optimierung.
 
         Args:
-            x_wert: x-Wert, an dem die Funktion ausgewertet werden soll
+            x_wert: x-Wert oder Array von x-Werten, an dem die Funktion ausgewertet werden soll
 
         Returns:
-            Der Funktionswert als float-Zahl oder symbolischer Ausdruck (bei Parametern)
+            Der Funktionswert als float-Zahl, Array oder symbolischer Ausdruck (bei Parametern)
 
         Beispiele:
             >>> f = GanzrationaleFunktion("x^2 + 2x - 3")
@@ -603,7 +606,41 @@ class GanzrationaleFunktion:
             bequemere Schreibweise. Die wert()-Methode bleibt für Abwärtskompatibilität
             erhalten.
         """
-        return self.wert(x_wert)
+        # Prüfe auf verbleibende freie Symbole (Parameter)
+        if self.hauptvariable:
+            free_syms = self.term_sympy.free_symbols
+            free_syms.discard(self.hauptvariable.symbol)
+
+            if free_syms:
+                # Noch Parameter vorhanden - symbolische Auswertung
+                if isinstance(x_wert, np.ndarray):
+                    return np.array(
+                        [
+                            self.term_sympy.subs(self.hauptvariable.symbol, val)
+                            for val in x_wert
+                        ]
+                    )
+                else:
+                    return self.term_sympy.subs(self.hauptvariable.symbol, x_wert)
+
+        # Für numerische Auswertung: verwende lambdify für maximale Performance
+        try:
+            # Erstelle lambdified-Funktion nur einmal und cache sie
+            if "_lambdified_func" not in self._cache:
+                if self.hauptvariable:
+                    self._cache["_lambdified_func"] = sp.lambdify(
+                        self.hauptvariable.symbol, self.term_sympy, modules=["numpy"]
+                    )
+                else:
+                    # Fallback für konstante Funktionen
+                    self._cache["_lambdified_func"] = lambda x: float(self.term_sympy)
+
+            lambdified_func = self._cache["_lambdified_func"]
+            return lambdified_func(x_wert)
+
+        except Exception as e:
+            # Fallback auf die ursprüngliche Methode bei Problemen
+            return self.wert(x_wert)
 
     def grad(self) -> int:
         """Gibt den Grad des Polynoms zurück"""
@@ -817,6 +854,34 @@ class GanzrationaleFunktion:
         except Exception:
             return []
 
+    def symmetrie(self) -> str:
+        """Bestimmt die Symmetrie der Funktion für die Wrapper-API."""
+        if "symmetrie" in self._cache:
+            return self._cache["symmetrie"]
+
+        try:
+            # Verwende die Hauptvariable für Symmetrie-Analyse
+            if not self.hauptvariable:
+                return "Keine Symmetrie (konstante Funktion)"
+
+            x_var = self.hauptvariable.symbol
+            f_minus_x = self.term_sympy.subs(x_var, -x_var)
+
+            # Prüfe auf Achsensymmetrie (gerade Funktion)
+            if sp.simplify(self.term_sympy - f_minus_x) == 0:
+                ergebnis = "Achsensymmetrisch zur y-Achse"
+            # Prüfe auf Punktsymmetrie (ungerade Funktion)
+            elif sp.simplify(self.term_sympy + f_minus_x) == 0:
+                ergebnis = "Punktsymmetrisch zum Ursprung"
+            else:
+                ergebnis = "Keine einfache Symmetrie"
+
+            self._cache["symmetrie"] = ergebnis
+            return ergebnis
+        except Exception as e:
+            self._cache["symmetrie"] = "Symmetrie nicht bestimmbar"
+            return "Symmetrie nicht bestimmbar"
+
     def _klassifiziere_extremum(self, x_wert: sp.Basic) -> str:
         """Klassifiziert eine stationäre Stelle als Minimum, Maximum oder Sattelpunkt."""
         try:
@@ -829,7 +894,9 @@ class GanzrationaleFunktion:
             elif y_wert < 0:
                 return "Maximum"
             else:
-                return "Sattelpunkt"
+                # Zweite Ableitung ist 0 - prüfe höhere Ableitungen
+                # Dies ist ein Sattelpunkt oder unbestimmbar
+                return "Sattelpunkt (oder unbestimmbar)"
         except Exception:
             return "Unbestimmbar"
 

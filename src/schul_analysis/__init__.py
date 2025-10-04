@@ -1,25 +1,77 @@
 """
-Schul-Analysis Framework
+Schul-Analysis Framework - Schülerfreundliche API
 
-Ein Python Framework für Schul-Analysis mit exakter Berechnung und Marimo-Integration.
+Ein Python Framework für Schul-Analysis mit exakter Berechnung, Marimo-Integration
+und intuitiver API für Mathematiklehrer und Schüler.
+
+PÄDAGOGISCHE KERNPRINZIPIEN:
+- Deutsche API-Namen für den Mathematikunterricht
+- Unterrichtsnahe Syntax: nullstellen(f) statt f.nullstellen()
+- Einfache Anwendung für Schüler durch Nähe zur mathematischen Notation
 """
 
+# =============================================================================
+# SCHÜLERFREUNDLICHE WRAPPER-API (Haupt-Import für Schüler)
+# =============================================================================
+
+from .api import (
+    # Analyse-Funktionen - unterrichtsnahe Syntax
+    nullstellen,
+    ableitung,
+    integral,
+    extrema,
+    wendepunkte,
+    symmetrie,
+    # Visualisierung
+    zeichne,
+    # Werteberechnung
+    auswerten,
+    # Helper-Funktionen für einfache Anwendung
+    erstelle_polynom,
+    erstelle_funktion,
+    erstelle_lineares_gleichungssystem,
+    # Komfort-Funktionen für den Unterricht
+    analysiere_funktion,
+    zeige_analyse,
+    # Funktionstypen für fortgeschrittene Nutzer
+    GanzrationaleFunktion,
+    GebrochenRationaleFunktion,
+    ParametrischeFunktion,
+    LGS,
+    Taylor,
+)
+
+# =============================================================================
+# FUNKTIONSKLASSEN (für direkte Verwendung)
+# =============================================================================
+
 from .funktion import (
-    Achsensymmetrie,
     Funktion,
+    Achsensymmetrie,
+    Punktsymmetrie,
     PruefeAchsensymmetrie,
     PruefePunktsymmetrie,
-    Punktsymmetrie,
 )
+
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
+from .parametrisch import ParametrischeFunktion
 from .lineare_gleichungssysteme import (
     LGS,
     LineareGleichung,
     interpolationspolynom,
     plotte_loesung,
 )
-from .parametrisch import ParametrischeFunktion
+from .taylor import (
+    Taylor,
+    MacLaurin,
+    Taylorpolynom,
+    TaylorKoeffizienten,
+    TaylorRestglied,
+    Konvergenzradius,
+    TaylorVergleich,
+    TaylorStandardbeispiele,
+)
 from .schmiegkurven import Schmiegkurve
 from .schmiegung import (
     Graph_parametrisiert,
@@ -29,34 +81,22 @@ from .schmiegung import (
     SchmiegkurveAllgemein,
     Schmiegparabel,
 )
+
+# =============================================================================
+# SYMBOLISCHE KOMPONENTEN
+# =============================================================================
+
 from .symbolic import Parameter, Variable
-from .taylor import (
-    Konvergenzradius,
-    MacLaurin,
-    Taylor,
-    TaylorKoeffizienten,
-    TaylorRestglied,
-    TaylorStandardbeispiele,
-    TaylorVergleich,
-)
-from .taylorpolynom import Taylorpolynom
 
-# ====================
-# Vordefinierte Variablen und Parameter
-# ====================
-
-# Standard-Variablen
+# Vordefinierte Variablen und Parameter für schnellen Zugriff
 x = Variable("x")
 t = Variable("t")
-
-# Standard-Parameter
 a = Parameter("a")
 k = Parameter("k")
 
-
-# ====================
-# Import von Analyse-Funktionen
-# ====================
+# =============================================================================
+# LEGACY-KOMPONENTEN (für Abwärtskompatibilität)
+# =============================================================================
 
 from .analysis import (
     AsymptotischesVerhalten,
@@ -66,7 +106,6 @@ from .analysis import (
     Grenzwert,
     Integral,
     Kürzen,
-    Nullstellen,
     Polstellen,
     Schnittpunkt,
     Wert,
@@ -75,54 +114,81 @@ from .analysis import (
 )
 from .visualisierung import Graph
 
-
-# ====================
 # Typ-Aliases für bessere Lesbarkeit
-# ====================
-
-# Typ-Aliases für Kompatibilität
 Polstellen = Polstellen  # Englische Variante auch verfügbar
 Ableiten = Ableitung
 Derivative = Ableitung
 IntersectionPoints = Schnittpunkt
-Integral = Integral
 Limit = Grenzwert
 AsymptoticBehavior = AsymptotischesVerhalten
 
+# =============================================================================
+# VERSION
+# =============================================================================
+
+__version__ = "1.0.0"  # Hauptversion nach pädagogischer Optimierung
+
+# =============================================================================
+# EXPORTLISTE - WAS BEI `from schul_analysis import *` IMPORTIERT WIRD
+# =============================================================================
 
 __all__ = [
+    # 🔥 SCHÜLERFREUNDLICHE API (Priorität für Unterricht)
+    "nullstellen",
+    "ableitung",
+    "integral",
+    "extrema",
+    "wendepunkte",
+    "symmetrie",
+    "zeichne",
+    "auswerten",
+    "erstelle_polynom",
+    "erstelle_funktion",
+    "erstelle_lineares_gleichungssystem",
+    "analysiere_funktion",
+    "zeige_analyse",
+    # 🏗️ FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
     "GebrochenRationaleFunktion",
-    "Schmiegkurve",
+    "ParametrischeFunktion",
+    "LGS",
     "Taylorpolynom",
+    # 🔤 SYMBOLISCHE KOMPONENTEN
     "Variable",
     "Parameter",
-    "ParametrischeFunktion",
     "x",
     "t",
     "a",
     "k",
-    "Nullstellen",
-    "Polstellen",
-    "Ableitung",
-    "Wert",
+    # 📊 VISUALISIERUNG
     "Graph",
     "Graph_parametrisiert",
+    # 🧮 ANALYSE-FUNKTIONEN (Legacy)
+    "Ableitung",
+    "Wert",
+    "Integral",
     "Kürzen",
     "Schnittpunkt",
     "Extremstellen",
     "Wendestellen",
     "Extrempunkte",
     "Wendepunkte",
-    "Integral",
     "Grenzwert",
     "AsymptotischesVerhalten",
+    "Polstellen",
+    # 📐 SPEZIALFUNKTIONEN
+    "Achsensymmetrie",
+    "Punktsymmetrie",
+    "PruefeAchsensymmetrie",
+    "PruefePunktsymmetrie",
     "Schmiegparabel",
     "Schmiegkegel",
     "Schmieggerade",
     "HermiteInterpolation",
     "SchmiegkurveAllgemein",
+    "Schmiegkurve",
+    # 📈 TAYLOR-FUNKTIONEN
     "Taylor",
     "MacLaurin",
     "TaylorKoeffizienten",
@@ -130,15 +196,8 @@ __all__ = [
     "Konvergenzradius",
     "TaylorVergleich",
     "TaylorStandardbeispiele",
-    # 🔥 SYMMETRIE-FUNKTIONEN 🔥
-    "Achsensymmetrie",
-    "Punktsymmetrie",
-    "PruefeAchsensymmetrie",
-    "PruefePunktsymmetrie",
-    # Lineare Gleichungssysteme
-    "LGS",
+    # 📐 LINEARE GLEICHUNGSSYSTEME
     "LineareGleichung",
     "interpolationspolynom",
     "plotte_loesung",
 ]
-__version__ = "0.1.0"

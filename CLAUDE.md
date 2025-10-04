@@ -4,26 +4,70 @@
 
 Python Framework für Schul-Analysis mit exakten Berechnungen, Marimo-Integration und mathematisch korrekter Visualisierung. Entwickelt für Mathematiklehrer und Schüler.
 
+### 🎓 **PÄDAGOGISCHE KERNPRINZIPIEN**
+
+#### **Deutsche Schul-Mathematik**
+
+- **API auf Deutsch**: Alle öffentlichen Methoden, Funktionen und Klassen haben deutsche Namen
+- **Fehlermeldungen auf Deutsch**: Klare, verständliche Fehlermeldungen für Schüler
+- **Dokumentation auf Deutsch**: Docstrings und Erklärungen in deutscher Sprache
+- **Begriffe aus dem Unterricht**: Verwendung bekannter mathematischer Begriffe
+
+#### **Unterrichtsnahes API-Design**
+
+- **Funktionsorientierte Syntax**: `Nullstellen(f)` statt `f.nullstellen()` - näher an mathematischer Notation
+- **Wrapper-Funktionen**: Einfache prozedurale API für schnelle Anwendung
+- **Intuitive Parameter**: Parameter-Namen entsprechen Unterrichtssprache
+- **Klare Struktur**: Aufbau entspricht typischem Unterrichtsablauf
+
+#### **Schülerfreundliche Features**
+
+- **Einfache Konstruktoren**: Mehrere Wege zur Funktions-Erstellung (Koeffizienten, String, etc.)
+- **Interaktive Visualisierung**: Plotly-Diagramme mit Erklärungen
+- **Exakte Berechnungen**: SymPy für symbolische Mathematik (keine numerischen Fehler)
+- **Caching für Performance**: Schnelle interaktive Nutzung im Unterricht
+
+#### **Beispiel-API für Schüler**
+
+```python
+# Einfache Erstellung
+f = ErstellePolynom([1, -4, 3])      # x² - 4x + 3
+g = ErstelleFunktion("2*x + 5")      # Beliebige Terme
+
+# Natürliche Syntax wie im Unterricht
+xs = Nullstellen(f)                  # statt f.nullstellen()
+f1 = Ableitung(f, 1)                 # statt f.ableitung(1)
+ext = Extrema(f)                     # statt f.extrema()
+wp = Wendepunkte(f)                  # statt f.wendepunkte()
+
+# Visualisierung
+Zeichne(f, x_bereich=(-5, 5))        # statt f.zeige_funktion()
+```
+
 ## 🔧 Entwicklungstools & Prinzipien
 
 ### **Package Management: uv**
+
 - **Immer `uv` für Python-Pakete verwenden**
 - Installation: `uv sync` (Core) oder `uv sync --group viz-math` (für Plotly)
 - Neue Pakete hinzufügen: `uv add <package>`
 - Dev-Pakete: `uv add --group dev <package>`
 
 ### **Code Quality: ruff**
+
 - **Linting**: `uv run ruff check`
 - **Formatting**: `uv run ruff format`
 - Vor jedem Commit ausführen!
 - Konfiguration in `pyproject.toml`
 
 ### **Type Checking: ty (Astral)**
+
 - **Type checking**: `uv run ty check`
 - Vor jedem Commit ausführen!
 - Typos statt mypy verwenden
 
 ### **Testing: pytest**
+
 - **Tests ausführen**: `uv run pytest`
 - **Mit Coverage**: `uv run pytest --cov=schul_analysis`
 - Vor jedem Merge ausführen!
@@ -31,6 +75,7 @@ Python Framework für Schul-Analysis mit exakten Berechnungen, Marimo-Integratio
 ## 🔄 Git Workflow
 
 ### **Grundprinzip: Jedes Feature = eigener Branch**
+
 ```bash
 # 1. Aktuellen Stand commiten
 git add .
@@ -49,6 +94,7 @@ git branch -d feature/plotly-visualisierung
 ```
 
 ### **Commit-Konvention**
+
 - **feat**: Neues Feature
 - **fix**: Bugfix
 - **docs**: Dokumentation
@@ -58,6 +104,7 @@ git branch -d feature/plotly-visualisierung
 - **chore**: Build/Tool-Änderungen
 
 **Beispiele:**
+
 ```bash
 git commit -m "feat: Implementiere perfekte Parabel-Darstellung mit Plotly"
 git commit -m "fix: Korrigiere Aspect Ratio in Visualisierung"
@@ -66,6 +113,7 @@ git commit -m "style: Führe ruff format aus"
 ```
 
 ### **Regelmäßiges Commiten**
+
 - **Vor jeder größeren Änderung**: Stand commiten
 - **Nach jedem Feature**: Commit erstellen
 - **Vor Merge/Rebase**: Sicherstellen, dass alles committet ist
@@ -74,21 +122,25 @@ git commit -m "style: Führe ruff format aus"
 ## 📦 Wichtige Module für die Entwicklung
 
 ### **Core Dependencies (immer installiert)**
+
 - `sympy>=1.14.0` - Symbolische Mathematik
 - `marimo>=0.16.3` - Interaktive Notebooks
 
 ### **Visualization Groups**
+
 - **viz-math**: `plotly>=6.3.0`, `numpy>=2.3.3` (🔥 EMPFOHLEN)
 - **viz-stats**: `altair>=5.5.0`, `pandas>=2.3.3` (für Statistik)
 - **viz-static**: `matplotlib>=3.8.0` (für Exporte)
 
 ### **Development Tools**
+
 - `ruff>=0.13.2` - Linting & Formatting
 - `ty>=0.0.1a21` - Type checking (Astral)
 - `pytest>=8.4.2` - Testing
 - `pytest-cov>=7.0.0` - Coverage
 
 ### **Dokumentation**
+
 - `sphinx>=7.0.0` - Dokumentations-Generator
 - `sphinx-rtd-theme>=1.3.0` - Theme
 
@@ -129,11 +181,13 @@ schul-analysis/
 ## 🧪 Testing-Strategie
 
 ### **Test-Dateien erstellen**
+
 - Jedes Modul bekommt eigene Test-Datei
 - Tests in `tests/` Verzeichnis
 - Fixtures für häufig genutzte Test-Daten
 
 ### **Test-Beispiele**
+
 ```python
 # tests/test_ganzrationale.py
 import pytest
@@ -149,28 +203,33 @@ def test_nullstellen():
 ```
 
 ### **Test-Coverage**
+
 - Mindestens 80% Coverage anstreben
 - Regelmäßig mit `pytest --cov` prüfen
 
 ## 📋 Entwicklungs-Checkliste
 
 ### **Vor dem Coden**
+
 - [ ] Feature-Branch erstellen
 - [ ] Letzten Stand commiten
 - [ ] Benötigte Pakete mit `uv` installieren
 
 ### **Während des Codens**
+
 - [ ] Typos mit `uv run ty check` prüfen
 - [ ] Ruff mit `uv run ruff check` und `uv run ruff format` ausführen
 - [ ] Tests schreiben und mit `uv run pytest` prüfen
 
 ### **Vor dem Commit**
+
 - [ ] Alle Tests bestehen
 - [ ] Code formatiert (ruff)
 - [ ] Types geprüft (ty)
 - [ ] Commit-Nachricht folgt Konvention
 
 ### **Nach dem Feature**
+
 - [ ] Branch zu main mergen
 - [ ] Feature-Branch löschen
 - [ ] Dokumentation aktualisieren
@@ -178,25 +237,64 @@ def test_nullstellen():
 ## 🔍 Code-Style-Regeln
 
 ### **Python Style**
+
 - PEP 8 konform
 - Maximale Zeilenlänge: 88 Zeichen
 - Docstrings für alle öffentlichen Methoden
 - Type hints verwenden
 
 ### **Namenskonventionen**
+
 - Klassen: `PascalCase` (`GanzrationaleFunktion`)
 - Methoden: `snake_case` (`zeige_funktion_plotly`)
 - Variablen: `snake_case` (`koeffizienten`)
 - Konstanten: `UPPER_SNAKE_CASE` (`MAX_POINTS`)
 
 ### **Dokumentation**
+
 - Deutsch für pädagogische Methoden
 - Englisch für technische Dokumentation
 - LaTeX in Docstrings für mathematische Formeln
 
+## 🎓 **PÄDAGOGISCHE ENTWICKLUNGSRICHTLINIEN**
+
+### **API-Design für Schüler**
+
+- **Funktionen statt Methoden**: Bevorzuge `Nullstellen(f)` über `f.nullstellen()`
+- **Deutsche Begriffe**: Alle öffentlichen APIs verwenden deutsche Namen
+- **Natürliche Parameter**: Parameter-Namen wie `ordnung`, `bereich`, `punkt`
+- **Verständliche Fehler**: Fehlermeldungen erklären das Problem in einfachem Deutsch
+
+### **Namenskonventionen für Schul-Mathematik**
+
+- **Wrapper-Funktionen**: `PascalCase` wie `Nullstellen`, `Ableitung`, `Extrema`
+- **Klassen**: `PascalCase` mit deutschen Namen wie `GanzrationaleFunktion`
+- **Methoden**: `snake_case` wie `zeige_funktion`, `bereiche_integral`
+- **Variablen**: `snake_case` wie `koeffizienten`, `nullstellen_liste`
+
+### **Wrapper-API implementieren**
+
+Jede Funktionsklasse sollte entsprechende Wrapper-Funktionen haben:
+
+```python
+# In api.py oder wrapper.py
+def Nullstellen(funktion): return funktion.nullstellen()
+def Ableitung(funktion, ordnung=1): return funktion.ableitung(ordnung)
+def Extrema(funktion): return funktion.extrema()
+def Zeichne(funktion, bereich=None): return funktion.zeige_funktion(bereich)
+```
+
+### **Unterrichtliche Reihenfolge berücksichtigen**
+
+- Aufbau der Module folgt typischem Schul-Curriculum
+- Einfache Funktionen zuerst, dann komplexe
+- Jedes Modul sollte unabhängig für sich funktionieren
+- Klare Beispiele und Übungsaufgaben bereitstellen
+
 ## 🚀 Deployment
 
 ### **Veröffentlichung mit uv**
+
 ```bash
 # Build
 uv build
@@ -206,6 +304,7 @@ uv publish
 ```
 
 ### **Versionierung**
+
 - Semantic Versioning: `MAJOR.MINOR.PATCH`
 - `__version__` in `__init__.py` pflegen
 - Changelog in `CHANGELOG.md` führen
@@ -213,16 +312,19 @@ uv publish
 ## 💡 Best Practices
 
 ### **Mathematische Korrektheit**
+
 - Immer SymPy für exakte Berechnungen verwenden
 - Keine numerischen Approximationen ohne Warnung
 - Aspect Ratio Control bei Plotly Visualisierungen
 
 ### **Performance**
+
 - SymPy-Ausdrücke cachen wo möglich
 - Komplexe Berechnungen nur bei Bedarf ausführen
 - Plotly-Graphen mit vernünftiger Punktanzahl
 
 ### **User Experience**
+
 - Intuitive Konstruktoren für Schüler
 - Klare Fehlermeldungen
 - Gute Visualisierungen mit Erklärungen
