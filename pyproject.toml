@@ -12,10 +12,11 @@ dependencies = [
 [dependency-groups]
 # Development tools (nur für Entwickler)
 dev = [
-    "ruff>=0.13.2",           # Linting & Formatting
-    "ty>=0.0.1a21",           # Type checking
-    "pytest>=8.4.2",         # Testing framework
-    "pytest-cov>=7.0.0",     # Test coverage
+    "ruff>=0.13.2", # Linting & Formatting
+    "ty>=0.0.1a21", # Type checking
+    "pytest>=8.4.2", # Testing framework
+    "pytest-cov>=7.0.0", # Test coverage
+    "scipy>=1.16.2",
 ]
 
 # Documentation (nur für Dokumentationserstellung)

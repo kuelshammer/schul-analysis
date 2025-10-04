@@ -637,3 +637,138 @@ class GebrochenRationaleFunktion:
                     asymptoten.append({"typ": "horizontal", "y": y_offset})
 
         return asymptoten
+
+    # =============================================================================
+    # NEUE METHODEN: SCHMIEGKURVE UND STÖRFUNKTION
+    # =============================================================================
+
+    def schmiegkurve(self) -> "GanzrationaleFunktion":
+        """
+        Gibt die Schmiegkurve (polynomialer Teil) der gebrochen-rationalen Funktion zurück.
+
+        Für eine rationale Funktion f(x) = Z(x)/N(x):
+        - Wenn grad(Z) < grad(N): Schmiegkurve = 0 (horizontale Asymptote y = 0)
+        - Wenn grad(Z) = grad(N): Schmiegkurve = Leitkoeffizienten-Verhältnis (horizontale Asymptote)
+        - Wenn grad(Z) > grad(N): Polynomdivision durchführen, polynomialer Teil ist die Schmiegkurve
+
+        Returns:
+            GanzrationaleFunktion: Die Schmiegkurve der Funktion
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion("x^2+1", "x-1")  # grad(Z)=2, grad(N)=1
+            >>> s = f.schmiegkurve()  # s(x) = x + 1 (schiefe Asymptote)
+
+            >>> g = GebrochenRationaleFunktion("x+1", "x^2-1")  # grad(Z)=1, grad(N)=2
+            >>> t = g.schmiegkurve()  # t(x) = 0 (horizontale Asymptote y = 0)
+
+        Didaktischer Hinweis:
+            Die Schmiegkurve ist die Funktion, an die sich f(x) für große |x| annähert.
+            Sie beschreibt das "globale" Verhalten der Funktion.
+        """
+        # Bestimme Grade von Zähler und Nenner
+        grad_zaehler = self.zaehler.grad()
+        grad_nenner = self.nenner.grad()
+
+        if grad_zaehler < grad_nenner:
+            # Horizontale Asymptote y = 0
+            return GanzrationaleFunktion([0])
+        elif grad_zaehler == grad_nenner:
+            # Horizontale Asymptote y = Leitkoeffizienten-Verhältnis
+            lkh_zaehler = self.zaehler.leitkoeffizient()
+            lkh_nenner = self.nenner.leitkoeffizient()
+            y_asymptote = lkh_zaehler / lkh_nenner
+            return GanzrationaleFunktion([y_asymptote])
+        else:
+            # grad(Z) > grad(N): Polynomdivision durchführen
+            quotient, rest = sp.div(
+                self.zaehler.term_sympy, self.nenner.term_sympy, domain="QQ"
+            )
+            return GanzrationaleFunktion(quotient)
+
+    def stoerfunktion(self) -> "GebrochenRationaleFunktion":
+        """
+        Gibt die Störfunktion (echt gebrochen-rationaler Teil) zurück.
+
+        Die Störfunktion ist definiert als: f(x) = Schmiegkurve(x) + Störfunktion(x)
+        Sie hat die Eigenschaft, dass für große |x| die Störfunktion gegen 0 geht.
+
+        Returns:
+            GebrochenRationaleFunktion: Die Störfunktion mit grad(Zähler) < grad(Nenner)
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion("x^2+1", "x-1")
+            >>> s = f.schmiegkurve()  # s(x) = x + 1
+            >>> r = f.stoerfunktion()  # r(x) = 2/(x-1)
+            >>> # Überprüfung: f(x) = (x+1) + 2/(x-1) = (x^2-x+2)/(x-1)
+
+        Didaktischer Hinweis:
+            Die Störfunktion beschreibt die "lokale" Abweichung von der Schmiegkurve
+            und bestimmt das Verhalten in der Nähe von Polstellen.
+        """
+        # Berechne Schmiegkurve
+        schmiegkurve_expr = self.schmiegkurve().term_sympy
+
+        # Störfunktion = f(x) - Schmiegkurve(x)
+        stoerfunktion_expr = self.term_sympy - schmiegkurve_expr
+
+        # Extrahiere Zähler und Nenner
+        zaehler_expr, nenner_expr = fraction(stoerfunktion_expr)
+
+        # Erstelle neue Funktion
+        return GebrochenRationaleFunktion(zaehler_expr, nenner_expr)
+
+    def validiere_zerlegung(self) -> bool:
+        """
+        Validiert, ob die Zerlegung f(x) = Schmiegkurve(x) + Störfunktion(x) korrekt ist.
+
+        Returns:
+            bool: True, wenn die Zerlegung mathematisch korrekt ist
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion("x^3+2x+1", "x^2+1")
+            >>> f.validiere_zerlegung()  # True
+            >>> # Manuelle Überprüfung: f = (x) + (x+1)/(x^2+1)
+
+        Didaktischer Hinweis:
+            Diese Methode hilft Schülern, ihre Ergebnisse zu überprüfen und
+            das Verständnis der mathematischen Beziehung zu vertiefen.
+        """
+        # Berechne beide Seiten
+        linke_seite = self.term_sympy
+        rechte_seite = self.schmiegkurve().term_sympy + self.stoerfunktion().term_sympy
+
+        # Vereinfache die rechte Seite und vergleiche
+        vereinfachte_rechte_seite = sp.simplify(rechte_seite)
+
+        return sp.simplify(linke_seite - vereinfachte_rechte_seite) == 0
+
+    def zeige_zerlegung(self) -> str:
+        """
+        Gibt eine formatierte Darstellung der Zerlegung zurück.
+
+        Returns:
+            str: Formatierter Text mit der Zerlegung
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion("x^2+3x+2", "x+1")
+            >>> print(f.zeige_zerlegung())
+            # Ausgabe:
+            # Funktion: f(x) = (x^2 + 3x + 2)/(x + 1)
+            # Zerlegung: f(x) = (x + 2) + 0/(x + 1)
+            # Schmiegkurve: s(x) = x + 2
+            # Störfunktion: r(x) = 0
+        """
+        s = self.schmiegkurve()
+        r = self.stoerfunktion()
+
+        text = f"Funktion: f(x) = {self.term()}\n"
+        text += f"Zerlegung: f(x) = {s.term()} + {r.term()}\n"
+        text += f"Schmiegkurve: s(x) = {s.term()}\n"
+        text += f"Störfunktion: r(x) = {r.term()}\n"
+
+        if self.validiere_zerlegung():
+            text += "✅ Validierung: Zerlegung ist mathematisch korrekt"
+        else:
+            text += "❌ Validierung: Zerlegung enthält Fehler"
+
+        return text

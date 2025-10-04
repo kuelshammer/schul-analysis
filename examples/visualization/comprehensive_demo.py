@@ -10,7 +10,6 @@ from schul_analysis import (
     Funktion,
     Graph,
     Nullstellen,
-    Ableitung,
     Extremstellen,
     Wendepunkte,
 )
@@ -272,7 +271,7 @@ def main():
     for name, graph in comparison_graphs:
         all_graphs.append((f"Vergleich: {name}", graph))
 
-    print(f"\n=== Zusammenfassung ===")
+    print("\n=== Zusammenfassung ===")
     print(f"Insgesamt erstellte Graphen: {len(all_graphs)}")
 
     for name, graph in all_graphs:

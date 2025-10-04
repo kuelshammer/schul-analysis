@@ -13,7 +13,6 @@ from schul_analysis import (
     Parameter,
     ParametrischeFunktion,
     interpolationspolynom,
-    plotte_loesung,
 )
 
 

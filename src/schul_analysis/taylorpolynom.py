@@ -5,7 +5,6 @@ Implementiert Taylorpolynome zur Approximation von Funktionen durch Polynome
 an einem Entwicklungspunkt. Enthält Fehlerabschätzung und Visualisierung.
 """
 
-
 import numpy as np
 import plotly.graph_objects as go
 import sympy as sp

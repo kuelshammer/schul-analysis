@@ -8,7 +8,7 @@ Alle Funktionen unterstützen Duck-Typing und funktionieren mit allen
 verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
 """
 
-from typing import Any, Union, List, Dict, Optional, Callable, Tuple
+from typing import Any, Union, List, Dict, Optional, Tuple
 import numpy as np
 
 # Importiere alle verfügbaren Funktionstypen

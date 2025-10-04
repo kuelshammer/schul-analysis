@@ -6,7 +6,6 @@ integriert für interaktive mathematische Analysen.
 """
 
 import marimo as mo
-import numpy as np
 from schul_analysis import Funktion, Nullstellen, Ableitung, Extremstellen, Graph
 
 

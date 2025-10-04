@@ -26,7 +26,7 @@ def test_automatische_symbolerkennung():
         if not f1.parameter:
             print(f"   f1(2) = {f1.wert(2)}")
         else:
-            print(f"   f1(2) = Kann nicht berechnet werden (Parameter vorhanden)")
+            print("   f1(2) = Kann nicht berechnet werden (Parameter vorhanden)")
     except Exception as e:
         print(f"   Fehler: {e}")
 

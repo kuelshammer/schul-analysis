@@ -12,7 +12,6 @@ from schul_analysis import (
     Extremstellen,
     Wendepunkte,
     Integral,
-    Grenzwert,
     AsymptotischesVerhalten,
     Graph,
 )

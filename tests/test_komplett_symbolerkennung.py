@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion, Variable, Parameter
+from schul_analysis import GanzrationaleFunktion
 
 
 def test_allgemeine_symbolerkennung():
@@ -151,7 +151,7 @@ def test_schulbeispiele():
         print(f"\n{beschreibung}: f(x) = {expr}")
         try:
             f = GanzrationaleFunktion(expr)
-            print(f"   Automatisch erkannt:")
+            print("   Automatisch erkannt:")
             print(f"     Variable: {[v.name for v in f.variablen]}")
             print(f"     Parameter: {[p.name for p in f.parameter]}")
             print(
@@ -165,7 +165,7 @@ def test_schulbeispiele():
                 print(f"   Nullstellen: {nullstellen}")
             except:
                 print(
-                    f"   Nullstellen: Konnten nicht berechnet werden (Parameter vorhanden)"
+                    "   Nullstellen: Konnten nicht berechnet werden (Parameter vorhanden)"
                 )
 
         except Exception as e:

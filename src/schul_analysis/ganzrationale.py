@@ -638,7 +638,7 @@ class GanzrationaleFunktion:
             lambdified_func = self._cache["_lambdified_func"]
             return lambdified_func(x_wert)
 
-        except Exception as e:
+        except Exception:
             # Fallback auf die ursprüngliche Methode bei Problemen
             return self.wert(x_wert)
 
@@ -878,7 +878,7 @@ class GanzrationaleFunktion:
 
             self._cache["symmetrie"] = ergebnis
             return ergebnis
-        except Exception as e:
+        except Exception:
             self._cache["symmetrie"] = "Symmetrie nicht bestimmbar"
             return "Symmetrie nicht bestimmbar"
 

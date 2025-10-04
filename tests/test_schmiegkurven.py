@@ -7,7 +7,6 @@ und zeigt pädagogische Anwendungen.
 
 from src.schul_analysis import (
     HermiteInterpolation,
-    Nullstellen,
     Schmieggerade,
     Schmiegkegel,
     SchmiegkurveAllgemein,

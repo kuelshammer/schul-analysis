@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion, LGS
+from schul_analysis import GanzrationaleFunktion
 
 
 def test_lgs_integration():
@@ -25,7 +25,7 @@ def test_lgs_integration():
 
         # Erstelle Bedingungen für LGS
         if f.parameter and f.hauptvariable:
-            print(f"   Mögliche LGS-Bedingungen:")
+            print("   Mögliche LGS-Bedingungen:")
             print(f"   - f(0) = {f.wert(0)} (Parameter vorhanden)")
             print(f"   - f(1) = {f.wert(1)} (Parameter vorhanden)")
             print(f"   - f(2) = {f.wert(2)} (Parameter vorhanden)")

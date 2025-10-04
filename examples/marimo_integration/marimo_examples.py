@@ -114,7 +114,6 @@ def create_interactive_plot(f, term):
 @mo.cell
 def taylor_series_demo():
     """Taylor-Reihe interaktiv demonstrieren"""
-    from schul_analysis import Funktion, Taylor
 
     # Basisfunktion (z.B. sin(x), cos(x), e^x)
     basisfunktion = mo.ui.dropdown(

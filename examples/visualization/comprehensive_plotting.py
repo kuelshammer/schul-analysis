@@ -5,7 +5,6 @@ Dieses Beispiel zeigt die fortgeschrittenen Visualisierungsmöglichkeiten des Sc
 mit Plotly für mathematisch korrekte Darstellungen.
 """
 
-import numpy as np
 from schul_analysis import (
     Funktion,
     Graph,

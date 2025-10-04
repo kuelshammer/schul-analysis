@@ -15,7 +15,6 @@ from schul_analysis import (
     Grenzwert,
     Polstellen,
     AsymptotischesVerhalten,
-    Graph,
 )
 
 # 1. Komplexe ganzrationale Funktion
