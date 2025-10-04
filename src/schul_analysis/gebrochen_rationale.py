@@ -783,3 +783,314 @@ class GebrochenRationaleFunktion:
             text += "❌ Validierung: Zerlegung enthält Fehler"
 
         return text
+
+    # =============================================================================
+    # PHASE 2: PÄDAGOGISCHE METHODEN
+    # =============================================================================
+
+    def erkläre_schritt_für_schritt(self) -> dict:
+        """
+        Erklärt die Zerlegung Schritt für Schritt für das Verständnis von Schülern.
+
+        Returns:
+            dict: Detaillierte schrittweise Erklärung mit mathematischen Operationen
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion("x^2+4x+3", "x+1")
+            >>> erklaerung = f.erkläre_schritt_für_schritt()
+            >>> print(erklaerung['schritte'][0]['titel'])
+            'Schritt 1: Grade bestimmen'
+        """
+        grad_z = self.zaehler.grad()
+        grad_n = self.nenner.grad()
+        s = self.schmiegkurve()
+        r = self.stoerfunktion()
+
+        schritte = []
+
+        # Schritt 1: Grade bestimmen
+        schritte.append(
+            {
+                "titel": "Schritt 1: Grade von Zähler und Nenner bestimmen",
+                "beschreibung": f"Wir bestimmen zunächst die Grade des Zählers und Nenners.",
+                "formel": f"grad(Zähler) = {grad_z}, grad(Nenner) = {grad_n}",
+                "erklaerung": "Der Grad sagt uns, wie das asymptotische Verhalten aussieht.",
+            }
+        )
+
+        # Schritt 2: Fallunterscheidung
+        fall_typ = ""
+        if grad_z < grad_n:
+            fall_typ = "grad(Z) < grad(N)"
+            schritte.append(
+                {
+                    "titel": "Schritt 2: Horizontale Asymptote y = 0",
+                    "beschreibung": f"Da {fall_typ}, nähert sich die Funktion an y = 0 an.",
+                    "formel": "lim_{x->oo} f(x) = 0",
+                    "erklaerung": "Für große |x| wird die Funktion sehr klein.",
+                }
+            )
+        elif grad_z == grad_n:
+            fall_typ = "grad(Z) = grad(N)"
+            lkh_z = self.zaehler.leitkoeffizient()
+            lkh_n = self.nenner.leitkoeffizient()
+            asymptote = lkh_z / lkh_n
+            schritte.append(
+                {
+                    "titel": "Schritt 2: Horizontale Asymptote durch Leitkoeffizienten",
+                    "beschreibung": f"Da {fall_typ}, bilden wir das Verhältnis der Leitkoeffizienten.",
+                    "formel": f"lim_{{x->oo}} f(x) = {lkh_z}/{lkh_n} = {asymptote}",
+                    "erklaerung": "Die Funktion nähert sich an den Quotienten der höchsten Koeffizienten an.",
+                }
+            )
+        else:
+            fall_typ = "grad(Z) > grad(N)"
+            schritte.append(
+                {
+                    "titel": "Schritt 2: Polynomdivision durchführen",
+                    "beschreibung": f"Da {fall_typ}, müssen wir eine Polynomdivision durchführen.",
+                    "formel": f"{self.zaehler.term()} ÷ {self.nenner.term()} = {s.term()} + {r.term()}",
+                    "erklaerung": "Wir teilen Zähler durch Nenner, um den polynomialen Anteil zu finden.",
+                }
+            )
+
+        # Schritt 3: Störfunktion berechnen
+        schritte.append(
+            {
+                "titel": "Schritt 3: Störfunktion bestimmen",
+                "beschreibung": "Die Störfunktion ist der Rest nach Abzug der Schmiegkurve.",
+                "formel": f"r(x) = f(x) - s(x) = {r.term()}",
+                "erklaerung": "Die Störfunktion geht für große |x| gegen 0.",
+            }
+        )
+
+        # Schritt 4: Zusammenfassung
+        schritte.append(
+            {
+                "titel": "Schritt 4: Zusammenfassung",
+                "beschreibung": "Die vollständige Zerlegung lautet:",
+                "formel": f"f(x) = {s.term()} + {r.term()}",
+                "erklaerung": f"Schmiegkurve: {s.term()} (globales Verhalten), Störfunktion: {r.term()} (lokales Verhalten)",
+            }
+        )
+
+        return {
+            "funktion": self.term(),
+            "schritte": schritte,
+            "ergebnis": {
+                "schmiegkurve": s.term(),
+                "stoerfunktion": r.term(),
+                "zerlegung": f"f(x) = {s.term()} + {r.term()}",
+            },
+        }
+
+    def zeige_asymptotisches_verhalten(self) -> dict:
+        """
+        Analysiert und erklärt das asymptotische Verhalten detailliert.
+
+        Returns:
+            dict: Umfassende Analyse des asymptotischen Verhaltens
+
+        Beispiele:
+            >>> f = GebrochenRationaleFunktion("x^2+1", "x-1")
+            >>> analyse = f.zeige_asymptotisches_verhalten()
+            >>> print(analyse['asymptoten']['schief']['beschreibung'])
+        """
+        grad_z = self.zaehler.grad()
+        grad_n = self.nenner.grad()
+        s = self.schmiegkurve()
+        r = self.stoerfunktion()
+
+        analyse = {
+            "funktion": self.term(),
+            "grade": {
+                "zaehler": grad_z,
+                "nenner": grad_n,
+                "differenz": grad_z - grad_n,
+            },
+            "asymptoten": {},
+            "verhalten": {},
+        }
+
+        # Vertikale Asymptoten (Polstellen)
+        polstellen = self.polstellen()
+        if polstellen:
+            analyse["asymptoten"]["vertikal"] = [
+                {
+                    "stelle": ps,
+                    "beschreibung": f"x = {ps} ist Polstelle, da Nenner = 0 und Zähler ≠ 0",
+                }
+                for ps in polstellen
+            ]
+
+        # Horizontale/Schiefe Asymptoten
+        if grad_z < grad_n:
+            analyse["asymptoten"]["horizontal"] = {
+                "y_wert": 0,
+                "beschreibung": "Horizontale Asymptote y = 0, da grad(Z) < grad(N)",
+            }
+        elif grad_z == grad_n:
+            lkh_z = self.zaehler.leitkoeffizient()
+            lkh_n = self.nenner.leitkoeffizient()
+            asymptote = lkh_z / lkh_n
+            analyse["asymptoten"]["horizontal"] = {
+                "y_wert": asymptote,
+                "beschreibung": f"Horizontale Asymptote y = {asymptote}, Verhältnis der Leitkoeffizienten",
+            }
+        else:
+            # Schiefe Asymptote = Schmiegkurve
+            analyse["asymptoten"]["schief"] = {
+                "funktion": s.term(),
+                "beschreibung": f"Schiefe Asymptote {s.term()}, Ergebnis der Polynomdivision",
+            }
+
+        # Verhalten für x -> oo und x -> -oo
+        analyse["verhalten"]["x_positiv_unendlich"] = {
+            "beschreibung": f"Für x -> ∞ nähert sich f(x) an {s.term()} an",
+            "mathematisch": f"lim_{{x->∞}} f(x) = {s.term()}",
+        }
+
+        analyse["verhalten"]["x_negativ_unendlich"] = {
+            "beschreibung": f"Für x -> -∞ nähert sich f(x) an {s.term()} an",
+            "mathematisch": f"lim_{{x->-∞}} f(x) = {s.term()}",
+        }
+
+        # Einfluss der Störfunktion
+        analyse["störfunktion_einfluss"] = {
+            "term": r.term(),
+            "beschreibung": f"Die Störfunktion {r.term()} wird für große |x| vernachlässigbar",
+            "eigenschaft": "lim_{x->±∞} r(x) = 0",
+        }
+
+        return analyse
+
+    def erstelle_uebungsaufgabe(self, schwierigkeit: str = "mittel") -> dict:
+        """
+        Erstellt eine Übungsaufgabe zur Zerlegung gebrochen-rationaler Funktionen.
+
+        Args:
+            schwierigkeit: "einfach", "mittel", oder "schwer"
+
+        Returns:
+            dict: Übungsaufgabe mit Lösung und Erklärung
+
+        Beispiele:
+            >>> aufgabe = f.erstelle_uebungsaufgabe("einfach")
+            >>> print(aufgabe['aufgabe'])
+            >>> print(aufgabe['loesung'])
+        """
+
+        if schwierigkeit == "einfach":
+            # Einfache Fälle: grad(Z) ≤ grad(N)
+            aufgaben = [
+                {"zaehler": "x+1", "nenner": "x-1", "typ": "horizontal"},
+                {"zaehler": "2x+3", "nenner": "x+2", "typ": "horizontal"},
+                {"zaehler": "x^2+1", "nenner": "x^2-1", "typ": "horizontal"},
+            ]
+        elif schwierigkeit == "mittel":
+            # Mittlere Fälle: grad(Z) = grad(N) + 1
+            aufgaben = [
+                {"zaehler": "x^2+1", "nenner": "x-1", "typ": "schief"},
+                {"zaehler": "x^2+4x+3", "nenner": "x+1", "typ": "schief"},
+                {"zaehler": "2x^2-3", "nenner": "x+2", "typ": "schief"},
+            ]
+        else:  # schwer
+            # Schwere Fälle: grad(Z) > grad(N) + 1
+            aufgaben = [
+                {"zaehler": "x^3+1", "nenner": "x-1", "typ": "schief_kubisch"},
+                {
+                    "zaehler": "x^3-2x^2+3",
+                    "nenner": "x^2+1",
+                    "typ": "schief_quadratisch",
+                },
+            ]
+
+        import random
+
+        aufgabe_data = random.choice(aufgaben)
+
+        # Erstelle Übungsfunktion
+        uebung_funktion = GebrochenRationaleFunktion(
+            aufgabe_data["zaehler"], aufgabe_data["nenner"]
+        )
+        s = uebung_funktion.schmiegkurve()
+        r = uebung_funktion.stoerfunktion()
+
+        # Generiere Aufgabe basierend auf Typ
+        if aufgabe_data["typ"] == "horizontal":
+            frage = f"Bestimmen Sie die horizontale Asymptote der Funktion f(x) = {uebung_funktion.term()}"
+            loesung_text = f"Die horizontale Asymptote ist y = {s.term()}"
+        else:
+            frage = f"Zerlegen Sie die Funktion f(x) = {uebung_funktion.term()} in Schmiegkurve und Störfunktion"
+            loesung_text = f"f(x) = {s.term()} + {r.term()}"
+
+        return {
+            "schwierigkeit": schwierigkeit,
+            "aufgabe": frage,
+            "funktion": uebung_funktion.term(),
+            "tipps": [
+                "Bestimmen Sie zuerst die Grade von Zähler und Nenner",
+                "Überlegen Sie, ob eine Polynomdivision nötig ist",
+                "Die Störfunktion sollte für große |x| gegen 0 gehen",
+            ],
+            "loesung": {
+                "schmiegkurve": s.term(),
+                "stoerfunktion": r.term(),
+                "zerlegung": f"f(x) = {s.term()} + {r.term()}",
+                "erklaerung": loesung_text,
+            },
+            "ueberpruefung": {
+                "valid": uebung_funktion.validiere_zerlegung(),
+                "methode": "Addieren Sie Schmiegkurve und Störfunktion, um das Ergebnis zu überprüfen",
+            },
+        }
+
+    def vergleiche_funktionen(
+        self, andere_funktion: "GebrochenRationaleFunktion"
+    ) -> dict:
+        """
+        Vergleicht zwei gebrochen-rationale Funktionen bezüglich ihrer Zerlegung.
+
+        Args:
+            andere_funktion: Zweite Funktion zum Vergleich
+
+        Returns:
+            dict: Vergleich der Funktionen mit Analyse
+
+        Beispiele:
+            >>> f1 = GebrochenRationaleFunktion("x^2+1", "x-1")
+            >>> f2 = GebrochenRationaleFunktion("x^2+4", "x+2")
+            >>> vergleich = f1.vergleiche_funktionen(f2)
+        """
+        s1 = self.schmiegkurve()
+        r1 = self.stoerfunktion()
+
+        s2 = andere_funktion.schmiegkurve()
+        r2 = andere_funktion.stoerfunktion()
+
+        return {
+            "funktion1": {
+                "term": self.term(),
+                "schmiegkurve": s1.term(),
+                "stoerfunktion": r1.term(),
+                "grad_z": self.zaehler.grad(),
+                "grad_n": self.nenner.grad(),
+            },
+            "funktion2": {
+                "term": andere_funktion.term(),
+                "schmiegkurve": s2.term(),
+                "stoerfunktion": r2.term(),
+                "grad_z": andere_funktion.zaehler.grad(),
+                "grad_n": andere_funktion.nenner.grad(),
+            },
+            "vergleich": {
+                "gleiche_schmiegkurve": s1.term() == s2.term(),
+                "gleiche_stoerfunktion": r1.term() == r2.term(),
+                "asymptotisches_verhalten": {
+                    "f1": f"lim x->∞: {s1.term()}",
+                    "f2": f"lim x->∞: {s2.term()}",
+                    "ähnlich": s1.term() == s2.term(),
+                },
+            },
+            "didaktischer_hinweis": "Vergleichen Sie, wie sich verschiedene Koeffizienten auf das asymptotische Verhalten auswirken.",
+        }
