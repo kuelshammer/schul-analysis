@@ -136,8 +136,8 @@ def test_kombinierte_anwendung():
     print(f"  Gekürzt: f(x) = {f_gekürzt.term()}")
 
     # Nullstellen
-    nullstellen = nullstellen(f_gekürzt)
-    print(f"  Nullstellen: {nullstellen}")
+    nullstellen_liste = nullstellen(f_gekürzt)
+    print(f"  Nullstellen: {nullstellen_liste}")
 
     # Polstellen (Verwendung der eingebauten Methode)
     polstellen = f.polstellen()
