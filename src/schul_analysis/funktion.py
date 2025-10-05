@@ -24,22 +24,83 @@ class Funktion:
     """
     Zentrale vereinheitlichte Funktionsklasse für das Schul-Analysis Framework.
 
-    Diese Klasse ist das Herzstück der unified Architecture. Sie kann:
+    Diese Klasse ist das Herzstück der Magic Factory Architecture. Sie kann:
     - Beliebige mathematische Ausdrücke verarbeiten
     - Alle Grundoperationen bereitstellen (Ableiten, Integrieren, etc.)
-    - Automatische Typenerkennung durchführen
+    - Automatische Typenerkennung: Funktion("x^2") gibt QuadratischeFunktion zurück!
     - Als Basis für spezialisierte pädagogische Klassen dienen
 
+    Die Factory-Architektur kombiniert Einfachheit und Funktionalität:
+    - Einfachheit: f = Funktion("x^2") - nur eine Zeile
+    - Power: f.get_scheitelpunkt() - volle Funktionalität der spezialisierten Klasse
+    - Pädagogisch perfekt: Schüler lernen mit einfachen Aufrufen, bekommen aber alle Spezialmethoden
+
     Examples:
-        >>> f = Funktion("x^2 + 1")              # ganzrational
-        >>> g = Funktion("(x^2 + 1)/(x - 1)")    # gebrochen-rational
-        >>> h = Funktion("exp(x) + 1")           # exponential
-        >>> t = Funktion("sin(x)")                # trigonometrisch
+        >>> f = Funktion("x^2 + 1")              # Gibt automatisch QuadratischeFunktion zurück!
+        >>> g = Funktion("2x + 3")                # Gibt automatisch LineareFunktion zurück!
+        >>> h = Funktion("(x^2 + 1)/(x - 1)")    # Gebrochen-rationale Funktion
+        >>> i = Funktion("exp(x) + 1")           # Exponentiale Funktion
+        >>> j = Funktion("sin(x)")                # Trigonometrische Funktion
+
+        Automatische Funktionalität:
+        >>> f = Funktion("x^2 - 4x + 3")
+        >>> type(f)                              # <class 'schul_analysis.quadratisch.QuadratischeFunktion'>
+        >>> f.get_scheitelpunkt()                 # (2.0, -1.0) - nur bei QuadratischeFunktion verfügbar!
+
+        >>> g = Funktion("2x + 5")
+        >>> type(g)                              # <class 'schul_analysis.lineare.LineareFunktion'>
+        >>> g.steigung                           # 2 - nur bei LineareFunktion verfügbar!
     """
+
+    def __new__(cls, *args, **kwargs):
+        """
+        Magic Factory - Funktion() Konstruktor gibt automatisch richtige Unterklasse zurück!
+
+        This makes Funktion("x^2") return a QuadratischeFunktion automatically
+        while keeping the simple API for users.
+        """
+        # Wenn es bereits eine Instanz ist, gib sie zurück
+        if cls is not Funktion:
+            return super().__new__(cls)
+
+        # Extrahiere eingabe und nenner aus den Argumenten
+        eingabe = kwargs.get("eingabe", args[0] if args else None)
+        nenner = kwargs.get("nenner", args[1] if len(args) > 1 else None)
+
+        # Intelligente Typenerkennung und automatische Instanziierung
+        try:
+            # Erstelle temporäre Basis-Funktion zur Analyse
+            temp_funktion = object.__new__(Funktion)
+            temp_funktion._initialisiere_basiskomponenten()
+            temp_funktion._verarbeite_eingabe(eingabe, nenner)
+            temp_funktion._erstelle_symbole_ausdruecke()
+
+            # Importiere spezialisierte Klassen
+            from .ganzrationale import GanzrationaleFunktion
+            from .lineare import LineareFunktion
+            from .quadratisch import QuadratischeFunktion
+
+            # Automatische Typenerkennung
+            if temp_funktion.ist_linear():
+                # Lineare Funktion -> LineareFunktion
+                return LineareFunktion(eingabe)
+            elif temp_funktion.ist_quadratisch():
+                # Quadratische Funktion -> QuadratischeFunktion
+                return QuadratischeFunktion(eingabe)
+            elif temp_funktion.ist_ganzrational:
+                # Andere ganzrationale Funktion -> GanzrationaleFunktion
+                return GanzrationaleFunktion(eingabe)
+            else:
+                # Für alle anderen Typen: verwende Basis-Funktion
+                return super().__new__(cls)
+
+        except Exception:
+            # Bei Fehlern bei der Typenerkennung: verwende Basis-Funktion
+            return super().__new__(cls)
 
     def __init__(
         self,
-        eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
+        eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str], None] = None,
         nenner: Union[str, sp.Basic, "Funktion", None] = None,
     ):
         """
@@ -53,7 +114,7 @@ class Funktion:
                      - Tuple: (zaehler_string, nenner_string)
             nenner: Optionaler Nenner (wenn eingabe nur Zähler ist)
         """
-        # 🔥 ECHTE UNIFIED ARCHITECTURE - Keine Wrapper-Delegation mehr! 🔥
+        # Echte Unified Architecture - Keine Wrapper-Delegation mehr!
 
         # Grundlegende Initialisierung
         self._initialisiere_basiskomponenten()
@@ -146,7 +207,7 @@ class Funktion:
         try:
             return parse_expr(bereinigt, transformations=transformations)
         except Exception as e:
-            # 🔥 PÄDAGOGISCHE FEHLERMELDUNGEN 🔥
+            # Pädagogische Fehlermeldungen
             if "SyntaxError" in str(e) or "invalid syntax" in str(e):
                 raise ValueError(
                     f"Syntaxfehler in '{eingabe}'. "
@@ -216,7 +277,7 @@ class Funktion:
                 # Default: als Variable behandeln
                 self.variablen.append(_Variable(symbol_name))
 
-    # 🔥 KERNFUNKTIONALITÄT - Alle zentral in einer Klasse! 🔥
+    # Kernfunktionalität - Alle zentral in einer Klasse!
 
     def term(self) -> str:
         """Gibt den Term als String zurück"""
@@ -236,7 +297,7 @@ class Funktion:
             Ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
             return float(Ergebnis) if Ergebnis.is_real else Ergebnis
         except Exception as e:
-            # 🔥 PÄDAGOGISCHE FEHLERMELDUNGEN 🔥
+            # Pädagogische Fehlermeldungen
             if "division by zero" in str(e).lower():
                 raise ValueError(
                     f"Division durch Null bei f({x_wert}). "
@@ -269,7 +330,7 @@ class Funktion:
         except Exception:
             return []
 
-    # 🔥 TYPENERKENNUNG - Alle zentral! 🔥
+    # Typenerkennung - Alle zentral!
 
     @property
     def ist_ganzrational(self) -> bool:
@@ -330,7 +391,7 @@ class Funktion:
         else:
             return "allgemein"
 
-    # 🔥 INTROSPEKTIVE METHODEN für Factory-Funktion 🔥
+    # Introspektive Methoden für Factory-Funktion
 
     def ist_linear(self) -> bool:
         """Prüft, ob die Funktion linear ist (ax + b)"""
@@ -376,7 +437,7 @@ class Funktion:
         except Exception:
             return 0
 
-    # 🔥 HILFSMETHODEN 🔥
+    # Hilfsmethoden
 
     def __str__(self):
         return self.term()
@@ -390,15 +451,18 @@ class Funktion:
         return self.term_sympy.equals(other.term_sympy)
 
 
-# 🔥 FACTORY-FUNKTION für automatische Erkennung 🔥
+# Factory-Funktion für Konsistenz und Abwärtskompatibilität
 
 
 def erstelle_funktion_automatisch(
-    eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
+    eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str], None],
     nenner: Union[str, sp.Basic, "Funktion", None] = None,
 ) -> Funktion:
     """
-    Factory-Funktion, die automatisch den richtigen Funktionstyp erkennt und erstellt.
+    Magic Factory Wrapper - Einfache Schnittstelle zur automatischen Funktionserstellung.
+
+    Diese Funktion ist nur ein Wrapper für die Magie des Funktion() Konstruktors.
+    Seit der Magic Factory Implementation kann man einfach Funktion(eingabe) verwenden!
 
     Args:
         eingabe: String, SymPy-Ausdruck, Funktion-Objekt oder Tuple (zaehler, nenner)
@@ -406,64 +470,19 @@ def erstelle_funktion_automatisch(
 
     Returns:
         Funktion: Automatisch erkannte und erstellte Funktion (spezialisierte Klasse)
+
+    Examples:
+        >>> f = erstelle_funktion_automatisch("x^2 - 4x + 3")
+        >>> type(f)  # <class 'schul_analysis.quadratisch.QuadratischeFunktion'>
+        >>> f.get_scheitelpunkt()  # (2.0, -1.0)
+
+        >>> g = erstelle_funktion_automatisch("2x + 5")
+        >>> type(g)  # <class 'schul_analysis.lineare.LineareFunktion'>
+        >>> g.steigung  # 2
+
+    Magic Factory Tipp:
+        Seit der Magic Factory kannst du auch einfach schreiben:
+        >>> f = Funktion("x^2 - 4x + 3")  # Gibt automatisch QuadratischeFunktion zurück!
     """
-    # 🔥 FACTORY-LOGIK: Automatische Typenerkennung 🔥
-
-    # Erstelle erstmal eine Basis-Funktion zur Typanalyse
-    basis_funktion = Funktion(eingabe, nenner)
-
-    # Importiere spezialisierte Klassen (zur Vermeidung von Circular Imports)
-    from .ganzrationale import GanzrationaleFunktion
-    from .gebrochen_rationale import (
-        ExponentialRationaleFunktion,
-        GebrochenRationaleFunktion,
-    )
-    from .trigonometrisch import TrigonometrischeFunktion
-
-    # 🔥 AUTOMATISCHE TYPENERKENNUNG 🔥
-    if basis_funktion.ist_ganzrational:
-        # 🔥 FIX: GanzrationaleFunktion hat andere Signatur (kein nenner) 🔥
-        if nenner is not None:
-            # Wenn Nenner angegeben, kombiniere vorher
-            if isinstance(eingabe, tuple) and len(eingabe) == 2:
-                # Tuple-Eingabe (zaehler, nenner)
-                combined_str = f"({eingabe[0]})/({eingabe[1]})"
-                return GanzrationaleFunktion(combined_str)
-            else:
-                combined_str = f"{eingabe}/{nenner}"
-                return GanzrationaleFunktion(combined_str)
-        else:
-            # Konvertiere zu String für ganzrationale Funktion
-            if isinstance(eingabe, Funktion):
-                eingabe_str = eingabe.term()
-            else:
-                eingabe_str = str(eingabe)
-            return GanzrationaleFunktion(eingabe_str)
-    elif basis_funktion.ist_gebrochen_rational:
-        # Konvertiere zu passendem Format für gebrochen-rationale Funktion
-        if isinstance(eingabe, Funktion):
-            eingabe_str = eingabe.term()
-        else:
-            eingabe_str = str(eingabe)
-        if isinstance(nenner, Funktion):
-            nenner_str = nenner.term()
-        else:
-            nenner_str = str(nenner) if nenner is not None else None
-        return GebrochenRationaleFunktion(eingabe_str, nenner_str)
-    elif basis_funktion.ist_exponential_rational:
-        # Konvertiere zu passendem Format für exponential-rationale Funktion
-        if isinstance(eingabe, Funktion):
-            eingabe_str = eingabe.term()
-        else:
-            eingabe_str = str(eingabe)
-        return ExponentialRationaleFunktion(eingabe_str)
-    elif basis_funktion.ist_trigonometrisch:
-        # Konvertiere zu passendem Format für trigonometrische Funktion
-        if isinstance(eingabe, Funktion):
-            eingabe_str = eingabe.term()
-        else:
-            eingabe_str = str(eingabe)
-        return TrigonometrischeFunktion(eingabe_str)
-    else:
-        # Fallback auf Basis-Klasse für gemischte oder allgemeine Funktionen
-        return basis_funktion
+    # Delegiere an die Magie des Konstruktors
+    return Funktion(eingabe, nenner)
