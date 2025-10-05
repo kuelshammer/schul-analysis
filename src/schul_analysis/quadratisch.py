@@ -135,8 +135,12 @@ class QuadratischeFunktion(GanzrationaleFunktion):
 
         # Extrahiere Koeffizienten aus der Funktion
         a = self.oeffnungsfaktor
-        b_koeff = float(self.koeffizienten[-2]) if len(self.koeffizienten) >= 2 else 0
-        c_koeff = float(self.koeffizienten[0]) if len(self.koeffizienten) >= 1 else 0
+        b_koeff = (
+            self.koeffizienten[-2] if len(self.koeffizienten) >= 2 else sp.Integer(0)
+        )
+        c_koeff = (
+            self.koeffizienten[0] if len(self.koeffizienten) >= 1 else sp.Integer(0)
+        )
 
         return b_koeff**2 - 4 * a * c_koeff
 

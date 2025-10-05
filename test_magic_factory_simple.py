@@ -82,10 +82,10 @@ def __(mo):
 
 @app.cell
 def __(mo):
-    from schul_analysis import Funktion
+    from schul_analysis import Funktion as FunktionImport
 
     # Lineare Funktion erstellen
-    g = Funktion("2x + 3")
+    g = FunktionImport("2x + 3")
 
     mo.md(f"""
     **Lineare Funktion**: g(x) = {g.term()}
@@ -96,7 +96,7 @@ def __(mo):
 
     **Steigung**: {g.steigung}
     """)
-    return Funktion, g
+    return FunktionImport, g
 
 
 if __name__ == "__main__":

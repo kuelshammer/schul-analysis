@@ -295,7 +295,7 @@ class Funktion:
         """Berechnet den Funktionswert an einer Stelle"""
         try:
             Ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
-            return float(Ergebnis) if Ergebnis.is_real else Ergebnis
+            return Ergebnis  # Behalte exakte SymPy-Werte bei
         except Exception as e:
             # Pädagogische Fehlermeldungen
             if "division by zero" in str(e).lower():
@@ -322,11 +322,7 @@ class Funktion:
         """Berechnet die Nullstellen"""
         try:
             lösungen = solve(self.term_sympy, self._variable_symbol)
-            return [
-                float(lösung) if lösung.is_real else lösung
-                for lösung in lösungen
-                if lösung.is_real
-            ]
+            return [lösung for lösung in lösungen if lösung.is_real]
         except Exception:
             return []
 
@@ -398,10 +394,10 @@ class Funktion:
         if not self.ist_ganzrational:
             return False
 
-        # Extrahiere Koeffizienten und prüfe Grad
+        # Prüfe Grad (muss 1 sein)
         try:
-            koeffizienten = self.term_sympy.as_poly(self._variable_symbol).coeffs()
-            return len(koeffizienten) <= 2  # Maximal 2 Koeffizienten (ax + b)
+            grad = self.term_sympy.as_poly(self._variable_symbol).degree()
+            return grad == 1
         except Exception:
             return False
 

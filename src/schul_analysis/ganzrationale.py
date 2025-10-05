@@ -144,7 +144,7 @@ class GanzrationaleFunktion(Funktion):
             )
 
         # Für lineare Funktionen: erster Koeffizient (umgekehrt wegen all_coeffs)
-        return float(self.koeffizienten[-1]) if self.koeffizienten else 0
+        return self.koeffizienten[-1] if self.koeffizienten else sp.Integer(0)
 
     def get_y_achsenabschnitt(self) -> float | sp.Basic:
         """
@@ -163,7 +163,7 @@ class GanzrationaleFunktion(Funktion):
             )
 
         # Für lineare Funktionen: letzter Koeffizient (umgekehrt wegen all_coeffs)
-        return float(self.koeffizienten[0]) if len(self.koeffizienten) > 0 else 0
+        return self.koeffizienten[0] if len(self.koeffizienten) > 0 else sp.Integer(0)
 
     def get_nullstelle(self) -> float | sp.Basic:
         """
@@ -209,7 +209,7 @@ class GanzrationaleFunktion(Funktion):
             )
 
         # Für quadratische Funktionen: höchster Koeffizient
-        return float(self.koeffizienten[-1]) if len(self.koeffizienten) >= 3 else 0
+        return self.koeffizienten[-1] if len(self.koeffizienten) >= 3 else sp.Integer(0)
 
     def get_scheitelpunkt(self) -> tuple[float | sp.Basic, float | sp.Basic]:
         """
@@ -232,7 +232,11 @@ class GanzrationaleFunktion(Funktion):
             a = self.get_oeffnungsfaktor()
 
             # Extrahiere b-Koeffizienten (zweiter von rechts)
-            b = float(self.koeffizienten[-2]) if len(self.koeffizienten) >= 2 else 0
+            b = (
+                self.koeffizienten[-2]
+                if len(self.koeffizienten) >= 2
+                else sp.Integer(0)
+            )
 
             x_s = -b / (2 * a)
             y_s = self.wert(x_s)
@@ -270,9 +274,11 @@ class GanzrationaleFunktion(Funktion):
             elif diskriminante == 0:
                 return [-p / 2]  # Eine Nullstelle
             else:
-                # Zwei Nullstellen
-                x1 = -p / 2 + diskriminante**0.5
-                x2 = -p / 2 - diskriminante**0.5
+                # Zwei Nullstellen mit exakten Symbolischen Werten
+                import sympy as sp
+
+                x1 = -p / 2 + sp.sqrt(diskriminante)
+                x2 = -p / 2 - sp.sqrt(diskriminante)
                 return [x1, x2]
         except Exception as e:
             raise ValueError(f"Konnte Nullstellen nicht berechnen: {e}")
