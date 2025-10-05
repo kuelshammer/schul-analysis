@@ -4,7 +4,6 @@ Ganzrationale Funktionen (Polynome) für das Schul-Analysis Framework.
 Pädagogischer Wrapper mit spezialisierten Methoden für lineare und quadratische Funktionen.
 """
 
-
 import sympy as sp
 
 from .funktion import Funktion
@@ -259,8 +258,22 @@ class GanzrationaleFunktion(Funktion):
             )
 
         try:
-            # Hole allgemeine Nullstellen (verwendet automatisch die beste Methode)
-            return self.nullstellen()
+            # Berechne Nullstellen direkt mit pq-Formel
+            p = self.koeffizienten[-2] / self.koeffizienten[-1]
+            q = self.koeffizienten[-3] / self.koeffizienten[-1]
+
+            # pq-Formel: x = -p/2 ± sqrt((p/2)² - q)
+            diskriminante = (p / 2) ** 2 - q
+
+            if diskriminante < 0:
+                return []  # Keine reellen Nullstellen
+            elif diskriminante == 0:
+                return [-p / 2]  # Eine Nullstelle
+            else:
+                # Zwei Nullstellen
+                x1 = -p / 2 + diskriminante**0.5
+                x2 = -p / 2 - diskriminante**0.5
+                return [x1, x2]
         except Exception as e:
             raise ValueError(f"Konnte Nullstellen nicht berechnen: {e}")
 
