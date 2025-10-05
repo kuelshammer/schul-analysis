@@ -22,6 +22,7 @@ from .analysis import (
     Grenzwert,
     Integral,
     Kürzen,
+    Nullstellen,  # Add this
     Polstellen,
     Schnittpunkt,
     Wendepunkte,
@@ -34,6 +35,7 @@ from .api import (
     # Funktionstypen für fortgeschrittene Nutzer
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
+    GemischteFunktion,
     ParametrischeFunktion,
     Taylor,
     ableitung,
@@ -61,12 +63,17 @@ from .api import (
 # FUNKTIONSKLASSEN (für direkte Verwendung)
 # =============================================================================
 from .funktion import (
-    Achsensymmetrie,
     Funktion,
-    PruefeAchsensymmetrie,
-    PruefePunktsymmetrie,
-    Punktsymmetrie,
     erstelle_funktion_automatisch,
+)
+
+# =============================================================================
+# SYMBOLISCHE KOMPONENTEN
+# =============================================================================
+from .lineare_gleichungssysteme import (
+    LineareGleichung,
+    interpolationspolynom,
+    plotte_loesung,
 )
 
 # Duplicate imports removed - these are already imported from .api above
@@ -80,11 +87,11 @@ from .schmiegung import (
     SchmiegkurveAllgemein,
     Schmiegparabel,
 )
+from .symbolic import Parameter, Variable
 
 # =============================================================================
 # SYMBOLISCHE KOMPONENTEN
 # =============================================================================
-from .symbolic import Parameter, Variable
 from .taylor import (
     Konvergenzradius,
     MacLaurin,
@@ -101,12 +108,6 @@ x = Variable("x")
 t = Variable("t")
 a = Parameter("a")
 k = Parameter("k")
-
-from .lineare_gleichungssysteme import (
-    LineareGleichung,
-    interpolationspolynom,
-    plotte_loesung,
-)
 
 # Typ-Aliases für bessere Lesbarkeit
 Polstellen = Polstellen  # Englische Variante auch verfügbar
@@ -148,6 +149,7 @@ __all__ = [
     "GanzrationaleFunktion",
     "GebrochenRationaleFunktion",
     "ExponentialRationaleFunktion",
+    "GemischteFunktion",
     "ParametrischeFunktion",
     "LGS",
     "Taylorpolynom",
@@ -174,6 +176,7 @@ __all__ = [
     "Grenzwert",
     "AsymptotischesVerhalten",
     "Polstellen",
+    "Nullstellen",  # Add this
     # 📐 SPEZIALFUNKTIONEN
     "Achsensymmetrie",
     "Punktsymmetrie",

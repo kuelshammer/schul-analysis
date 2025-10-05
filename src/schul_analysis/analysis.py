@@ -212,26 +212,29 @@ def Integral(funktion, a: float, b: float) -> float:
         # Werte das bestimmte Integral aus
         integral_wert = float(stammfunktion.subs(x, b) - stammfunktion.subs(x, a))
         return integral_wert
-    except Exception:
-        # Fallback: Numerische Integration mit scipy
-        try:
-            from scipy import integrate as scipy_integrate
+    except (sp.SympifyError, ValueError, TypeError) as e:
+        # Spezifische Fehler bei der Symbolik-Integration
+        raise ValueError(f"Symbolische Integration fehlgeschlagen: {e}") from e
 
-            def integrand(x_val):
-                return funktion.wert(x_val)
+    # Numerische Integration als Alternative für komplexe Fälle
+    try:
+        from scipy import integrate as scipy_integrate
 
-            integral_wert, _ = scipy_integrate.quad(integrand, a, b)
-            return integral_wert
-        except ImportError:
-            # Fallback: Trapezregel
-            n = 1000
-            h = (b - a) / n
-            summe = 0.5 * (funktion.wert(a) + funktion.wert(b))
+        def integrand(x_val):
+            return funktion.wert(x_val)
 
-            for i in range(1, n):
-                summe += funktion.wert(a + i * h)
+        integral_wert, _ = scipy_integrate.quad(integrand, a, b)
+        return integral_wert
+    except ImportError:
+        # Fallback: Trapezregel
+        n = 1000
+        h = (b - a) / n
+        summe = 0.5 * (funktion.wert(a) + funktion.wert(b))
 
-            return h * summe
+        for i in range(1, n):
+            summe += funktion.wert(a + i * h)
+
+        return h * summe
 
 
 # ====================
@@ -289,13 +292,17 @@ def Schnittpunkt(f1, f2):
 
         for loesung in loesungen:
             if loesung.is_real:
-                x_wert = float(loesung)
-                y_wert = f1.wert(x_wert)
-                schnittpunkte.append((x_wert, y_wert))
+                try:
+                    x_wert = float(loesung)
+                    y_wert = f1.wert(x_wert)
+                    schnittpunkte.append((x_wert, y_wert))
+                except (ValueError, TypeError):
+                    # Überspringe ungültige Lösungen statt alle zu verwerfen
+                    continue
 
         return schnittpunkte
-    except Exception:
-        return []
+    except (sp.SympifyError, ValueError, TypeError) as e:
+        raise ValueError(f"Konnte Schnittpunkte nicht berechnen: {e}") from e
 
 
 # ====================
@@ -335,9 +342,15 @@ def Grenzwert(funktion, zielpunkt: float, richtung: str = "beidseitig") -> float
             limit_val = sp.limit(expr, x, zielpunkt)
 
         return float(limit_val) if limit_val.is_Number else None
-    except Exception:
-        # Fallback: Numerische Annäherung
-        return _numerischer_grenzwert(funktion, zielpunkt, richtung)
+    except (sp.SympifyError, ValueError, NotImplementedError) as e:
+        # Spezifische Fehler bei der Grenzwertberechnung
+        from .errors import MathematischerDomainError
+
+        raise MathematischerDomainError(
+            f"Grenzwertberechnung fehlgeschlagen: {e}",
+            domain="Grenzwert",
+            valid_range="Funktion muss an der Stelle definiert sein",
+        ) from e
 
 
 def _numerischer_grenzwert(
@@ -359,8 +372,14 @@ def _numerischer_grenzwert(
                 return (links + rechts) / 2
             else:
                 return None
-    except Exception:
-        return None
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        from .errors import MathematischerDomainError
+
+        raise MathematischerDomainError(
+            f"Numerische Grenzwertberechnung fehlgeschlagen: {e}",
+            domain="Grenzwert",
+            valid_range="Funktion muss in der Umgebung definiert sein",
+        ) from e
 
 
 def AsymptotischesVerhalten(funktion) -> dict:
@@ -390,15 +409,15 @@ def AsymptotischesVerhalten(funktion) -> dict:
     try:
         limit_inf = sp.limit(expr, x, sp.oo)
         verhalten["x->inf"] = str(limit_inf)
-    except Exception:
-        verhalten["x->inf"] = "undefiniert"
+    except (sp.SympifyError, ValueError, NotImplementedError) as e:
+        verhalten["x->inf"] = f"berechnungsfehler: {e}"
 
     # Analyse für x -> -∞
     try:
         limit_neg_inf = sp.limit(expr, x, -sp.oo)
         verhalten["x->-inf"] = str(limit_neg_inf)
-    except Exception:
-        verhalten["x->-inf"] = "undefiniert"
+    except (sp.SympifyError, ValueError, NotImplementedError) as e:
+        verhalten["x->-inf"] = f"berechnungsfehler: {e}"
 
     # Analyse für Polstellen (falls vorhanden)
     if hasattr(funktion, "polstellen"):
@@ -408,14 +427,14 @@ def AsymptotischesVerhalten(funktion) -> dict:
             try:
                 links = sp.limit(expr, x, pol, dir="-")
                 verhalten[f"x->{pol}-"] = str(links)
-            except Exception:
-                verhalten[f"x->{pol}-"] = "undefiniert"
+            except (sp.SympifyError, ValueError, NotImplementedError) as e:
+                verhalten[f"x->{pol}-"] = f"berechnungsfehler: {e}"
 
             # Rechtseitiger Grenzwert
             try:
                 rechts = sp.limit(expr, x, pol, dir="+")
                 verhalten[f"x->{pol}+"] = str(rechts)
-            except Exception:
-                verhalten[f"x->{pol}+"] = "undefiniert"
+            except (sp.SympifyError, ValueError, NotImplementedError) as e:
+                verhalten[f"x->{pol}+"] = f"berechnungsfehler: {e}"
 
     return verhalten

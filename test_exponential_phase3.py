@@ -16,7 +16,7 @@ def test_exponential_rationale_funktion():
 
     # Test 1: Einfache Funktion f(x) = (e^x + 1)/(e^x - 1)
     print("Test 1: f(x) = (e^x + 1)/(e^x - 1)")
-    f1 = ExponentialRationaleFunktion("x+1", "x-1", exponent_param=1.0)
+    f1 = ExponentialRationaleFunktion("(exp(x)+1)/(exp(x)-1)", exponent_param=1.0)
 
     print(f"  Term: {f1.term()}")
     print(f"  LaTeX: {f1.term_latex()}")
@@ -61,7 +61,9 @@ def test_exponential_rationale_funktion():
 
     # Test 5: Komplexere Funktion f(x) = (e^{2x} + x*e^x + 1)/(e^{2x} - 1)
     print("\nTest 5: Komplexere Funktion f(x) = (e^{2x} + x*e^x + 1)/(e^{2x} - 1)")
-    f2 = ExponentialRationaleFunktion("x^2+x+1", "x^2-1", exponent_param=2.0)
+    f2 = ExponentialRationaleFunktion(
+        "(exp(2*x)+x*exp(x)+1)/(exp(2*x)-1)", exponent_param=2.0
+    )
 
     print(f"  Term: {f2.term()}")
 
@@ -94,7 +96,7 @@ def test_vergleich_mit_rational():
     g_rational = GebrochenRationaleFunktion("x^2+1", "x-1")
 
     # Exponential-rationale Funktion: f(x) = (e^{2x} + 1)/(e^x - 1)
-    f_exp = ExponentialRationaleFunktion("x^2+1", "x-1", exponent_param=1.0)
+    f_exp = ExponentialRationaleFunktion("(exp(2*x)+1)/(exp(x)-1)", exponent_param=1.0)
 
     print(f"Rationale Funktion: g(x) = {g_rational.term()}")
     print(f"Exponential-rationale: f(x) = {f_exp.term()}")

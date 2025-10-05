@@ -6,25 +6,19 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 """
 
 import re
-from typing import Any
+from typing import Any, Union
 
 import plotly.graph_objects as go
 import sympy as sp
-from sympy import (
-    Rational,
-    fraction,
-    latex,
-    symbols,
-)
+from sympy import Rational, fraction, latex
 
 from .errors import (
     DivisionDurchNullError,
-    EingabeSyntaxError,
     SicherheitsError,
     UngueltigerAusdruckError,
 )
+from .funktion import Funktion
 from .ganzrationale import GanzrationaleFunktion
-from .symbolic import Parameter, Variable
 
 
 def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
@@ -78,10 +72,12 @@ def _validiere_konstruktor_parameter(zaehler, nenner) -> None:
         _pruefe_division_durch_null(zaehler, nenner)
 
 
-class GebrochenRationaleFunktion:
+class GebrochenRationaleFunktion(Funktion):
     """
-    Repräsentiert eine gebrochen-rationale Funktion f(x) = Z(x)/N(x)
-    mit Zähler und Nenner als ganzrationale Funktionen.
+    Pädagogischer Wrapper für gebrochen-rationale Funktionen.
+
+    Diese Klasse ist ein Thin-Wrapper über der unified Funktion-Klasse,
+    der gebrochen-rationale spezifische Methoden bereitstellt.
     """
 
     def __init__(
@@ -97,261 +93,87 @@ class GebrochenRationaleFunktion:
             nenner: GanzrationaleFunktion, String ("x-1") oder SymPy-Ausdruck.
                     Wenn None und zaehler ist String, wird versucht aus "(x^2+1)/(x-1)" zu parsen
         """
-        # Validiere Konstruktorparameter
-        _validiere_konstruktor_parameter(zaehler, nenner)
+        # 🔥 PÄDAGOGISCHER WRAPPER - Keine komplexe Logik mehr! 🔥
 
-        # Sicherheitsprüfung für String-Eingaben
-        if isinstance(zaehler, str):
-            _validiere_mathematischen_ausdruck(zaehler)
-        if isinstance(nenner, str):
-            _validiere_mathematischen_ausdruck(nenner)
-            # Spezielle Prüfung für Division durch Null
-            if nenner.strip() == "0":
-                raise DivisionDurchNullError()
-
-        self.x = symbols("x")
-
-        # Cache für wiederholte Berechnungen
-        self._cache = {
-            "polstellen": None,
-            "asymptoten": None,
-            "nullstellen": None,
-            "term_str": None,
-            # Cache für Schmiegkurve/Störfunktion Zerlegung
-            "_schmiegkurve": None,
-            "_stoerfunktion": None,
-            "_zerlegung_berechnet": False,
-        }
-
-        # Parser für String-Eingabe im Format "(zaehler)/(nenner)"
+        # Konstruiere die Eingabe für die Basisklasse
         if isinstance(zaehler, str) and nenner is None:
-            self._parse_string_eingabe(zaehler)
+            # String im Format "(zaehler)/(nenner)"
+            eingabe = zaehler
         elif isinstance(zaehler, str) and isinstance(nenner, str):
             # Beide als String übergeben
-            self.zaehler = GanzrationaleFunktion(zaehler)
-            self.nenner = GanzrationaleFunktion(nenner)
+            eingabe = f"({zaehler})/({nenner})"
         elif isinstance(zaehler, (GanzrationaleFunktion, sp.Basic)) and isinstance(
             nenner, (GanzrationaleFunktion, sp.Basic)
         ):
-            # Zaehler und Nenner einzeln übergeben
-            self.zaehler = self._convert_to_ganzrationale(zaehler)
-            self.nenner = self._convert_to_ganzrationale(nenner)
+            # Zaehler und Nenner einzeln übergeben - konvertiere zu Strings
+            zaehler_str = str(
+                zaehler.term_sympy if hasattr(zaehler, "term_sympy") else zaehler
+            )
+            nenner_str = str(
+                nenner.term_sympy if hasattr(nenner, "term_sympy") else nenner
+            )
+            eingabe = f"({zaehler_str})/({nenner_str})"
         else:
             raise TypeError(
                 "Ungültige Eingabeparameter für gebrochen-rationale Funktion"
             )
 
-        # Validiere, dass Nenner nicht Null ist
-        if self.nenner.term_sympy == 0:
-            raise UngueltigerAusdruckError(
-                "Nullfunktion", "Nenner darf nicht die Nullfunktion sein"
-            )
+        # Speichere ursprüngliche Eingabe für Validierung
+        self.original_eingabe = eingabe
 
-        # Erstelle SymPy-Ausdruck für die gesamte Funktion
-        self.term_sympy = self.zaehler.term_sympy / self.nenner.term_sympy
+        # Rufe den Konstruktor der Basisklasse auf
+        super().__init__(eingabe)
 
-        # Initialisiere Parameter-Liste
-        self.parameter: list[Parameter] = []
-        self._extrahiere_parameter()
-
-        # Kürze die Funktion automatisch
-        self._kuerzen()
-
-    def _clear_cache(self):
-        """Leert den Cache nach Änderungen an der Funktion"""
-        for key in self._cache:
-            self._cache[key] = None
-
-    def _extrahiere_parameter(self):
-        """Extrahiert Parameter aus Zähler und Nenner"""
-        # Sammle alle Symbole aus Zähler und Nenner
-        alle_symbole = (
-            self.zaehler.term_sympy.free_symbols | self.nenner.term_sympy.free_symbols
-        ) - {self.x}
-
-        # Klassifiziere Symbole als Parameter (häufige Parameternamen)
-        parameter_kandidaten = []
-        for symbol in alle_symbole:
-            symbol_name = str(symbol)
-            if symbol_name in [
-                "a",
-                "b",
-                "c",
-                "d",
-                "k",
-                "m",
-                "n",
-                "p",
-                "q",
-                "r",
-                "s",
-                "α",
-                "β",
-                "γ",
-            ]:
-                parameter_kandidaten.append(symbol)
-
-        # Erstelle Parameter-Objekte
-        for symbol in parameter_kandidaten:
-            self.parameter.append(Parameter(str(symbol)))
-
-    def _parse_string_eingabe(self, eingabe: str):
-        """Parst String-Eingabe im Format '(x^2+1)/(x-1)'"""
-        eingabe = eingabe.strip()
-
-        if "/" not in eingabe:
-            raise EingabeSyntaxError(eingabe, "(zaehler)/(nenner)")
-
-        # Trenne Zaehler und Nenner
-        teile = eingabe.split("/", 1)
-        zaehler_str = teile[0].strip().lstrip("(").rstrip(")")
-        nenner_str = teile[1].strip().lstrip("(").rstrip(")")
-
-        self.zaehler = GanzrationaleFunktion(zaehler_str)
-        self.nenner = GanzrationaleFunktion(nenner_str)
-
-    def _convert_to_ganzrationale(
-        self, eingabe: GanzrationaleFunktion | str | sp.Basic
-    ) -> GanzrationaleFunktion:
-        """Konvertiert Eingabe zu GanzrationaleFunktion"""
-        if isinstance(eingabe, GanzrationaleFunktion):
-            return eingabe
-        elif isinstance(eingabe, str):
-            return GanzrationaleFunktion(eingabe)
-        elif isinstance(eingabe, sp.Basic):
-            return GanzrationaleFunktion(eingabe)
-        else:
+        # 🔥 PÄDAGOGISCHE VALIDIERUNG mit deutscher Fehlermeldung 🔥
+        if not self.ist_gebrochen_rational:
             raise TypeError(
-                f"Kann {type(eingabe)} nicht in GanzrationaleFunktion umwandeln"
+                f"Die Eingabe '{self.original_eingabe}' ist keine gebrochen-rationale Funktion! "
+                "Eine gebrochen-rationale Funktion muss ein Bruch aus zwei Polynomen sein. "
+                "Hast du vielleicht eine ganzrationale, exponentiale oder trigonometrische Funktion gemeint?"
             )
 
-    def _kuerzen(self):
-        """Kürzt die Funktion durch Zähler und Nenner mit ihrem ggT"""
-        # Nutze SymPy's cancel() Funktion für robuste Kürzung
-        gekuerzter_term = sp.cancel(self.term_sympy)
+        # 🔥 CACHE für wiederholte Berechnungen
+        self._cache = {
+            "polstellen": None,
+            "zaehler_nenner": None,
+        }
 
-        # Wenn sich etwas geändert hat, extrahiere Zähler und Nenner neu
-        if gekuerzter_term != self.term_sympy:
-            self.term_sympy = gekuerzter_term
+    @property
+    def zaehler(self) -> GanzrationaleFunktion:
+        """Gibt den Zähler als GanzrationaleFunktion zurück"""
+        if self._cache["zaehler_nenner"] is None:
+            from sympy import fraction
 
-            # Extrahiere Zähler und Nenner aus dem gekürzten Term
-            if gekuerzter_term.is_rational_function(self.x):
-                # Zerlege in Zähler und Nenner
-                zaehler_expr, nenner_expr = gekuerzter_term.as_numer_denom()
+            zaehler_sympy, _ = fraction(self.term_sympy)
+            self._cache["zaehler_nenner"] = (
+                GanzrationaleFunktion(zaehler_sympy),
+                None,  # Wird bei Bedarf gesetzt
+            )
 
-                # Aktualisiere Zähler und Nenner
-                self.zaehler = GanzrationaleFunktion(zaehler_expr)
-                self.nenner = GanzrationaleFunktion(nenner_expr)
+        if self._cache["zaehler_nenner"][1] is None:
+            from sympy import fraction
 
-                # Cache leeren nach Änderung
-                self._clear_cache()
+            _, nenner_sympy = fraction(self.term_sympy)
+            self._cache["zaehler_nenner"] = (
+                self._cache["zaehler_nenner"][0],
+                GanzrationaleFunktion(nenner_sympy),
+            )
 
-    def kürzen(self) -> "GebrochenRationaleFunktion":
-        """Kürzt die Funktion und gibt sich selbst zurück"""
-        self._kuerzen()
-        # Stelle sicher, dass der Cache immer geleert wird, auch wenn keine Änderung
-        self._clear_cache()
-        return self
+        return self._cache["zaehler_nenner"][0]
 
-    def term(self) -> str:
-        """Gibt den Term als String zurück"""
-        if self._cache["term_str"] is None:
-            zaehler_str = self.zaehler.term()
-            nenner_str = self.nenner.term()
-            self._cache["term_str"] = f"({zaehler_str})/({nenner_str})"
-        return self._cache["term_str"]
+    @property
+    def nenner(self) -> GanzrationaleFunktion:
+        """Gibt den Nenner als GanzrationaleFunktion zurück"""
+        if self._cache["zaehler_nenner"] is None:
+            from sympy import fraction
 
-    def term_latex(self) -> str:
-        """Gibt den Term als LaTeX-String zurück"""
-        return latex(self.term_sympy)
+            zaehler_sympy, nenner_sympy = fraction(self.term_sympy)
+            self._cache["zaehler_nenner"] = (
+                GanzrationaleFunktion(zaehler_sympy),
+                GanzrationaleFunktion(nenner_sympy),
+            )
 
-    def wert(self, x_wert: float) -> float | sp.Basic:
-        """
-        Berechnet den Funktionswert an einer Stelle.
-
-        Args:
-            x_wert: x-Wert an dem die Funktion ausgewertet werden soll
-
-        Returns:
-            Funktionswert als float oder symbolischer Ausdruck (bei Parametern)
-
-        Raises:
-            ValueError: Wenn x_wert eine Polstelle ist (Division durch Null)
-        """
-        # Prüfe, ob x_wert eine Polstelle ist
-        if self._ist_polstelle(x_wert):
-            raise ValueError(f"x = {x_wert} ist eine Polstelle der Funktion")
-
-        # Berechne Zähler und Nenner separat, um symbolische Unterstützung zu nutzen
-        zaehler_wert = self.zaehler.wert(x_wert)
-        nenner_wert = self.nenner.wert(x_wert)
-
-        # Wenn beide Werte konkrete Zahlen sind, teile sie
-        if isinstance(zaehler_wert, (int, float)) and isinstance(
-            nenner_wert, (int, float)
-        ):
-            return float(zaehler_wert) / float(nenner_wert)
-
-        # Andernfalls gib den symbolischen Ausdruck zurück
-        return zaehler_wert / nenner_wert
-
-    def __call__(self, x_wert: float) -> float | sp.Basic:
-        """
-        Macht die Funktion aufrufbar: f(2), f(0.5), etc.
-
-        Args:
-            x_wert: x-Wert, an dem die Funktion ausgewertet werden soll
-
-        Returns:
-            Der Funktionswert als float-Zahl oder symbolischer Ausdruck (bei Parametern)
-
-        Beispiele:
-            >>> f = GebrochenRationaleFunktion(GanzrationaleFunktion("x^2 + 1"), GanzrationaleFunktion("x - 1"))
-            >>> f(2)    # (2^2 + 1)/(2 - 1) = 5.0
-            >>> g = GebrochenRationaleFunktion(GanzrationaleFunktion("a x^2 + 1"), GanzrationaleFunktion("x"))
-            >>> g(1)    # (a*1^2 + 1)/1 = a + 1 (symbolisch)
-
-        Didaktischer Hinweis:
-            Diese Methode ermöglicht die natürliche mathematische Notation f(x),
-            die Schüler aus dem Unterricht kennen.
-        """
-        return self.wert(x_wert)
-
-    def _ist_polstelle(self, x_wert: float) -> bool:
-        """Prüft, ob x_wert eine Polstelle ist"""
-        try:
-            # Versuche, den Nenner auszuwerten
-            nenner_wert = self.nenner.wert(x_wert)
-            if isinstance(nenner_wert, (int, float)):
-                return abs(nenner_wert) < 1e-10
-            # Bei symbolischen Ausdrücken: keine Polstelle erkennbar
-            return False
-        except (ValueError, TypeError, AttributeError):
-            # Bei Fehlern: keine Polstelle erkennbar
-            return False
-
-    def nullstellen(self, real: bool = True, runden=None) -> list[float]:
-        """
-        Berechnet die Nullstellen der Funktion (Zähler-Nullstellen).
-
-        Args:
-            real: Nur reelle Nullstellen zurückgeben
-            runden: Anzahl Nachkommastellen für Rundung (None = exakt)
-
-        Returns:
-            Liste der Nullstellen, wobei Definitionslücken entfernt wurden
-        """
-        zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
-        polstellen = self.polstellen()
-
-        # Entferne Nullstellen, die gleichzeitig Polstellen sind
-        eigentliche_nullstellen = [
-            ns
-            for ns in zaehler_nullstellen
-            if not any(abs(ns - ps) < 1e-10 for ps in polstellen)
-        ]
-
-        return eigentliche_nullstellen
+        return self._cache["zaehler_nenner"][1]
 
     def polstellen(self) -> list[float]:
         """Berechnet die Polstellen der Funktion (Nenner-Nullstellen)"""
@@ -665,8 +487,8 @@ class GebrochenRationaleFunktion:
             quotient, rest = div(self.zaehler.term_sympy, self.nenner.term_sympy)
 
             # Extrahiere Koeffizienten y = mx + b
-            if quotient.is_polynomial(self.x):
-                quotient_poly = sp.poly(quotient, self.x)
+            if quotient.is_polynomial(self._variable_symbol):
+                quotient_poly = sp.poly(quotient, self._variable_symbol)
                 koeffizienten = quotient_poly.all_coeffs()
 
                 if len(koeffizienten) == 2:
@@ -1194,8 +1016,8 @@ class GebrochenRationaleFunktion:
             # Quotientenregel: (u/v)' = (u'v - uv')/v^2
             u = self.zaehler.term_sympy
             v = self.nenner.term_sympy
-            u_strich = diff(u, self.x)
-            v_strich = diff(v, self.x)
+            u_strich = diff(u, self._variable_symbol)
+            v_strich = diff(v, self._variable_symbol)
 
             zaehler_ableitung = u_strich * v - u * v_strich
             nenner_ableitung = v**2
@@ -1281,191 +1103,74 @@ class GebrochenRationaleFunktion:
 # =============================================================================
 
 
-class ExponentialRationaleFunktion:
+class ExponentialRationaleFunktion(Funktion):
     """
-    Repräsentiert eine exponential-rationale Funktion f(x) = P(e^{ax})/Q(e^{ax}),
-    wobei P und Q Polynome sind und a ein reeller Parameter.
+    Pädagogischer Wrapper für exponential-rationale Funktionen.
+
+    Diese Klasse ist ein Thin-Wrapper über der unified Funktion-Klasse,
+    der exponential-rationale spezifische Methoden bereitstellt.
 
     Diese Funktionen lassen sich durch Substitution u = e^{ax} in rationale
     Funktionen transformieren, was die Analyse asymptotischen Verhaltens ermöglicht.
     """
 
-    @classmethod
-    def _erstelle_aus_string(cls, eingabe: str):
-        """
-        Factory-Methode zur Erstellung aus einem String mit exp()-Funktionen.
-
-        Args:
-            eingabe: String wie "exp(x) + 1", "(exp(x)+1)/(exp(x)-1)", etc.
-
-        Returns:
-            ExponentialRationaleFunktion
-        """
-        # Finde alle exp() Ausdrücke
-        import re
-
-        # Finde alle exp() Ausdrücke und extrahiere deren Argumente
-        exp_matches = re.findall(r"exp\(([^)]+)\)", eingabe)
-        if not exp_matches:
-            raise ValueError(f"Keine exp() Funktion in Eingabe gefunden: {eingabe}")
-
-        # Bestimme den Exponentialparameter (vereinfacht: nehme den ersten)
-        exp_arg = exp_matches[0].strip()
-
-        # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
-        if exp_arg == "x":
-            a_param = 1.0
-        elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
-            # Form wie k*x oder kx
-            coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
-            if coeff_match:
-                a_param = float(coeff_match.group(1) if coeff_match.group(1) else "1")
-            else:
-                a_param = 1.0
-        else:
-            # Komplexerer Ausdruck - Standardwert verwenden
-            a_param = 1.0
-
-        # Ersetze exp(...) durch x für die rationale Funktion
-        verarbeitete_eingabe = re.sub(r"exp\([^)]+\)", "x", eingabe)
-
-        # Prüfe ob es ein Bruch ist
-        if "/" in verarbeitete_eingabe:
-            # Trenne in Zähler und Nenner
-            teile = verarbeitete_eingabe.split("/", 1)
-            zaehler_str = teile[0].strip()
-            nenner_str = teile[1].strip()
-
-            # Entferne Klammern wenn vorhanden
-            zaehler_str = zaehler_str.strip("()")
-            nenner_str = nenner_str.strip("()")
-
-            return cls(zaehler_str, nenner_str, exponent_param=a_param)
-        else:
-            # Nur Zähler
-            zaehler_str = verarbeitete_eingabe.strip("()")
-            return cls(zaehler_str, "1", exponent_param=a_param)
-
     def __init__(
         self,
-        zaehler: GanzrationaleFunktion | str | sp.Basic,
-        nenner: GanzrationaleFunktion | str | sp.Basic,
+        eingabe: Union[str, sp.Basic, "Funktion"],
         exponent_param: float = 1.0,
     ):
         """
         Konstruktor für exponential-rationale Funktionen.
 
         Args:
-            zaehler: Polynom in e^{ax} als GanzrationaleFunktion, String oder SymPy-Ausdruck
-            nenner: Polynom in e^{ax} als GanzrationaleFunktion, String oder SymPy-Ausdruck
+            eingabe: String, SymPy-Ausdruck oder Funktion, der eine exponential-rationale Funktion darstellt
             exponent_param: Parameter a in e^{ax} (Standard: 1.0)
         """
-        # Validiere Konstruktorparameter
-        _validiere_konstruktor_parameter(zaehler, nenner)
-
-        # Sicherheitsprüfung für String-Eingaben
-        if isinstance(zaehler, str):
-            _validiere_mathematischen_ausdruck(zaehler)
-        if isinstance(nenner, str):
-            _validiere_mathematischen_ausdruck(nenner)
-            # Spezielle Prüfung für Division durch Null
-            if nenner.strip() == "0":
-                raise DivisionDurchNullError()
-
-        self.x = symbols("x")
+        # 🔥 PÄDAGOGISCHER WRAPPER - Keine komplexe Logik mehr! 🔥
         self.a = exponent_param  # Parameter für e^{ax}
 
-        # Cache für wiederholte Berechnungen
-        self._cache = {
-            "transformierte_funktion": None,
-            "schmiegkurve": None,
-            "stoerfunktion": None,
-            "zerlegung_berechnet": False,
-            "asymptoten": None,
-        }
+        # Speichere ursprüngliche Eingabe für Validierung
+        self.original_eingabe = str(eingabe)
 
-        # Erstelle Zähler und Nenner
-        self.zaehler = self._convert_to_ganzrationale(zaehler)
-        self.nenner = self._convert_to_ganzrationale(nenner)
-
-        # Validiere, dass Nenner nicht Null ist
-        if self.nenner.term_sympy == 0:
-            raise UngueltigerAusdruckError(
-                "Nullfunktion", "Nenner darf nicht die Nullfunktion sein"
-            )
-
-        # Erstelle SymPy-Ausdruck für die gesamte Funktion
-        self.term_sympy = self._erzeuge_exponential_funktion()
-
-        # Initialisiere Parameter-Liste
-        self.parameter: list[Parameter] = []
-        self._extrahiere_parameter_exponential()
-
-    def _extrahiere_parameter_exponential(self):
-        """Extrahiert Parameter aus Zähler und Nenner der exponential-rationalen Funktion"""
-        # Sammle alle Symbole aus Zähler und Nenner
-        alle_symbole = (
-            self.zaehler.term_sympy.free_symbols | self.nenner.term_sympy.free_symbols
-        ) - {self.x}
-
-        # Klassifiziere Symbole als Parameter (häufige Parameternamen)
-        parameter_kandidaten = []
-        for symbol in alle_symbole:
-            symbol_name = str(symbol)
-            # Erweitere die Liste der Parameternamen
-            if symbol_name in [
-                "a",
-                "b",
-                "c",
-                "d",
-                "k",
-                "m",
-                "n",
-                "p",
-                "q",
-                "r",
-                "s",
-                "α",
-                "β",
-                "γ",
-            ]:
-                parameter_kandidaten.append(symbol)
-
-        # Erstelle Parameter-Objekte
-        for symbol in parameter_kandidaten:
-            self.parameter.append(Parameter(str(symbol)))
-
-    def _convert_to_ganzrationale(
-        self, eingabe: GanzrationaleFunktion | str | sp.Basic
-    ) -> GanzrationaleFunktion:
-        """Konvertiert Eingabe zu GanzrationaleFunktion"""
-        if isinstance(eingabe, GanzrationaleFunktion):
-            return eingabe
-        elif isinstance(eingabe, str):
-            return GanzrationaleFunktion(eingabe)
+        # 🔥 UNIFIED ARCHITECTURE: Delegiere an Basis-Klasse 🔥
+        # Konstruiere die Eingabe für die Basisklasse
+        if isinstance(eingabe, str):
+            super().__init__(eingabe)
         elif isinstance(eingabe, sp.Basic):
-            return GanzrationaleFunktion(eingabe)
+            super().__init__(eingabe)
+        elif isinstance(eingabe, Funktion):
+            super().__init__(eingabe.term())
         else:
+            raise TypeError(f"Unsupported input type: {type(eingabe)}")
+
+        # 🔥 PÄDAGOGISCHE VALIDIERUNG mit deutscher Fehlermeldung 🔥
+        if not self.ist_exponential_rational:
             raise TypeError(
-                f"Kann {type(eingabe)} nicht in GanzrationaleFunktion umwandeln"
+                f"Die Eingabe '{self.original_eingabe}' ist keine exponential-rationale Funktion! "
+                "Eine exponential-rationale Funktion muss exp(x)-Terme enthalten. "
+                "Hast du vielleicht eine ganzrationale, gebrochen-rationale oder trigonometrische Funktion gemeint?"
             )
 
-    def _erzeuge_exponential_funktion(self) -> sp.Basic:
-        """
-        Erzeugt die exponential-rationale Funktion f(x) = P(e^{ax})/Q(e^{ax}).
+        # 🔥 CACHE für wiederholte Berechnungen
+        self._cache = {}
 
-        Returns:
-            SymPy-Ausdruck der exponential-rationalen Funktion
-        """
-        # Substituiere x -> e^{ax} in Zähler und Nenner
-        exp_sub = sp.exp(self.a * self.x)
+    def __str__(self) -> str:
+        """String-Repräsentation"""
+        return str(self.term_sympy)
 
-        zaehler_exp = self.zaehler.term_sympy.subs(self.x, exp_sub)
-        nenner_exp = self.nenner.term_sympy.subs(self.x, exp_sub)
+    def __repr__(self) -> str:
+        """Repräsentation für debugging"""
+        return f"ExponentialRationaleFunktion('{self.term()}', exponent_param={self.a})"
 
-        return zaehler_exp / nenner_exp
+    def __eq__(self, other) -> bool:
+        """Vergleich zweier Funktionen auf Gleichheit"""
+        if not isinstance(other, ExponentialRationaleFunktion):
+            return False
+        return (
+            self.term_sympy.equals(other.term_sympy) and abs(self.a - other.a) < 1e-10
+        )
 
-    def _transformiere_zu_rational(self) -> GebrochenRationaleFunktion:
+    def _transformiere_zu_rational(self) -> "GebrochenRationaleFunktion":
         """
         Transformiert die exponential-rationale Funktion in eine rationale Funktion
         durch Substitution u = e^{ax}.
@@ -1474,9 +1179,38 @@ class ExponentialRationaleFunktion:
             GebrochenRationaleFunktion: Transformierte rationale Funktion
         """
         if self._cache["transformierte_funktion"] is None:
-            # Erstelle rationale Funktion mit gleichen Koeffizienten
+            # 🔥 UNIFIED ARCHITECTURE: Analysiere die aktuelle Funktion 🔥
+            # Extrahiere Zähler und Nenner aus der aktuellen Funktion
+            x_symbol = self._variable_symbol
+            u_symbol = sp.Symbol("u")
+
+            # Substituiere e^{ax} durch u
+            substitution = {sp.exp(self.a * x_symbol): u_symbol}
+            transformierter_term = self.term_sympy.subs(substitution)
+
+            # 🔥 FIX: Handle auch einfache Polynome (keine echten Brüche) 🔥
+            # Nach der Substitution haben wir einen Ausdruck in u, aber GebrochenRationaleFunktion
+            # erwartet einen Ausdruck in x. Wir müssen den transformierten Term als rational in x behandeln.
+            from sympy import fraction
+
+            # Zerlege in Zähler und Nenner
+            zaehler_expr, nenner_expr = fraction(transformierter_term.together())
+
+            # Erstelle eine einfache rationale Funktion in x durch Ersetzung von u durch x
+            # Dies ist ein Workaround, um die Typen-Prüfung zu umgehen
+            x_fuer_rationale = sp.Symbol("x")
+            einfache_zaehler = (
+                zaehler_expr.subs(u_symbol, x_fuer_rationale)
+                if zaehler_expr != 1
+                else 1
+            )
+            einfacher_nenner = (
+                nenner_expr.subs(u_symbol, x_fuer_rationale) if nenner_expr != 1 else 1
+            )
+
+            # Erstelle rationale Funktion mit den vereinfachten Ausdrücken
             self._cache["transformierte_funktion"] = GebrochenRationaleFunktion(
-                self.zaehler, self.nenner
+                einfache_zaehler, einfacher_nenner
             )
 
         return self._cache["transformierte_funktion"]
@@ -1515,15 +1249,17 @@ class ExponentialRationaleFunktion:
             ExponentialRationaleFunktion: Transformierte Funktion
         """
         if isinstance(rationale_funktion, GanzrationaleFunktion):
+            # 🔥 UNIFIED ARCHITECTURE FIX: Erstelle kombinierten Ausdruck 🔥
+            ganzrational_term = rationale_funktion.term()
             # Für ganzrationale Funktionen: Nenner = 1
-            return ExponentialRationaleFunktion(
-                rationale_funktion, GanzrationaleFunktion("1"), self.a
-            )
+            voller_term = f"({ganzrational_term})/1"
+            return ExponentialRationaleFunktion(voller_term, self.a)
         elif isinstance(rationale_funktion, GebrochenRationaleFunktion):
-            # Für gebrochen-rationale Funktionen: Zähler und Nenner extrahieren
-            return ExponentialRationaleFunktion(
-                rationale_funktion.zaehler, rationale_funktion.nenner, self.a
-            )
+            # 🔥 UNIFIED ARCHITECTURE FIX: Erstelle kombinierten Ausdruck 🔥
+            zaehler_term = rationale_funktion.zaehler.term()
+            nenner_term = rationale_funktion.nenner.term()
+            voller_term = f"({zaehler_term})/({nenner_term})"
+            return ExponentialRationaleFunktion(voller_term, self.a)
         else:
             raise TypeError(
                 f"Kann {type(rationale_funktion)} nicht transformieren. "
@@ -1585,9 +1321,19 @@ class ExponentialRationaleFunktion:
         Returns:
             str: String-Darstellung der Funktion
         """
-        zaehler_str = self.zaehler.term().replace("x", f"e^{{{self.a}x}}")
-        nenner_str = self.nenner.term().replace("x", f"e^{{{self.a}x}}")
-        return f"({zaehler_str})/({nenner_str})"
+        # Für die Anzeige verwenden wir die ursprüngliche SymPy-Darstellung
+        # die bereits korrekt formatiert ist
+
+        # Konvertiere den SymPy-Ausdruck zu einem lesbareren Format
+        term_str = str(self.term_sympy)
+
+        # Ersetze ** durch ^ für Konsistenz mit der restlichen API
+        term_str = term_str.replace("**", "^")
+
+        # Ersetze exp durch e^ für bessere Lesbarkeit (erwartetes Format)
+        term_str = term_str.replace("exp(", "e^(")
+
+        return term_str
 
     def term_latex(self) -> str:
         """
@@ -1617,7 +1363,7 @@ class ExponentialRationaleFunktion:
 
         try:
             # Substituiere x-Wert in den SymPy-Ausdruck
-            result = self.term_sympy.subs(self.x, x_wert)
+            result = self.term_sympy.subs(self._variable_symbol, x_wert)
 
             # Versuche, zu float zu konvertieren
             if hasattr(result, "evalf"):
@@ -1644,7 +1390,9 @@ class ExponentialRationaleFunktion:
             exp_wert = sp.exp(self.a * x_wert)
 
             # Substituiere in den Nenner
-            nenner_bei_exp = self.nenner.term_sympy.subs(self.x, exp_wert)
+            nenner_bei_exp = self.nenner.term_sympy.subs(
+                self._variable_symbol, exp_wert
+            )
 
             # Prüfe, ob der Nenner nahe bei Null ist
             if hasattr(nenner_bei_exp, "evalf"):
@@ -1668,14 +1416,6 @@ class ExponentialRationaleFunktion:
             float: Der Funktionswert
         """
         return self.wert(x_wert)
-
-    def __str__(self) -> str:
-        """String-Repräsentation"""
-        return self.term()
-
-    def __repr__(self) -> str:
-        """Repräsentation für debugging"""
-        return f"ExponentialRationaleFunktion({self.zaehler.term()}, {self.nenner.term()}, exponent_param={self.a})"
 
     def _repr_latex_(self) -> str:
         """LaTeX-Darstellung für Jupyter/Marimo Notebooks"""
@@ -1873,7 +1613,23 @@ class ExponentialRationaleFunktion:
                 neuer_nenner = neuer_nenner.subs(param_symbol, wert)
 
         # Erstelle neue Funktion mit spezialisierten Werten
-        return ExponentialRationaleFunktion(neuer_zaehler, neuer_nenner, self.a)
+        # Erstelle den rationalen Ausdruck aus Zähler und Nenner
+        if neuer_nenner == 1:
+            eingabe = neuer_zaehler
+        else:
+            eingabe = neuer_zaehler / neuer_nenner
+
+        return ExponentialRationaleFunktion(eingabe, exponent_param=self.a)
+
+    @property
+    def funktionstyp(self) -> str:
+        """
+        Gibt den Funktionstyp für Klassifizierung zurück.
+
+        Returns:
+            str: "exponential-rational"
+        """
+        return "exponential-rational"
 
     def nullstellen(self, real: bool = True, runden=None) -> list[float]:
         """
@@ -1888,7 +1644,10 @@ class ExponentialRationaleFunktion:
         """
         # Für exponential-rationale Funktionen: löse P(e^{ax}) = 0
         # Zuerst finde die Nullstellen des Zählerpolynoms P
-        zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
+        if runden is not None:
+            zaehler_nullstellen = self.zaehler.nullstellen(runden=runden)
+        else:
+            zaehler_nullstellen = self.zaehler.nullstellen()
 
         # Transformiere zurück: wenn P(u) = 0, dann u = e^{ax} = nullstelle
         # Also x = ln(nullstelle) / a, für nullstelle > 0
@@ -1915,6 +1674,9 @@ class ExponentialRationaleFunktion:
 
         Für f(x) = P(e^{ax})/Q(e^{ax}) verwenden wir die Kettenregel.
 
+        🔥 UNIFIED ARCHITECTURE: Wir verwenden direkt SymPy's diff-Funktion
+        anstatt der komplexen Transformation.
+
         Args:
             ordnung: Ordnung der Ableitung (Standard: 1)
 
@@ -1926,20 +1688,14 @@ class ExponentialRationaleFunktion:
             >>> f1 = f.ableitung()
             >>> print(f1.term())  # Ableitung mit exp-Funktionen
         """
-        from sympy import diff, exp
+        from sympy import diff
 
-        if ordnung == 1:
-            # Für f(x) = P(e^{ax})/Q(e^{ax}) brauchen wir die Kettenregel
-            # Transformiere zu rationaler Funktion, ableiten, dann zurücktransformieren
-            rationale_funktion = self._transformiere_zu_rational()
-            rationale_ableitung = rationale_funktion.ableitung(1)
+        # 🔥 FIX: Direkte Ableitung mit SymPy statt Transformation 🔥
+        # Verwende die eingebaute SymPy-Ableitungsfunktion
+        abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
 
-            # Transformiere die Ableitung zurück zu exponential-rational
-            return self._transformiere_zurueck(rationale_ableitung)
-        else:
-            # Höhere Ableitungen durch rekursive Anwendung
-            erste_ableitung = self.ableitung(1)
-            return erste_ableitung.ableitung(ordnung - 1)
+        # Erstelle neue ExponentialRationaleFunktion aus dem abgeleiteten Term
+        return ExponentialRationaleFunktion(abgeleiteter_term, exponent_param=self.a)
 
     def extrempunkte(self) -> list[tuple[float, float, str]]:
         """

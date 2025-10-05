@@ -17,9 +17,10 @@ import marimo as mo
 import plotly.graph_objects as go
 import sympy as sp
 from plotly.subplots import make_subplots
-from sympy import Poly, Rational, diff, factor, latex, solve, symbols, sympify
+from sympy import Poly, Rational, diff, factor, latex, solve, symbols
 
 from .config import config
+from .funktion import Funktion
 from .symbolic import _Parameter, _Variable
 
 # Logger instance for the module
@@ -52,10 +53,17 @@ def _runde_wert(wert, runden=None):
         return wert
 
 
-class GanzrationaleFunktion:
+class GanzrationaleFunktion(Funktion):
     """
-    Repräsentiert eine ganzrationale Funktion (Polynom) mit verschiedenen
-    Konstruktor-Optionen und Visualisierungsmethoden.
+    Pädagogischer Wrapper für ganzrationale Funktionen (Polynome).
+
+    Diese Klasse bietet eine spezialisierte Schnittstelle für Polynome
+    mit deutscher Fehlermeldung und typspezifischen Methoden.
+
+    Examples:
+        >>> f = GanzrationaleFunktion("x^2 - 4x + 3")
+        >>> g = GanzrationaleFunktion([1, -4, 3])  # x² - 4x + 3
+        >>> h = GanzrationaleFunktion({2: 1, 1: -4, 0: 3})  # x² - 4x + 3
     """
 
     def __init__(
@@ -72,66 +80,93 @@ class GanzrationaleFunktion:
             variable: Optional expliziter Variablenname (überschreibt automatische Erkennung)
             parameter: Optionale Liste von Parameternamen (überschreibt automatische Erkennung)
         """
-        self.original_eingabe = str(eingabe)  # Original eingabe speichern
+        # 🔥 PÄDAGOGISCHER WRAPPER - Verarbeite verschiedene Eingabeformate 🔥
 
-        # Neue Eigenschaften für automatische Symbolerkennung
-        self.variablen: list[_Variable] = []
-        self.parameter: list[_Parameter] = []
-        self.hauptvariable: _Variable | None = None
+        # Speichere Original-Eingabe für deutsche Fehlermeldungen
+        self.original_eingabe = str(eingabe)
 
-        # Speichere explizite Vorgaben
-        self._explizite_variable = variable
-        self._explizite_parameter = parameter or []
-
-        # Performance-Cache für lambdify und andere Berechnungen
-        self._cache: dict[str, Any] = {}
-
-        if isinstance(eingabe, str):
-            # String-Konstruktor mit robuster Verarbeitung und automatischer Symbolerkennung
-            self.term_str, self.term_sympy = self._parse_string_eingabe_mit_symbols(
-                eingabe
-            )
-        elif isinstance(eingabe, list):
-            # Listen-Konstruktor: [1, 0, -2, 1] für x³ - 2x + 1 (Standard x als Variable)
-            self.x = symbols("x")
-            self.variablen = [_Variable("x")]
-            self.hauptvariable = self.variablen[0]
-            self.term_str = self._liste_zu_string(eingabe)
-            self.term_sympy = self._liste_zu_sympy(eingabe)
-        elif isinstance(eingabe, dict):
-            # Dictionary-Konstruktor: {3: 1, 1: -2, 0: 1} für x³ - 2x + 1 (Standard x als Variable)
-            self.x = symbols("x")
-            self.variablen = [_Variable("x")]
-            self.hauptvariable = self.variablen[0]
-            self.term_str = self._dict_zu_string(eingabe)
-            self.term_sympy = self._dict_zu_sympy(eingabe)
-        elif isinstance(eingabe, sp.Basic):
-            # SymPy-Ausdruck-Konstruktor - versuche auch hier Symbolerkennung
-            self.term_str = str(eingabe)
-            self.term_sympy = eingabe
-            self._erkenne_und_klassifiziere_symbole(self.term_sympy)
-            # Validiere, dass es wirklich ein Polynom ist
-            if self.hauptvariable and not self.term_sympy.is_polynomial(
-                self.hauptvariable.symbol
-            ):
-                raise TypeError(
-                    "SymPy-Ausdruck ist kein Polynom in der erkannten Hauptvariable"
-                )
+        # Konvertiere verschiedene Eingabeformate zu String für die Basisklasse
+        if isinstance(eingabe, (list, dict)):
+            eingabe_str = self._konvertiere_eingabe_zu_string(eingabe)
+            super().__init__(eingabe_str)
         else:
+            super().__init__(eingabe)
+
+        # 🔥 PÄDAGOGISCHE VALIDIERUNG mit deutscher Fehlermeldung 🔥
+        if not self.ist_ganzrational:
             raise TypeError(
-                "Eingabe muss String, Liste, Dictionary oder SymPy-Ausdruck sein"
+                f"Die Eingabe '{self.original_eingabe}' ist keine ganzrationale Funktion! "
+                "Eine ganzrationale Funktion muss ein Polynom sein (nur Summen von x^n Termen). "
+                "Hast du vielleicht eine gebrochen-rationale, exponentielle oder trigonometrische Funktion gemeint?"
             )
 
-        # Koeffizienten extrahieren (als exakte SymPy-Objekte)
+        # 🔥 SPEZIFISCHE ATTRIBUTE für ganzrationale Funktionen 🔥
+        # (Erst NACH der Validierung, da wir sonst bei gebrochen-rationalen Funktionen crashen)
         self.koeffizienten = self._extrahiere_koeffizienten()
+        self._cache = {}
 
-        # Abwärtskompatibilität: self.x für bestehenden Code
-        if not hasattr(self, "x") or self.x is None:
-            self.x = self.hauptvariable.symbol if self.hauptvariable else symbols("x")
+    def grad(self) -> int:
+        """Gibt den Grad des Polynoms zurück"""
+        return sp.Poly(self.term_sympy, self._variable_symbol).degree()
+
+    def _konvertiere_eingabe_zu_string(self, eingabe: list | dict) -> str:
+        """Konvertiert Listen- oder Dictionary-Eingabe zu String"""
+        if isinstance(eingabe, list):
+            return self._liste_zu_string(eingabe)
+        elif isinstance(eingabe, dict):
+            return self._dict_zu_string(eingabe)
+        else:
+            raise TypeError("Eingabe muss Liste oder Dictionary sein")
+
+    def _liste_zu_string(self, koeffizienten: list[float]) -> str:
+        """Konvertiert Koeffizienten-Liste zu String-Repräsentation"""
+        terme = []
+        for i, koeff in enumerate(reversed(koeffizienten)):
+            if koeff == 0:
+                continue
+            grad = len(koeffizienten) - 1 - i
+            if grad == 0:
+                terme.append(str(koeff))
+            elif grad == 1:
+                if koeff == 1:
+                    terme.append("x")
+                elif koeff == -1:
+                    terme.append("-x")
+                else:
+                    terme.append(f"{koeff}x")
+            else:
+                if koeff == 1:
+                    terme.append(f"x^{grad}")
+                elif koeff == -1:
+                    terme.append(f"-x^{grad}")
+                else:
+                    terme.append(f"{koeff}x^{grad}")
+
+        if not terme:
+            return "0"
+
+        # Ersten Term ohne Vorzeichen, Rest mit Vorzeichen
+        ergebnis = terme[0]
+        for term in terme[1:]:
+            if term.startswith("-"):
+                ergebnis += f" - {term[1:]}"
+            else:
+                ergebnis += f" + {term}"
+
+        return ergebnis
+
+    def _dict_zu_string(self, koeffizienten: dict[int, float]) -> str:
+        """Konvertiert Koeffizienten-Dictionary zu String-Repräsentation"""
+        # Konvertiere zu Liste und verwende vorhandene Methode
+        max_grad = max(koeffizienten.keys()) if koeffizienten else 0
+        liste = [0.0] * (max_grad + 1)
+        for grad, koeff in koeffizienten.items():
+            liste[grad] = koeff
+        return self._liste_zu_string(liste)
 
     def _get_x_symbol(self) -> sp.Symbol:
         """Hilfsmethode zur Abwärtskompatibilität - gibt das korrekte x-Symbol zurück"""
-        return self.hauptvariable.symbol if self.hauptvariable else self.x
+        return self._variable_symbol
 
     def _parse_string_eingabe_mit_symbols(self, eingabe: str) -> tuple[str, sp.Basic]:
         """
@@ -158,23 +193,24 @@ class GanzrationaleFunktion:
             self._erkenne_und_klassifiziere_symbole(term_sympy)
             return term_str, term_sympy
 
-        # Für alle anderen Strings: sympify die Arbeit machen lassen
+        # Für alle anderen Strings: modernes SymPy-Parsing verwenden
         try:
-            # Bereinige die Eingabe für bessere Kompatibilität
-            import re
+            from sympy.parsing.sympy_parser import (
+                implicit_multiplication_application,
+                parse_expr,
+                standard_transformations,
+            )
 
+            # Bereinige die Eingabe für bessere Kompatibilität
             bereinigt = eingabe.strip().replace("$", "").replace("^", "**")
 
-            # Implizite Multiplikation hinzufügen (2x -> 2*x, a x -> a*x)
-            bereinigt = re.sub(
-                r"([a-zA-Z])\s*([a-zA-Z])", r"\1*\2", bereinigt
-            )  # Buchstabe-Buchstabe
-            bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)  # Zahl-Buchstabe
-            # Leerzeichen um Operatoren normalisieren
-            bereinigt = re.sub(r"\s+", "", bereinigt)
-
-            # Zuerst mit generischem sympify parsen, um alle Symbole zu erkennen
-            term_sympy: sp.Basic = sympify(bereinigt)
+            # Verwende SymPy's parse_expr mit allen notwendigen Transformationen
+            transformations = standard_transformations + (
+                implicit_multiplication_application,
+            )
+            term_sympy: sp.Basic = parse_expr(
+                bereinigt, transformations=transformations
+            )
 
             # Erkenne und klassifiziere Symbole automatisch
             self._erkenne_und_klassifiziere_symbole(term_sympy)
@@ -233,7 +269,7 @@ class GanzrationaleFunktion:
                     else:
                         # Symbol kommt nur als konstanter Faktor vor -> wahrscheinlicher Parameter
                         parameter_kandidaten.append((symbol, symbol_name))
-                except Exception:
+                except (ValueError, TypeError):
                     # Fallback: Einzelbuchstaben sind eher Parameter, längere Namen eher Variablen
                     if len(symbol_name) == 1:
                         parameter_kandidaten.append((symbol, symbol_name))
@@ -316,27 +352,23 @@ class GanzrationaleFunktion:
         if self._ist_linearfaktor_format(eingabe):
             return self._parse_linearfaktoren(eingabe)
 
-        # Für alle anderen Strings: sympify die Arbeit machen lassen
+        # Für alle anderen Strings: modernes SymPy-Parsing verwenden
         try:
-            # Bereinige die Eingabe für bessere Kompatibilität
-            import re
+            from sympy.parsing.sympy_parser import (
+                parse_expr,
+            )
 
+            # Bereinige die Eingabe für bessere Kompatibilität
             bereinigt = eingabe.strip().replace("$", "").replace("^", "**")
 
-            # Implizite Multiplikation hinzufügen (2x -> 2*x)
-            bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)
-            # Leerzeichen um Operatoren normalisieren
-            bereinigt = re.sub(r"\s+", "", bereinigt)
-
-            # sympify mit korrekter Variable (für Abwärtskompatibilität)
-            term_sympy = sympify(  # type: ignore
-                bereinigt, locals={"x": self.x if hasattr(self, "x") else symbols("x")}
+            # 🔥 UNIFIED ARCHITECTURE FIX: Verwende self._variable_symbol statt self.x 🔥
+            term_sympy = parse_expr(  # type: ignore
+                bereinigt,
+                locals={"x": self._variable_symbol},
             )
 
             # Wichtig: Validiere, dass das Ergebnis wirklich ein Polynom in x ist
-            if not term_sympy.is_polynomial(
-                self.x if hasattr(self, "x") else symbols("x")
-            ):
+            if not term_sympy.is_polynomial(self._variable_symbol):
                 raise ValueError(
                     f"Eingabe '{eingabe}' ist keine ganzrationale Funktion in x."
                 )
@@ -453,14 +485,6 @@ class GanzrationaleFunktion:
 
         return "+".join(terme).replace("+-", "-")
 
-    @property
-    def _variable_symbol(self) -> sp.Symbol:
-        """Gibt das Symbol der Hauptvariable zurück, mit Fallback auf 'x'."""
-        if self.hauptvariable:
-            return self.hauptvariable.symbol
-        # Legacy-Fallback für List/Dict-Eingaben, die hauptvariable nicht setzen
-        return symbols("x")
-
     def _liste_zu_sympy(self, koeff: list[float]) -> sp.Basic:
         """Wandelt Koeffizienten-Liste in SymPy-Ausdruck um."""
         term: sp.Basic = sp.sympify("0")
@@ -537,13 +561,11 @@ class GanzrationaleFunktion:
 
     def _extrahiere_koeffizienten(self) -> list[sp.Basic]:
         """Extrahiert Koeffizienten aus SymPy-Ausdruck."""
-        # Verwende die Hauptvariable für die Koeffizientenextraktion
-        if not self.hauptvariable:
-            # Keine Variable gefunden - konstante Funktion
-            return [self.term_sympy]
+        # Verwende die Hauptvariable aus der Basisklasse
+        variable = self._variable_symbol
 
         # Durch die Polynom-Validierung im Konstruktor ist dies immer möglich
-        poly = Poly(self.term_sympy, self.hauptvariable.symbol)
+        poly = Poly(self.term_sympy, variable)
 
         # all_coeffs() gibt Koeffizienten von höchstem zu niedrigstem Grad zurück
         # Wir kehren die Reihenfolge um für [c0, c1, c2, ...] Format
@@ -646,13 +668,15 @@ class GanzrationaleFunktion:
             lambdified_func = self._cache["_lambdified_func"]
             return lambdified_func(x_wert)
 
-        except Exception:
-            # Fallback auf die ursprüngliche Methode bei Problemen
-            return self.wert(x_wert)
+        except (ValueError, TypeError, KeyError) as e:
+            # Spezifische Fehler anstelle von unendlichem Retry
+            from .errors import MathematischerDomainError
 
-    def grad(self) -> int:
-        """Gibt den Grad des Polynoms zurück"""
-        return sp.Poly(self.term_sympy, self.x).degree()
+            raise MathematischerDomainError(
+                f"Funktionsauswertung bei x={x_wert} fehlgeschlagen: {e}",
+                domain="Funktionsauswertung",
+                valid_range="x muss im Definitionsbereich liegen",
+            ) from e
 
     def kürzen(self) -> "GanzrationaleFunktion":
         """Kürzt die Funktion durch Faktorisierung"""
@@ -688,19 +712,23 @@ class GanzrationaleFunktion:
 
         return neue_funktion
 
-    def nullstellen(self, real: bool = True, runden=None) -> list[sp.Basic]:
+    def nullstellen(
+        self, real: bool = True, runden=None, exakt: bool = False
+    ) -> list[sp.Basic]:
         """Berechnet die Nullstellen der Funktion.
 
         Args:
             real: Nur reelle Nullstellen zurückgeben
             runden: Anzahl Nachkommastellen für Rundung (None = exakt)
+            exakt: Wenn True, gib exakte symbolische Ergebnisse zurück (ignoriert runden)
 
         Returns:
             Liste der Nullstellen als exakte symbolische Ausdrücke oder gerundete Zahlen
         """
         try:
             # Verwende direkt SymPy's solve für alle Fälle
-            lösungen = solve(self.term_sympy, self.x)
+            # 🔥 UNIFIED ARCHITECTURE FIX: Verwende self._variable_symbol statt self.x 🔥
+            lösungen = solve(self.term_sympy, self._variable_symbol)
             nullstellen_liste = []
 
             for lösung in lösungen:
@@ -709,7 +737,10 @@ class GanzrationaleFunktion:
                 if real and lösung.is_real is False:
                     continue
 
-                if lösung.is_real is True:
+                if exakt:
+                    # Gib exakte symbolische Ergebnisse zurück
+                    nullstellen_liste.append(lösung)
+                elif lösung.is_real is True:
                     nullstellen_liste.append(_runde_wert(lösung, runden))
                 else:
                     # Symbolische Lösungen oder komplexe Zahlen
@@ -2207,6 +2238,16 @@ class GanzrationaleFunktion:
         """String-Darstellung der Funktion"""
         return str(self.term_sympy)
 
+    @property
+    def ist_ganzrational(self) -> bool:
+        """Gibt True zurück, da dies eine ganzrationale Funktion ist"""
+        return True
+
+    @property
+    def hat_polstellen(self) -> bool:
+        """Ganzrationale Funktionen haben keine Polstellen"""
+        return False
+
     def __repr__(self) -> str:
         """Repräsentation der Funktion"""
         return str(self.term_sympy)
@@ -2623,3 +2664,15 @@ class GanzrationaleFunktion:
 
         # Erstelle neue Funktion mit spezialisierten Werten
         return GanzrationaleFunktion(neuer_term)
+
+    def mit_wert(self, **werte) -> "GanzrationaleFunktion":
+        """
+        Alias für spezialisiere_parameter - setzt Parameter auf spezifische Werte.
+
+        Args:
+            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            Neue GanzrationaleFunktion mit spezifizierten Parameterwerten
+        """
+        return self.spezialisiere_parameter(**werte)

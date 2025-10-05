@@ -1,86 +1,46 @@
 """
-Vereinheitliche Funktionsklasse für ganzrationale und gebrochen-rationale Funktionen.
+Vereinheitliche Funktionsklasse für das Schul-Analysis Framework.
 
-Diese Klasse vereint die Funktionalität von GanzrationaleFunktion und GebrochenRationaleFunktion
-in einer einzigen, konsistenten API.
+Dies ist die zentrale, echte unified Klasse - keine Wrapper-Logik mehr!
+Alle spezialisierten Klassen erben von dieser Basis-Klasse.
 """
 
-import random
-from typing import Any, Union
+from typing import Union
 
 import sympy as sp
-from sympy import diff, factor, latex, solve, symbols
+from sympy import diff, latex, solve, symbols
+
+# Type Hint compatibility for different Python versions
+try:
+    # Python 3.14+ - native union syntax available
+    UNION_TYPE_AVAILABLE = True
+except ImportError:
+    UNION_TYPE_AVAILABLE = False
 
 from .symbolic import _Parameter, _Variable
 
 
 class Funktion:
     """
-    Vereinheitlichte Funktionsklasse für ganzrationale und gebrochen-rationale Funktionen.
+    Zentrale vereinheitlichte Funktionsklasse für das Schul-Analysis Framework.
 
-    Repräsentiert eine Funktion f(x) = Z(x)/N(x) wobei Z und N ganzrational sind.
-    Spezialfall: N(x) = 1 → ganzrationale Funktion
+    Diese Klasse ist das Herzstück der unified Architecture. Sie kann:
+    - Beliebige mathematische Ausdrücke verarbeiten
+    - Alle Grundoperationen bereitstellen (Ableiten, Integrieren, etc.)
+    - Automatische Typenerkennung durchführen
+    - Als Basis für spezialisierte pädagogische Klassen dienen
 
     Examples:
         >>> f = Funktion("x^2 + 1")              # ganzrational
         >>> g = Funktion("(x^2 + 1)/(x - 1)")    # gebrochen-rational
-        >>> h = Funktion("x^2", "1")               # explizite Trennung
+        >>> h = Funktion("exp(x) + 1")           # exponential
+        >>> t = Funktion("sin(x)")                # trigonometrisch
     """
-
-    def _ist_exponential_funktion(self, eingabe: str | sp.Basic) -> bool:
-        """Prüft, ob die Eingabe eine Exponentialfunktion enthält"""
-        if isinstance(eingabe, str):
-            # Prüfe auf exp() in String
-            return "exp(" in eingabe or "e^" in eingabe
-        elif hasattr(eingabe, "has"):
-            # Prüfe auf exp() in SymPy-Ausdruck
-            return eingabe.has(sp.exp)
-        return False
-
-    def _parse_exponential_funktion(self, eingabe: str | sp.Basic):
-        """Parst eine Exponentialfunktion und erstellt das entsprechende Objekt"""
-        from .gebrochen_rationale import ExponentialRationaleFunktion
-
-        if isinstance(eingabe, str):
-            # Extrahiere den Exponentialparameter und erstelle ExponentialRationaleFunktion
-            # Einfache Heuristik: Suche nach exp(x) oder exp(kx)
-            import re
-
-            # Finde alle exp() Ausdrücke
-            exp_matches = re.findall(r"exp\(([^)]+)\)", eingabe)
-            if exp_matches:
-                # Bestimme den Exponentialparameter (vereinfacht: nehme den ersten)
-                exp_arg = exp_matches[0].strip()
-
-                # Prüfe ob es ein einfaches exp(x) oder exp(kx) ist
-                if exp_arg == "x":
-                    # a_param = 1.0
-                    pass
-                elif re.match(r"^\d*\.?\d*\s*\*?\s*x$", exp_arg):
-                    # Form wie k*x oder kx
-                    coeff_match = re.match(r"^(\d*\.?\d*)\s*\*?\s*x$", exp_arg)
-                    if coeff_match:
-                        # a_param = float(
-                        #     coeff_match.group(1) if coeff_match.group(1) else "1"
-                        # )
-                        pass
-                    else:
-                        # a_param = 1.0  # Nicht verwendet
-                        pass
-                else:
-                    # Komplexerer Ausdruck - Standardwert verwenden
-                    # a_param = 1.0  # Nicht verwendet
-                    pass
-
-                # Erstelle ExponentialRationaleFunktion
-                return ExponentialRationaleFunktion._erstelle_aus_string(eingabe)
-
-        return None
 
     def __init__(
         self,
         eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
-        nenner: Union[str, sp.Basic, "Funktion"] | None = None,
+        nenner: Union[str, sp.Basic, "Funktion", None] = None,
     ):
         """
         Konstruktor für die vereinheitlichte Funktionsklasse.
@@ -93,2436 +53,329 @@ class Funktion:
                      - Tuple: (zaehler_string, nenner_string)
             nenner: Optionaler Nenner (wenn eingabe nur Zähler ist)
         """
-        # 🔥 AUTOMATISCHE FUNKTIONSTYP-ERKENNUNG 🔥
+        # 🔥 ECHTE UNIFIED ARCHITECTURE - Keine Wrapper-Delegation mehr! 🔥
 
-        # Prüfe zuerst auf Exponentialfunktionen
-        if self._ist_exponential_funktion(eingabe):
-            exp_funktion = self._parse_exponential_funktion(eingabe)
-            # Delegiere alle Eigenschaften an die ExponentialRationaleFunktion
-            self.__class__ = type(exp_funktion)
-            self.__dict__ = exp_funktion.__dict__
-            return
+        # Grundlegende Initialisierung
+        self._initialisiere_basiskomponenten()
 
-        self.x = symbols("x")
+        # Verarbeite die Eingabe und erstelle SymPy-Ausdruck
+        self._verarbeite_eingabe(eingabe, nenner)
 
-        # Interne Symbol-Verwaltung
+        # Erstelle SymPy-Ausdrücke für Berechnungen
+        self._erstelle_symbole_ausdruecke()
+
+    def _initialisiere_basiskomponenten(self):
+        """Initialisiert die grundlegenden Komponenten"""
+        self._variable_symbol = symbols("x")
         self.variablen: list[_Variable] = []
         self.parameter: list[_Parameter] = []
         self.hauptvariable: _Variable | None = None
+        self.original_eingabe = ""
+        self._cache = {}
 
-        # Speichere die ursprüngliche Eingabe
+    def _verarbeite_eingabe(
+        self,
+        eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
+        nenner: Union[str, sp.Basic, "Funktion", None] = None,
+    ):
+        """Verarbeitet die Eingabe und erstellt Term"""
+        # Speichere ursprüngliche Eingabe
         if isinstance(eingabe, tuple) and len(eingabe) == 2:
             self.original_eingabe = f"({eingabe[0]})/({eingabe[1]})"
         else:
             self.original_eingabe = str(eingabe)
 
-        # Parse die Eingabe
+        # Verarbeite verschiedene Eingabetypen
         if isinstance(eingabe, tuple) and len(eingabe) == 2:
-            # Explizite Trennung: (zaehler, nenner)
-            zaehler_input, nenner_input = eingabe
-            self.zaehler = self._parse_zaehler(zaehler_input)
-            self.nenner = self._parse_nenner(nenner_input)
+            self._verarbeite_tuple_eingabe(eingabe)
         elif isinstance(eingabe, Funktion):
-            # Kopie eines existierenden Funktion-Objekts
-            self.zaehler = eingabe.zaehler
-            self.nenner = eingabe.nenner
-            self.variablen = eingabe.variablen.copy()
-            self.parameter = eingabe.parameter.copy()
-            self.hauptvariable = eingabe.hauptvariable
+            self._verarbeite_funktions_kopie(eingabe)
         else:
-            # Einziger String oder SymPy-Ausdruck
-            if isinstance(eingabe, str) and "/" in eingabe:
-                # Versuche, als Bruch zu parsen
-                if self._ist_bruch_string(eingabe):
-                    self.zaehler, self.nenner = self._parse_bruch_string(eingabe)
-                else:
-                    # Behandle als ganzrationalen Ausdruck
-                    self.zaehler = self._parse_zaehler(eingabe)
-                    self.nenner = self._parse_nenner("1")
+            self._verarbeite_standard_eingabe(eingabe, nenner)
+
+    def _verarbeite_tuple_eingabe(self, eingabe: tuple[str, str]):
+        """Verarbeitet Tupel-Eingabe (zaehler, nenner)"""
+        zaehler_str, nenner_str = eingabe
+        zaehler_expr = self._parse_string_to_sympy(zaehler_str)
+        nenner_expr = self._parse_string_to_sympy(nenner_str)
+        self.term_sympy = zaehler_expr / nenner_expr
+
+    def _verarbeite_funktions_kopie(self, andere_funktion: "Funktion"):
+        """Verarbeitet Kopie einer anderen Funktion"""
+        self.term_sympy = andere_funktion.term_sympy.copy()
+        self._variable_symbol = andere_funktion._variable_symbol
+        self.variablen = andere_funktion.variablen.copy()
+        self.parameter = andere_funktion.parameter.copy()
+        self.hauptvariable = andere_funktion.hauptvariable
+
+    def _verarbeite_standard_eingabe(
+        self,
+        eingabe: str | sp.Basic,
+        nenner: Union[str, sp.Basic, "Funktion", None] = None,
+    ):
+        """Verarbeitet Standard-Eingabe"""
+        if isinstance(eingabe, str):
+            self.term_sympy = self._parse_string_to_sympy(eingabe)
+        else:
+            self.term_sympy = eingabe
+
+        # Wenn Nenner angegeben, kombiniere
+        if nenner is not None:
+            if isinstance(nenner, str):
+                nenner_expr = self._parse_string_to_sympy(nenner)
             else:
-                # Ganzrationaler Fall
-                self.zaehler = self._parse_zaehler(eingabe)
-                self.nenner = self._parse_nenner("1")
+                nenner_expr = nenner
+            self.term_sympy = self.term_sympy / nenner_expr
 
-        # Erstelle SymPy-Ausdrücke (temporär deaktiviert)
-        # self._erstelle_sympy_ausdruecke()
-
-        # Vereinfache wenn möglich (temporär deaktiviert)
-        # self.kürzen()
-
-        # 🔥 PHASE 2: Intelligente Funktionsklassifizierung 🔥
-        # self._klassifiziere_funktion()
-        # self._erstelle_metadaten()
-
-    def _string_zu_sympy(self, text: str) -> sp.Basic:
-        """Wandelt einen String in einen SymPy-Ausdruck um mit modernem Parsing"""
+    def _parse_string_to_sympy(self, eingabe: str) -> sp.Basic:
+        """Parset String-Eingabe zu SymPy-Ausdruck mit allen Transformationen"""
         from sympy.parsing.sympy_parser import (
             implicit_multiplication_application,
             parse_expr,
             standard_transformations,
         )
 
-        # Normalisiere den String
-        text = text.strip()
+        # Bereinige Eingabe
+        bereinigt = eingabe.strip().replace("$", "").replace("^", "**")
 
-        # Ersetze ^ durch ** (für SymPy)
-        text = text.replace("^", "**")
-
-        # Verwende SymPy's parse_expr mit allen notwendigen Transformationen
+        # Verwende alle Transformationen
         transformations = standard_transformations + (
             implicit_multiplication_application,
         )
 
         try:
-            return parse_expr(text, transformations=transformations)
+            return parse_expr(bereinigt, transformations=transformations)
         except Exception as e:
-            raise ValueError(f"Ungültiger mathematischer Ausdruck: '{text}'") from e
+            raise ValueError(f"Kann '{eingabe}' nicht parsen: {e}")
 
-    def _validiere_mathematischen_ausdruck(self, text: str):
-        """Validiert einen mathematischen Ausdruck"""
-        # Erlaubte Zeichen für mathematische Ausdrücke
-        erlaubte_zeichen = "0123456789+-*/^()x.abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ \t\n"
-
-        for char in text:
-            if char not in erlaubte_zeichen:
-                raise ValueError(
-                    f"Ungültiger Ausdruck '{text}': Ungültiges Zeichen '{char}'"
-                )
-
-        # Mindestens ein gültiges Zeichen
-        if not text.strip():
-            raise ValueError("Leerer Ausdruck")
-
-    def _erkenne_und_klassifiziere_symbole(self, term_sympy: sp.Basic):
-        """Erkennt alle Symbole im Ausdruck und klassifiziert sie als Variablen oder Parameter"""
-        alle_symbole = term_sympy.free_symbols
-
+    def _erstelle_symbole_ausdruecke(self):
+        """Erstelle SymPy-Ausdrücke und führe Initialisierung durch"""
+        # Erkenne Hauptvariable automatisch
+        alle_symbole = self.term_sympy.free_symbols
         if not alle_symbole:
-            # Keine Symbole gefunden - konstante Funktion
-            return
-
-        # Heuristiken zur Klassifizierung
-        for symbol in alle_symbole:
-            symbol_name = str(symbol)
-
-            if symbol_name == "x":
-                # x ist immer die Hauptvariable
-                var = _Variable(symbol_name)
-                self.variablen.append(var)
-                self.hauptvariable = var
-            elif symbol_name in ["t", "y", "z"]:
-                # t, y, z sind typische Variablen
-                var = _Variable(symbol_name)
-                self.variablen.append(var)
-                if self.hauptvariable is None:
-                    self.hauptvariable = var
+            self.hauptvariable = _Variable("x")
+            self._variable_symbol = symbols("x")
+        else:
+            # Heuristik zur Hauptvariablen-Erkennung
+            for symbol in alle_symbole:
+                symbol_name = str(symbol)
+                if symbol_name == "x":
+                    self.hauptvariable = _Variable(symbol_name)
+                    self._variable_symbol = symbol
+                    break
+                elif symbol_name in ["t", "y", "z"]:
+                    self.hauptvariable = _Variable(symbol_name)
+                    self._variable_symbol = symbol
+                    break
             else:
-                # Alle anderen Symbole werden als Parameter behandelt
-                param = _Parameter(symbol_name, symbol)
-                self.parameter.append(param)
+                # Nimm erstes Symbol
+                first_symbol = list(alle_symbole)[0]
+                self.hauptvariable = _Variable(str(first_symbol))
+                self._variable_symbol = first_symbol
+
+        # Klassifiziere Symbole in Variablen und Parameter
+        self._klassifiziere_symbole()
+
+    def _klassifiziere_symbole(self):
+        """Klassifiziert Symbole in Variablen und Parameter"""
+        for symbol in self.term_sympy.free_symbols:
+            symbol_name = str(symbol)
+            if symbol_name == str(self._variable_symbol):
+                self.variablen.append(_Variable(symbol_name))
+            elif symbol_name in ["a", "b", "c", "k", "m", "n", "p", "q"]:
+                self.parameter.append(_Parameter(symbol_name))
+            else:
+                # Default: als Variable behandeln
+                self.variablen.append(_Variable(symbol_name))
+
+    # 🔥 KERNFUNKTIONALITÄT - Alle zentral in einer Klasse! 🔥
 
     def term(self) -> str:
         """Gibt den Term als String zurück"""
-        if hasattr(self, "zaehler") and hasattr(self, "nenner"):
-            if self.nenner.term() == "1":
-                return self.zaehler.term()
-            else:
-                return f"({self.zaehler.term()})/({self.nenner.term()})"
-        else:
-            return str(getattr(self, "term_sympy", "unknown"))
+        return str(self.term_sympy).replace("**", "^")
 
-    def _parse_zaehler(self, eingabe: str | sp.Basic) -> "Funktion":
-        """Parst den Zähler als Funktion-Objekt"""
-        if isinstance(eingabe, str):
-            # Validiere den mathematischen Ausdruck
-            self._validiere_mathematischen_ausdruck(eingabe)
+    def term_latex(self) -> str:
+        """Gibt den Term als LaTeX-String zurück"""
+        return latex(self.term_sympy)
 
-            # Erstelle temporäres Funktion-Objekt nur für den Zähler
-            temp_funktion = Funktion.__new__(Funktion)
-            temp_funktion.x = self.x
-            temp_funktion.variablen = []
-            temp_funktion.parameter = []
-            temp_funktion.hauptvariable = None
-            temp_funktion.original_eingabe = eingabe
+    def __call__(self, x_wert):
+        """Ermöglicht f(x) Syntax für Funktionsauswertung"""
+        return self.wert(x_wert)
 
-            # Parse String zu SymPy
-            temp_funktion.term_sympy = self._string_zu_sympy(eingabe)
-            temp_funktion.term_str = str(temp_funktion.term_sympy)
-
-            # Erkenne und klassifiziere Symbole
-            temp_funktion._erkenne_und_klassifiziere_symbole(temp_funktion.term_sympy)
-
-            return temp_funktion
-        else:
-            # SymPy-Ausdruck
-            temp_funktion = Funktion.__new__(Funktion)
-            temp_funktion.x = self.x
-            temp_funktion.variablen = []
-            temp_funktion.parameter = []
-            temp_funktion.hauptvariable = None
-            temp_funktion.original_eingabe = str(eingabe)
-            temp_funktion.term_sympy = eingabe
-            temp_funktion.term_str = str(eingabe)
-            temp_funktion._erkenne_und_klassifiziere_symbole(eingabe)
-            return temp_funktion
-
-    def _parse_nenner(self, eingabe: str | sp.Basic) -> "Funktion":
-        """Parst den Nenner als Funktion-Objekt"""
-        return self._parse_zaehler(eingabe)  # Gleiche Logik wie Zähler
-
-    def _ist_bruch_string(self, text: str) -> bool:
-        """Prüft, ob ein String einen Bruch darstellt"""
-        # Einfache Heuristik: genau ein / nicht in Klammern oder Exponenten
-        slash_count = text.count("/")
-        if slash_count != 1:
-            return False
-
-        # Prüfe, ob das / nicht in einem Exponenten ist
-        slash_pos = text.find("/")
-        before_slash = text[:slash_pos]
-        after_slash = text[slash_pos + 1 :]
-
-        # Keine ^ vor oder nach dem /
-        return "^" not in before_slash and "^" not in after_slash
-
-    def _parse_bruch_string(self, text: str) -> tuple["Funktion", "Funktion"]:
-        """Parst einen String der Form "zaehler/nenner" """
-        slash_pos = text.find("/")
-        zaehler_str = text[:slash_pos].strip()
-        nenner_str = text[slash_pos + 1 :].strip()
-        return (self._parse_zaehler(zaehler_str), self._parse_nenner(nenner_str))
-
-
-def erstelle_funktion_automatisch(
-    eingabe: str | sp.Basic | tuple[str, str],
-    nenner: str | sp.Basic | None = None,
-):
-    """
-    Factory-Funktion zur automatischen Erkennung und Erstellung der richtigen Funktionsklasse.
-
-    Nutzt SymPy's eingebaute Methoden für intelligente Funktionstyp-Klassifizierung.
-
-    Args:
-        eingabe: Die mathematische Funktion als String, SymPy-Ausdruck oder Tuple
-                 - "x^2 + 1" für ganzrationale Funktionen
-                 - "(x+1)/(x-1)" für gebrochen-rationale Funktionen
-                 - "exp(x) + 1" für exponential-rationale Funktionen
-                 - "(x^2+1)sin(x)" für gemischte Funktionen
-        nenner: Optionaler Nenner für rationale Funktionen
-
-    Returns:
-        Die passende Funktionsklasse mit voller Funktionalität
-
-    Examples:
-        >>> f1 = erstelle_funktion_automatisch("x^2 + 2x + 1")  # GanzrationaleFunktion
-        >>> f2 = erstelle_funktion_automatisch("(x+1)/(x-1)")  # GebrochenRationaleFunktion
-        >>> f3 = erstelle_funktion_automatisch("exp(x) + 1")  # ExponentialRationaleFunktion
-        >>> f4 = erstelle_funktion_automatisch("(x^2+1)sin(x)")  # GemischteFunktion
-    """
-    from sympy.parsing.sympy_parser import (
-        implicit_multiplication_application,
-        parse_expr,
-        standard_transformations,
-    )
-
-    # Parse die Eingabe zu SymPy
-    if isinstance(eingabe, str):
-        transformations = standard_transformations + (
-            implicit_multiplication_application,
-        )
-        expr = parse_expr(eingabe.replace("^", "**"), transformations=transformations)
-    elif isinstance(eingabe, sp.Basic):
-        expr = eingabe
-    elif isinstance(eingabe, tuple) and len(eingabe) == 2:
-        # Spezialfall: (zaehler, nenner) - als rationale Funktion behandeln
-        from .gebrochen_rationale import GebrochenRationaleFunktion
-
-        return GebrochenRationaleFunktion(eingabe[0], eingabe[1])
-    else:
-        raise ValueError(f"Ungültige Eingabe: {eingabe}")
-
-    # Erkenne Hauptvariable mit direkter Logik
-    alle_symbole = expr.free_symbols
-    if not alle_symbole:
-        hauptvariable = sp.symbols("x")
-    else:
-        # Heuristiken zur Hauptvariablen-Erkennung
-        for symbol in alle_symbole:
-            symbol_name = str(symbol)
-            if symbol_name == "x":
-                hauptvariable = symbol
-                break
-            elif symbol_name in ["t", "y", "z"]:
-                hauptvariable = symbol
-                break
-        else:
-            hauptvariable = list(alle_symbole)[0]
-
-    # Klassifiziere den Funktionstyp mit direkter Logik
-    if expr.is_constant():
-        funktionstyp = "konstante"
-    elif expr.is_polynomial(hauptvariable):
-        funktionstyp = "ganzrational"
-    elif expr.is_rational_function(hauptvariable):
-        funktionstyp = "gebrochen_rational"
-    else:
-        # Prüfe auf spezifische Funktionstypen für gemischte Funktionen
-        merkmale = 0
-
-        # Zähle verschiedene Funktionsmerkmale
-        if expr.is_polynomial(hauptvariable):
-            merkmale += 1
-        if expr.is_rational_function(hauptvariable) and not expr.is_polynomial(
-            hauptvariable
-        ):
-            merkmale += 1
-        if expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
-            merkmale += 1
-        if expr.has(sp.exp):
-            # Prüfe ob es eine "reine" Exponentialfunktion ist
-            # exp(x) oder exp(ax+b) sind rein, exp(x)*x^2 ist gemischt
-            hat_exp = True
-            # Prüfe ob die Exponentialfunktion mit Polynomen oder anderen Funktionen kombiniert ist
-            if expr.is_Mul and len(expr.args) > 1:
-                # Bei Multiplikation: prüfe ob andere Faktoren die Variable enthalten
-                for arg in expr.args:
-                    if arg != sp.exp and hauptvariable in arg.free_symbols:
-                        merkmale += 1  # Zusätzliches Merkmal für gemischte Funktion
-                        break
-            elif expr.is_Add and len(expr.args) > 1:
-                # Bei Addition: prüfe ob andere Terme die Variable enthalten
-                for arg in expr.args:
-                    if arg != sp.exp and hauptvariable in arg.free_symbols:
-                        merkmale += 1  # Zusätzliches Merkmal für gemischte Funktion
-                        break
-            else:
-                merkmale += 1
-        if expr.has(sp.log, sp.ln):
-            merkmale += 1
-        if expr.has(sp.sqrt):
-            merkmale += 1
-
-        # Entscheidung über Funktionstyp
-        if merkmale > 1:
-            funktionstyp = "gemischt"
-        elif expr.has(sp.exp) and not merkmale > 1:
-            funktionstyp = "exponential"
-        elif expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
-            funktionstyp = "trigonometrisch"
-        else:
-            funktionstyp = "unbekannt"
-
-    # Delegiere an die passende spezialisierte Klasse
-    if funktionstyp == "ganzrational":
-        from .ganzrationale import GanzrationaleFunktion
-
-        return GanzrationaleFunktion(expr)
-    elif funktionstyp == "gebrochen_rational":
-        from .gebrochen_rationale import GebrochenRationaleFunktion
-
-        return GebrochenRationaleFunktion(str(expr))
-    elif funktionstyp == "exponential":
-        from .gebrochen_rationale import ExponentialRationaleFunktion
-
-        return ExponentialRationaleFunktion._erstelle_aus_string(str(expr))
-    elif funktionstyp == "trigonometrisch":
-        from .trigonometrisch import TrigonometrischeFunktion
-
-        return TrigonometrischeFunktion(expr)
-    elif funktionstyp == "gemischt":
-        from .gemischte import GemischteFunktion
-
-        return GemischteFunktion(expr)
-    elif funktionstyp == "konstante":
-        # Konstante Funktionen als spezielle ganzrationale Funktionen behandeln
-        from .ganzrationale import GanzrationaleFunktion
-
-        return GanzrationaleFunktion(expr)
-    else:
-        # Fallback auf die allgemeine Funktion-Klasse
-        return Funktion(expr)
-
-
-def _ist_exponential_funktion_static(eingabe: str | sp.Basic) -> bool:
-    """Statische Methode zur Prüfung auf Exponentialfunktionen"""
-    if isinstance(eingabe, str):
-        # Prüfe auf exp() in String
-        return "exp(" in eingabe.lower() or "e^" in eingabe.lower()
-    elif hasattr(eingabe, "has"):
-        # Prüfe auf exp() in SymPy-Ausdruck
-        return eingabe.has(sp.exp)
-
-    def _ist_exponential_funktion(self, eingabe: str | sp.Basic) -> bool:
-        """Prüft, ob die Eingabe eine Exponentialfunktion enthält"""
-        if isinstance(eingabe, str):
-            # Prüfe auf exp() in String
-            return "exp(" in eingabe or "e^" in eingabe
-        elif hasattr(eingabe, "has"):
-            # Prüfe auf exp() in SymPy-Ausdruck
-            return eingabe.has(sp.exp)
-        return False
-
-    def _parse_exponential_funktion(self, eingabe: str | sp.Basic):
-        """Parst eine Exponentialfunktion und erstellt das entsprechende Objekt"""
-        from .gebrochen_rationale import ExponentialRationaleFunktion
-
-        if isinstance(eingabe, str):
-            # Verwende die verbesserte Factory-Methode von ExponentialRationaleFunktion
-            return ExponentialRationaleFunktion._erstelle_aus_string(eingabe)
-
-        # Fallback für SymPy-Eingabe
-        return ExponentialRationaleFunktion("1", "1", exponent_param=1.0)
-
-    def _parse_zaehler(self, eingabe: str | sp.Basic) -> "Funktion":
-        """Parst den Zähler als Funktion-Objekt"""
-        if isinstance(eingabe, str):
-            # Validiere den mathematischen Ausdruck
-            self._validiere_mathematischen_ausdruck(eingabe)
-
-            # Erstelle temporäres Funktion-Objekt nur für den Zähler
-            temp_funktion = Funktion.__new__(Funktion)
-            temp_funktion.x = self.x
-            temp_funktion.variablen = []
-            temp_funktion.parameter = []
-            temp_funktion.hauptvariable = None
-            temp_funktion.original_eingabe = eingabe
-
-            # Parse String zu SymPy
-            temp_funktion.term_sympy = self._string_zu_sympy(eingabe)
-            temp_funktion.term_str = str(temp_funktion.term_sympy)
-
-            # Erkenne und klassifiziere Symbole
-            temp_funktion._erkenne_und_klassifiziere_symbole(temp_funktion.term_sympy)
-
-            return temp_funktion
-        else:
-            # SymPy-Ausdruck
-            temp_funktion = Funktion.__new__(Funktion)
-            temp_funktion.x = self.x
-            temp_funktion.variablen = []
-            temp_funktion.parameter = []
-            temp_funktion.hauptvariable = None
-            temp_funktion.original_eingabe = str(eingabe)
-            temp_funktion.term_sympy = eingabe
-            temp_funktion.term_str = str(eingabe)
-            temp_funktion._erkenne_und_klassifiziere_symbole(eingabe)
-            return temp_funktion
-
-    def _parse_nenner(self, eingabe: str | sp.Basic) -> "Funktion":
-        """Parst den Nenner als Funktion-Objekt"""
-        return self._parse_zaehler(eingabe)  # Gleiche Logik wie Zähler
-
-    def _ist_bruch_string(self, text: str) -> bool:
-        """Prüft, ob ein String einen Bruch darstellt"""
-        # Einfache Heuristik: genau ein / nicht in Klammern oder Exponenten
-        slash_count = text.count("/")
-        if slash_count != 1:
-            return False
-
-        # Prüfe, ob das / nicht in einem Exponenten ist
-        slash_pos = text.find("/")
-        before_slash = text[:slash_pos]
-        after_slash = text[slash_pos + 1 :]
-
-        # Keine ^ vor oder nach dem /
-        return "^" not in before_slash and "^" not in after_slash
-
-    def _parse_bruch_string(self, text: str) -> tuple["Funktion", "Funktion"]:
-        """Parst einen String der Form "zaehler/nenner" """
-        slash_pos = text.find("/")
-        zaehler_str = text[:slash_pos].strip()
-        nenner_str = text[slash_pos + 1 :].strip()
-
-        # Entferne äußere Klammern wenn vorhanden
-        zaehler_str = self._entferne_aeussere_klammern(zaehler_str)
-        nenner_str = self._entferne_aeussere_klammern(nenner_str)
-
-        return self._parse_zaehler(zaehler_str), self._parse_nenner(nenner_str)
-
-    def _entferne_aeussere_klammern(self, text: str) -> str:
-        """Entfernt äußere Klammern wenn sie den gesamten Ausdruck umschließen"""
-        text = text.strip()
-        if text.startswith("(") and text.endswith(")"):
-            # Prüfe, ob die Klammern wirklich äußere sind
-            klammer_zaehler = 0
-            for i, char in enumerate(text):
-                if char == "(":
-                    klammer_zaehler += 1
-                elif char == ")":
-                    klammer_zaehler -= 1
-                    if klammer_zaehler == 0 and i == len(text) - 1:
-                        # Äußere Klammern gefunden
-                        return text[1:-1]
-        return text
-
-    def _validiere_mathematischen_ausdruck(self, text: str):
-        """Validiert einen mathematischen Ausdruck"""
-        # Erlaubte Zeichen: Zahlen, Variablen, +-*^/(), Leerzeichen
-        erlaubte_zeichen = set("0123456789xyzwtabcdefghijklmnopqrstuvwxyz+-*/^(). ")
-
-        for char in text.lower():
-            if char not in erlaubte_zeichen:
-                raise ValueError(
-                    f"Ungültiger Ausdruck '{text}': Ungültiges Zeichen '{char}'"
-                )
-
-        # Mindestens ein gültiges Zeichen
-        if not text.strip():
-            raise ValueError("Leerer Ausdruck")
-
-    def _string_zu_sympy(self, text: str) -> sp.Basic:
-        """Wandelt einen String in einen SymPy-Ausdruck um mit modernem Parsing"""
-        from sympy.parsing.sympy_parser import (
-            implicit_multiplication_application,
-            parse_expr,
-            standard_transformations,
-        )
-
-        # Normalisiere den String
-        text = text.strip()
-
-        # Ersetze ^ durch ** (für SymPy)
-        text = text.replace("^", "**")
-
-        # Verwende SymPy's parse_expr mit allen notwendigen Transformationen
-        transformations = standard_transformations + (
-            implicit_multiplication_application,
-        )
-
+    def wert(self, x_wert):
+        """Berechnet den Funktionswert an einer Stelle"""
         try:
-            return parse_expr(text, transformations=transformations)
+            Ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
+            return float(Ergebnis) if Ergebnis.is_real else Ergebnis
         except Exception as e:
-            raise ValueError(f"Ungültiger mathematischer Ausdruck: '{text}'") from e
+            raise ValueError(f"Fehler bei Berechnung von f({x_wert}): {e}")
 
-    def _erkenne_und_klassifiziere_symbole(self, term_sympy: sp.Basic):
-        """Erkennt alle Symbole im Ausdruck und klassifiziert sie als Variablen oder Parameter"""
-        alle_symbole = term_sympy.free_symbols
+    def ableitung(self, ordnung: int = 1) -> "Funktion":
+        """Berechnet die Ableitung"""
+        abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
+        return Funktion(abgeleiteter_term)
 
-        if not alle_symbole:
-            # Keine Symbole gefunden - konstante Funktion
-            return
-
-        # Heuristiken zur Klassifizierung
-        for symbol in alle_symbole:
-            symbol_name = str(symbol)
-
-            if symbol_name == "x":
-                # x ist immer die Hauptvariable
-                var = _Variable(symbol_name)
-                self.variablen.append(var)
-                self.hauptvariable = var
-            elif symbol_name in ["t", "y", "z"]:
-                # t, y, z sind typische Variablen
-                var = _Variable(symbol_name)
-                self.variablen.append(var)
-                if self.hauptvariable is None:
-                    self.hauptvariable = var
-            elif len(symbol_name) == 1 and symbol_name in [
-                "a",
-                "b",
-                "c",
-                "d",
-                "e",
-                "f",
-                "g",
-                "h",
-                "k",
-                "m",
-                "n",
-                "p",
-                "q",
-                "r",
-                "s",
-                "u",
-                "v",
-                "w",
-            ]:
-                # Einzelne Buchstaben a-z (außer x,t,y,z) sind typischerweise Parameter
-                param = _Parameter(symbol_name)
-                self.parameter.append(param)
-            else:
-                # Mehrbuchstabige Symbole oder unbekannte: als Parameter behandeln
-                param = _Parameter(symbol_name)
-                self.parameter.append(param)
-
-        # Falls keine Variable gefunden wurde, nimm x als Standard
-        if not self.variablen:
-            x_var = _Variable("x")
-            self.variablen.append(x_var)
-            self.hauptvariable = x_var
-
-    def _erstelle_sympy_ausdruecke(self):
-        """Erstelle die SymPy-Ausdrücke für die gesamte Funktion"""
-        # Kombiniere Symbol-Informationen von Zähler und Nenner
-        alle_variablen = []
-        alle_parameter = []
-
-        for teil in [self.zaehler, self.nenner]:
-            alle_variablen.extend(teil.variablen)
-            alle_parameter.extend(teil.parameter)
-
-        # Entferne Duplikate
-        self.variablen = []
-        self.parameter = []
-
-        seen_vars = set()
-        for var in alle_variablen:
-            if var.name not in seen_vars:
-                self.variablen.append(var)
-                seen_vars.add(var.name)
-                if var.name == "x" or self.hauptvariable is None:
-                    self.hauptvariable = var
-
-        seen_params = set()
-        for param in alle_parameter:
-            if param.name not in seen_params:
-                self.parameter.append(param)
-                seen_params.add(param.name)
-
-        # Erstelle den kombinierten SymPy-Ausdruck
+    def nullstellen(self) -> list:
+        """Berechnet die Nullstellen"""
         try:
-            if self.nenner.term_sympy == 1:
-                # Ganzrationaler Fall
-                self.term_sympy = self.zaehler.term_sympy
-            else:
-                # Gebrochen-rationaler Fall
-                self.term_sympy = self.zaehler.term_sympy / self.nenner.term_sympy
-        except AttributeError:
-            # Fallback für einfache Fälle
-            self.term_sympy = self.zaehler.term_sympy
+            lösungen = solve(self.term_sympy, self._variable_symbol)
+            return [
+                float(lösung) if lösung.is_real else lösung
+                for lösung in lösungen
+                if lösung.is_real
+            ]
+        except Exception:
+            return []
 
-        self.term_str = str(self.term_sympy)
-
-    @property
-    def _variable_symbol(self) -> sp.Symbol:
-        """Gibt das Symbol der Hauptvariable zurück, mit Fallback auf 'x'."""
-        if self.hauptvariable:
-            return self.hauptvariable.symbol
-        return symbols("x")
+    # 🔥 TYPENERKENNUNG - Alle zentral! 🔥
 
     @property
     def ist_ganzrational(self) -> bool:
-        """True wenn die Funktion ganzrational ist (Nenner = 1)"""
-        try:
-            return self.nenner.term_sympy == 1
-        except AttributeError:
-            # Fallback für rekursive Aufrufe
-            return hasattr(self, "term_sympy") and not hasattr(self, "nenner")
+        """Prüft, ob die Funktion ganzrational ist"""
+        return self.term_sympy.is_polynomial(self._variable_symbol)
 
     @property
-    def hat_polstellen(self) -> bool:
-        """True wenn die Funktion Polstellen hat (echt gebrochen-rational)"""
-        return not self.ist_ganzrational
+    def ist_gebrochen_rational(self) -> bool:
+        """Prüft, ob die Funktion gebrochen-rational ist"""
+        return (
+            self.term_sympy.is_rational_function(self._variable_symbol)
+            and not self.ist_ganzrational
+        )
 
     @property
     def ist_exponential_rational(self) -> bool:
-        """True wenn die Funktion eine Exponentialfunktion ist"""
-        return self._ist_exponential_funktion(self.original_eingabe)
-
-    def kürzen(self) -> "Funktion":
-        """Kürzt die Funktion durch Faktorisierung"""
-        # Vereinfache Zähler und Nenner separat
-        self.zaehler.term_sympy = factor(self.zaehler.term_sympy)
-        self.nenner.term_sympy = factor(self.nenner.term_sympy)
-
-        # Erstelle SymPy-Ausdruck neu
-        if self.ist_ganzrational:
-            self.term_sympy = self.zaehler.term_sympy
-        else:
-            self.term_sympy = self.zaehler.term_sympy / self.nenner.term_sympy
-
-        self.term_str = str(self.term_sympy)
-        return self
-
-    # 🔥 PHASE 2: Intelligente Funktionsklassifizierung 🔥
-
-    def _klassifiziere_funktion(self):
-        """Klassifiziert die Funktion mit erweiterten Analysemethoden"""
-        # Erweiterte Funktionstyp-Analyse
-        self.funktionstyp = self._bestimme_funktionstyp()
-        self.komplexität = self._berechne_komplexität()
-        self.eigenschaften = self._analysiere_eigenschaften()
-
-    def _bestimme_funktionstyp(self) -> str:
-        """Bestimmt den detaillierten Funktionstyp"""
-        if self.ist_ganzrational:
-            grad = self.zaehler.grad()
-            if grad == 0:
-                return "Konstante Funktion"
-            elif grad == 1:
-                return "Lineare Funktion"
-            elif grad == 2:
-                return "Quadratische Funktion"
-            elif grad == 3:
-                return "Kubische Funktion"
-            else:
-                return f"Polynom {grad}. Grades"
-        else:
-            zaehler_grad = self.zaehler.grad()
-            nenner_grad = self.nenner.grad()
-
-            if zaehler_grad < nenner_grad:
-                return "Gebrochen-rationale Funktion (echt gebrochen)"
-            elif zaehler_grad == nenner_grad:
-                return "Gebrochen-rationale Funktion (unecht gebrochen)"
-            else:
-                return "Gebrochen-rationale Funktion (unecht gebrochen)"
-
-    def _berechne_komplexität(self) -> dict:
-        """Berechnet verschiedene Komplexitätsmaße für die Funktion"""
-        from sympy import count_ops
-
-        # Anzahl der Operationen
-        operationen = count_ops(self.term_sympy)
-
-        # Anzahl der Terme
-        if self.ist_ganzrational:
-            terme = len(self.term_sympy.as_ordered_terms())
-        else:
-            zaehler_terme = len(self.zaehler.term_sympy.as_ordered_terms())
-            nenner_terme = len(self.nenner.term_sympy.as_ordered_terms())
-            terme = zaehler_terme + nenner_terme
-
-        # Maximale Koeffizienten-Größe
-        def max_koeffizient(ausdruck):
-            if hasattr(ausdruck, "coeffs"):
-                return max(abs(float(c)) for c in ausdruck.coeffs() if c.is_number)
-            return 0
-
-        max_koeff = max(
-            max_koeffizient(self.zaehler.term_sympy),
-            max_koeffizient(self.nenner.term_sympy),
-        )
-
-        return {
-            "operationen": operationen,
-            "terme": terme,
-            "max_koeffizient": max_koeff,
-            "schwierigkeit": self._bestimme_schwierigkeit(
-                operationen, terme, max_koeff
-            ),
-        }
-
-    def _bestimme_schwierigkeit(
-        self, operationen: int, terme: int, max_koeff: float
-    ) -> str:
-        """Bestimmt die Schwierigkeitsstufe für Schüler"""
-        if operationen <= 2 and terme <= 2 and max_koeff <= 5:
-            return "Anfänger"
-        elif operationen <= 5 and terme <= 4 and max_koeff <= 10:
-            return "Mittel"
-        elif operationen <= 10 and terme <= 6 and max_koeff <= 20:
-            return "Fortgeschritten"
-        else:
-            return "Experte"
-
-    def _analysiere_eigenschaften(self) -> dict:
-        """Analysiert mathematische Eigenschaften der Funktion"""
-        eigenschaften = {}
-
-        # Symmetrie
-        try:
-            from .analysis import prüfe_achsensymmetrie, prüfe_punktsymmetrie
-
-            eigenschaften["achsensymmetrie"] = prüfe_achsensymmetrie(
-                self, self.hauptvariable.symbol if self.hauptvariable else "x"
-            )
-            eigenschaften["punktsymmetrie"] = prüfe_punktsymmetrie(
-                self, self.hauptvariable.symbol if self.hauptvariable else "x", 0
-            )
-        except Exception:
-            # Fallback zu einfacher Prüfung
-            x_sym = sp.symbols("x")
-            test_expr = (
-                self.term_sympy.subs(self.hauptvariable.symbol, x_sym)
-                if self.hauptvariable
-                else self.term_sympy
-            )
-            eigenschaften["achsensymmetrie"] = test_expr.equals(
-                test_expr.subs(x_sym, -x_sym)
-            )
-            eigenschaften["punktsymmetrie"] = test_expr.equals(
-                -test_expr.subs(x_sym, -x_sym)
-            )
-
-        # Monotonie (einfache Prüfung)
-        try:
-            # ableitung = diff(  # Nicht verwendet
-            #     self.term_sympy,
-            #     self.hauptvariable.symbol if self.hauptvariable else "x",
-            # )
-            eigenschaften["monotonie_check"] = "komplex"  # Vereinfachte Darstellung
-        except Exception:
-            eigenschaften["monotonie_check"] = "nicht bestimmbar"
-
-        return eigenschaften
-
-    def _erstelle_metadaten(self):
-        """Erstellt umfassende Metadaten für die Funktion"""
-        self.metadaten = {
-            "erstellungszeitpunkt": self._get_aktuelle_zeit(),
-            "original_eingabe": self.original_eingabe,
-            "funktionstyp": self.funktionstyp,
-            "komplexität": self.komplexität,
-            "eigenschaften": self.eigenschaften,
-            "parameter_info": self._erstelle_parameter_info(),
-            "empfehlungen": self._erstelle_empfehlungen(),
-        }
-
-    def _get_aktuelle_zeit(self) -> str:
-        """Gibt den aktuellen Zeitstempel zurück"""
-        from datetime import datetime
-
-        return datetime.now().isoformat()
-
-    def _erstelle_parameter_info(self) -> dict:
-        """Erstellt detaillierte Informationen über Parameter"""
-        info = {}
-
-        if self.parameter:
-            info["vorhandene_parameter"] = [p.name for p in self.parameter]
-            info["parameter_bereiche"] = {p.name: "reell" for p in self.parameter}
-        else:
-            info["vorhandene_parameter"] = []
-            info["parameter_bereiche"] = {}
-
-        return info
-
-    def _erstelle_empfehlungen(self) -> list:
-        """Erstellt Lernempfehlungen basierend auf der Funktion"""
-        empfehlungen = []
-
-        # Basierend auf Funktionstyp
-        if "linear" in self.funktionstyp:
-            empfehlungen.append(
-                "Lineare Funktionen: Steigung und y-Achsenabschnitt interpretieren"
-            )
-        elif "quadratisch" in self.funktionstyp:
-            empfehlungen.append(
-                "Quadratische Funktionen: Scheitelpunktform und Nullstellen berechnen"
-            )
-        elif "gebrochen" in self.funktionstyp:
-            empfehlungen.append(
-                "Gebrochen-rationale Funktionen: Polstellen und Definitionslücken beachten"
-            )
-
-        # Basierend auf Schwierigkeit
-        schwierigkeit = self.komplexität.get("schwierigkeit", "Mittel")
-        if schwierigkeit == "Anfänger":
-            empfehlungen.append(
-                "Perfekt für Einsteiger: Einfache Berechnungen und Graphen"
-            )
-        elif schwierigkeit == "Fortgeschritten":
-            empfehlungen.append("Herausfordernd: Kombinierte Analysemethoden anwenden")
-
-        return empfehlungen
-
-    # 🔥 PHASE 2: Metadaten-Methoden 🔥
-
-    def get_metadaten(self) -> dict:
-        """Gibt die vollständigen Metadaten zurück"""
-        return self.metadaten
-
-    def get_info(self) -> str:
-        """Gibt eine übersichtliche Zusammenfassung der Funktion zurück"""
-        info = []
-        info.append(f"📊 Funktion: {self.term()}")
-        info.append(f"📝 Typ: {self.funktionstyp}")
-        info.append(
-            f"🎯 Schwierigkeit: {self.komplexität.get('schwierigkeit', 'Unbekannt')}"
-        )
-        info.append(f"🔢 Operationen: {self.komplexität.get('operationen', 0)}")
-        info.append(f"📐 Terme: {self.komplexität.get('terme', 0)}")
-
-        if self.metadaten["parameter_info"]["vorhandene_parameter"]:
-            info.append(
-                f"🔤 Parameter: {', '.join(self.metadaten['parameter_info']['vorhandene_parameter'])}"
-            )
-
-        if self.eigenschaften.get("achsensymmetrie"):
-            info.append("✅ Achsensymmetrisch")
-
-        if self.eigenschaften.get("punktsymmetrie"):
-            info.append("🔄 Punktsymmetrisch")
-
-        return "\n".join(info)
-
-    def analysiere(self) -> dict:
-        """Führt eine umfassende Analyse der Funktion durch"""
-        analyse = {
-            "grundlegende_eigenschaften": {
-                "term": self.term(),
-                "typ": self.funktionstyp,
-                "schwierigkeit": self.komplexität.get("schwierigkeit"),
-                "operationen": self.komplexität.get("operationen"),
-                "terme": self.komplexität.get("terme"),
-            },
-            "symmetrie": self.eigenschaften,
-            "parameter": self.metadaten["parameter_info"],
-            "empfehlungen": self.metadaten["empfehlungen"],
-        }
-
-        # Füge spezifische Analysen hinzu
-        if self.ist_ganzrational:
-            analyse["ganzrationale_eigenschaften"] = {
-                "grad": self.zaehler.grad(),
-                "nullstellen": len(self.nullstellen())
-                if hasattr(self, "nullstellen")
-                else "nicht berechnet",
-                "extremstellen": "zu berechnen",  # Könnte später ergänzt werden
-            }
-        else:
-            analyse["gebrochen_rationale_eigenschaften"] = {
-                "zaehler_grad": self.zaehler.grad(),
-                "nenner_grad": self.nenner.grad(),
-                "polstellen": len(self.polstellen())
-                if hasattr(self, "polstellen")
-                else "nicht berechnet",
-                "definitionsluecken": "vorhanden"
-                if self.nenner.grad() > 0
-                else "keine",
-            }
-
-        return analyse
-
-    # 🔥 PHASE 2: Transformations- und Konvertierungs-Utilities 🔥
-
-    def transformiere(self, art: str, **kwargs) -> "Funktion":
-        """
-        Transformiert die Funktion in verschiedene Formen.
-
-        Args:
-            art: Art der Transformation
-                 - 'expandiert': Expandiert alle Terme
-                 - 'faktorisiert': Faktorisiert die Funktion
-                 - 'partialbruch': Zerlegt in Partialbrüche (nur gebrochen-rational)
-                 - 'polynomdivision': Führt Polynomdivision durch
-                 - 'vereinfacht': Vereinfacht den Ausdruck
-            **kwargs: Zusätzliche Parameter für die Transformation
-
-        Returns:
-            Neue Funktion mit transformiertem Ausdruck
-        """
-        from sympy import apart, expand, factor, pquo, simplify
-
-        if art == "expandiert":
-            neuer_zaehler = expand(self.zaehler.term_sympy)
-            neuer_nenner = expand(self.nenner.term_sympy)
-        elif art == "faktorisiert":
-            neuer_zaehler = factor(self.zaehler.term_sympy)
-            neuer_nenner = factor(self.nenner.term_sympy)
-        elif art == "partialbruch" and not self.ist_ganzrational:
-            # Partialbruchzerlegung
-            try:
-                zerlegt = apart(self.term_sympy)
-                # Erstelle neue Funktion aus dem Ergebnis
-
-                return Funktion(zerlegt)
-            except Exception:
-                raise ValueError("Partialbruchzerlegung nicht möglich")
-        elif art == "polynomdivision" and not self.ist_ganzrational:
-            # Polynomdivision
-            try:
-                quotient, rest = pquo(self.zaehler.term_sympy, self.nenner.term_sympy)
-                # Gib Ergebnis als Summe von ganzrationalem und gebrochen-rationalem Teil zurück
-                if rest == 0:
-                    return Funktion(quotient)
-                else:
-                    return Funktion(f"{quotient} + ({rest})/({self.nenner.term_sympy})")
-            except Exception:
-                raise ValueError("Polynomdivision nicht möglich")
-        elif art == "vereinfacht":
-            neuer_zaehler = simplify(self.zaehler.term_sympy)
-            neuer_nenner = simplify(self.nenner.term_sympy)
-        else:
-            raise ValueError(f"Unbekannte Transformation: {art}")
-
-        # Erstelle neue Funktion
-        if self.ist_ganzrational:
-            return Funktion(neuer_zaehler)
-        else:
-            return Funktion((str(neuer_zaehler), str(neuer_nenner)))
-
-    def konvertiere_zu(self, zieltyp: str) -> "Funktion":
-        """
-        Konvertiert die Funktion in einen anderen Typ.
-
-        Args:
-            zieltyp: Zieltyp der Konvertierung
-                     - 'ganzrational': Konvertiert zu ganzrationaler Funktion
-                     - 'gebrochen_rational': Konvertiert zu gebrochen-rationaler Funktion
-                     - 'exponential': Konvertiert zu exponential-rationaler Funktion (wenn möglich)
-
-        Returns:
-            Neue Funktion des Zieltyps
-        """
-        if zieltyp == "ganzrational":
-            if self.ist_ganzrational:
-                return self  # Bereits ganzrational
-            else:
-                # Versuche, zu einer ganzrationalen Funktion zu konvertieren
-                # (nur möglich, wenn Nenner = 1)
-                if self.nenner.term_sympy == 1:
-                    return Funktion(self.zaehler.term_sympy)
-                else:
-                    raise ValueError(
-                        "Konvertierung zu ganzrational nicht möglich: Nenner ≠ 1"
-                    )
-
-        elif zieltyp == "gebrochen_rational":
-            if not self.ist_ganzrational:
-                return self  # Bereits gebrochen-rational
-            else:
-                # Konvertiere ganzrationale zu gebrochen-rationaler
-                return Funktion((self.zaehler.term_sympy, 1))
-
-        elif zieltyp == "exponential":
-            # Versuche, eine exponentiale Darstellung zu finden
-            # Dies ist komplex und nur für bestimmte Funktionen möglich
-            try:
-                from .gebrochen_rationale import ExponentialRationaleFunktion
-
-                # Vereinfachte Heuristik: suche nach exp() im Ausdruck
-                if "exp" in str(self.term_sympy):
-                    return ExponentialRationaleFunktion._erstelle_aus_string(
-                        str(self.term_sympy)
-                    )
-                else:
-                    raise ValueError("Keine exponentiale Form erkannt")
-            except Exception:
-                raise ValueError("Konvertierung zu Exponentialfunktion nicht möglich")
-
-        else:
-            raise ValueError(f"Unbekannter Zieltyp: {zieltyp}")
-
-    def _klassifiziere_funktionstyp_auto(self, expr: sp.Basic, var: sp.Symbol) -> str:
-        """
-        Intelligente Funktionstyp-Klassifizierung mit SymPy's eingebauten Methoden.
-
-        Args:
-            expr: Der zu klassifizierende SymPy-Ausdruck
-            var: Die Hauptvariable des Ausdrucks
-
-        Returns:
-            String mit dem erkannten Funktionstyp
-        """
-        # 1. Prüfe auf konstante Funktionen
-        if expr.is_constant():
-            return "konstante"
-
-        # 2. Prüfe auf polynomiale Struktur (spezifischste Prüfung zuerst)
-        if expr.is_polynomial(var):
-            return "ganzrational"
-
-        # 3. Prüfe auf rationale Funktion (allgemeiner als Polynome)
-        if expr.is_rational_function(var):
-            return "gebrochen_rational"
-
-        # 4. Prüfe auf spezifische Funktionstypen durch Komponentenanalyse
-        merkmale = self._zaehle_funktionsmerkmale(expr, var)
-
-        if merkmale > 1:
-            return "gemischt"
-        elif expr.has(sp.exp):
-            return "exponential"
-        elif expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
-            return "trigonometrisch"
-        elif expr.has(sp.log):
-            return "logarithmisch"
-        elif expr.has(sp.sqrt):
-            return "wurzel"
-
-        return "unbekannt"
-
-    def _hat_exponentielle_komponente(self, expr: sp.Basic, var: sp.Symbol) -> bool:
-        """
-        Prüft, ob der Ausdruck exponentielle Komponenten enthält.
-
-        Args:
-            expr: Zu prüfender SymPy-Ausdruck
-            var: Hauptvariable
-
-        Returns:
-            True wenn exponentielle Komponenten vorhanden
-        """
-        # Prüfe auf exp() Funktionen
-        if expr.has(sp.exp):
-            return True
-
-        # Prüfe auf Potenzen der Form a**x oder a**(f(x))
-        # wobei die Variable im Exponenten vorkommt
-        for potenz in expr.atoms(sp.Pow):
-            basis, exponent = potenz.as_base_exp()
-            if var in exponent.free_symbols:
-                return True
-
-        return False
-
-    def _zaehle_funktionsmerkmale(self, expr: sp.Basic, var: sp.Symbol) -> int:
-        """
-        Zählt die Anzahl verschiedener Funktionsmerkmale im Ausdruck.
-
-        Args:
-            expr: Zu analysierender SymPy-Ausdruck
-            var: Hauptvariable
-
-        Returns:
-            Anzahl der erkannten Funktionsmerkmale
-        """
+        """Prüft, ob die Funktion exponential-rational ist"""
+        return self.term_sympy.has(sp.exp)
+
+    @property
+    def ist_trigonometrisch(self) -> bool:
+        """Prüft, ob die Funktion trigonometrisch ist"""
+        return self.term_sympy.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc)
+
+    @property
+    def ist_gemischt(self) -> bool:
+        """Prüft, ob die Funktion gemischt ist"""
         merkmale = 0
-
-        # Polynomiale Anteile
-        if expr.is_polynomial(var):
+        if self.term_sympy.is_polynomial(self._variable_symbol):
             merkmale += 1
-
-        # Rationale Anteile (nicht polynomiale rationale Funktionen)
-        if expr.is_rational_function(var) and not expr.is_polynomial(var):
+        if self.term_sympy.is_rational_function(
+            self._variable_symbol
+        ) and not self.term_sympy.is_polynomial(self._variable_symbol):
             merkmale += 1
-
-        # Trigonometrische Funktionen
-        if expr.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+        if self.term_sympy.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
             merkmale += 1
-
-        # Exponentielle Funktionen
-        if self._hat_exponentielle_komponente(expr, var):
+        if self.term_sympy.has(sp.exp):
             merkmale += 1
-
-        # Logarithmische Funktionen
-        if expr.has(sp.log, sp.ln):
+        if self.term_sympy.has(sp.log, sp.ln):
             merkmale += 1
-
-        # Wurzelfunktionen
-        if expr.has(sp.sqrt):
+        if self.term_sympy.has(sp.sqrt):
             merkmale += 1
-
-        return merkmale
-
-    def _erkenne_hauptvariable(self, expr: sp.Basic) -> sp.Symbol:
-        """
-        Erkennt automatisch die Hauptvariable in einem SymPy-Ausdruck.
-
-        Args:
-            expr: SymPy-Ausdruck
-
-        Returns:
-            Die erkannte Hauptvariable als SymPy-Symbol
-        """
-        alle_symbole = expr.free_symbols
-
-        if not alle_symbole:
-            # Keine Symbole - konstante Funktion
-            return sp.symbols("x")
-
-        # Heuristiken zur Hauptvariablen-Erkennung
-        for symbol in alle_symbole:
-            symbol_name = str(symbol)
-
-            # x hat höchste Priorität
-            if symbol_name == "x":
-                return symbol
-            # t, y, z haben mittlere Priorität
-            elif symbol_name in ["t", "y", "z"]:
-                continue
-            # Andere einzelne Buchstaben sind eher Parameter
-            elif len(symbol_name) == 1:
-                continue
-
-        # Falls x nicht gefunden wurde, nimm das erste Symbol
-        return list(alle_symbole)[0]
-
-    def kombiniere_mit(self, andere_funktion: "Funktion", operation: str) -> "Funktion":
-        """
-        Kombiniert diese Funktion mit einer anderen Funktion.
-
-        Args:
-            andere_funktion: Zweite Funktion für die Kombination
-            operation: Art der Kombination
-                       - 'addition': f + g
-                       - 'subtraktion': f - g
-                       - 'multiplikation': f * g
-                       - 'division': f / g
-                       - 'komposition': f(g(x))
-
-        Returns:
-            Neue Funktion mit dem kombinierten Ausdruck
-        """
-        from sympy import Add, Mul, Pow
-
-        if operation == "addition":
-            neuer_term = Add(self.term_sympy, andere_funktion.term_sympy)
-        elif operation == "subtraktion":
-            neuer_term = Add(self.term_sympy, -andere_funktion.term_sympy)
-        elif operation == "multiplikation":
-            neuer_term = Mul(self.term_sympy, andere_funktion.term_sympy)
-        elif operation == "division":
-            neuer_term = Mul(self.term_sympy, Pow(andere_funktion.term_sympy, -1))
-        elif operation == "komposition":
-            # Ersetze x durch g(x)
-            x_sym = self.hauptvariable.symbol if self.hauptvariable else sp.symbols("x")
-            neuer_term = self.term_sympy.subs(x_sym, andere_funktion.term_sympy)
-        else:
-            raise ValueError(f"Unbekannte Operation: {operation}")
-
-        return Funktion(neuer_term)
-
-    def spezialisiere_parameter(self, **werte) -> "Funktion":
-        """
-        Setzt Parameter auf spezifische Werte und gibt eine neue Funktion zurück.
-
-        Args:
-            **werte: Parameter-Wert-Paare (z.B. a=2, b=3)
-
-        Returns:
-            Neue Funktion mit spezifizierten Parameterwerten
-        """
-        # Ersetze Parameter durch die gegebenen Werte
-        neuer_term = self.term_sympy
-
-        for param_name, wert in werte.items():
-            # Finde das passende Parameter-Symbol
-            param_symbol = None
-            for p in self.parameter:
-                if p.name == param_name:
-                    param_symbol = p.symbol
-                    break
-
-            if param_symbol is not None:
-                neuer_term = neuer_term.subs(param_symbol, wert)
-
-        return Funktion(neuer_term)
-
-    def erstelle_umkehrfunktion(self) -> "Funktion":
-        """
-        Versucht, die Umkehrfunktion zu erstellen.
-
-        Returns:
-            Umkehrfunktion, wenn sie existiert und gefunden werden kann
-
-        Raises:
-            ValueError: Wenn keine Umkehrfunktion gefunden werden kann
-        """
-        try:
-            x_sym = self.hauptvariable.symbol if self.hauptvariable else sp.symbols("x")
-            y_sym = sp.symbols("y")
-
-            # Löse y = f(x) nach x auf
-            gleichung = sp.Eq(y_sym, self.term_sympy)
-            umkehr_geloest = solve(gleichung, x_sym)
-
-            if umkehr_geloest:
-                # Nehme die erste Lösung (einfacher Fall)
-                if isinstance(umkehr_geloest, list) and len(umkehr_geloest) > 0:
-                    umkehr_funktion = umkehr_geloest[0]
-                    # Ersetze y durch x für die Standardnotation
-                    umkehr_funktion = umkehr_funktion.subs(y_sym, x_sym)
-                    return Funktion(umkehr_funktion)
-
-            raise ValueError("Umkehrfunktion konnte nicht gefunden werden")
-
-        except Exception as e:
-            raise ValueError(f"Umkehrfunktion konnte nicht erstellt werden: {e}")
-
-    def vergleiche_mit(self, andere_funktion: "Funktion") -> dict:
-        """
-        Vergleicht diese Funktion mit einer anderen Funktion.
-
-        Args:
-            andere_funktion: Funktion zum Vergleich
-
-        Returns:
-            Dictionary mit Vergleichsergebnissen
-        """
-        vergleich = {
-            "gleichheit": self.term_sympy.equals(andere_funktion.term_sympy),
-            "typ_gleich": type(self).__name__ == type(andere_funktion).__name__,
-            "komplexitaetsvergleich": {
-                "eigen": self.komplexität,
-                "anderer": andere_funktion.komplexität,
-            },
-            "eigenschaften_gleich": self.eigenschaften == andere_funktion.eigenschaften,
-            "differenz": None,
-        }
-
-        # Berechne die Differenz der Funktionen
-        try:
-            differenz_term = self.term_sympy - andere_funktion.term_sympy
-            vergleich["differenz"] = {
-                "term": str(differenz_term),
-                "ist_null": differenz_term.equals(0),
-            }
-        except Exception:
-            pass
-
-        return vergleich
-
-    # 🔥 PHASE 2: Unified Visualization Interface 🔥
-
-    def zeige(self, modus: str = "standard", **kwargs) -> Any:
-        """
-        Einheitliche Visualisierungsmethode für alle Funktionstypen.
-
-        Args:
-            modus: Visualisierungsmodus
-                   - 'standard': Standard-Graph der Funktion
-                   - 'mit_analyse': Graph mit Analyse-Informationen
-                   - 'vergleich': Vergleich mit anderer Funktion
-                   - 'details': Detaillierte Analyse mit mehreren Graphen
-                   - 'interaktiv': Interaktiver Plot (falls marimo verfügbar)
-            **kwargs: Zusätzliche Parameter:
-                     - x_bereich: Tuple (von, bis) für x-Achse
-                     - punkte: Anzahl der zu berechnenden Punkte
-                     - titel: Titel für den Graphen
-                     - andere_funktion: Funktion für Vergleichsmodus
-                     - zeige_analysis: Boolean für Analyse-Informationen
-
-        Returns:
-            Plotly-Figur oder marimo-Widget (abhängig von Verfügbarkeit)
-        """
-
-        # Standardparameter setzen
-        x_bereich = kwargs.get("x_bereich", (-10, 10))
-        punkte = kwargs.get("punkte", 200)
-        titel = kwargs.get("titel", f"Funktion: {self.term()}")
-        # zeige_analysis = kwargs.get("zeige_analysis", False)  # Nicht verwendet
-
-        if modus == "standard":
-            return self._zeige_standard_graph(x_bereich, punkte, titel)
-        elif modus == "mit_analyse":
-            return self._zeige_mit_analyse(x_bereich, punkte, titel)
-        elif modus == "vergleich":
-            andere_funktion = kwargs.get("andere_funktion")
-            if andere_funktion is None:
-                raise ValueError("Für Vergleichsmodus wird 'andere_funktion' benötigt")
-            return self._zeige_vergleich(andere_funktion, x_bereich, punkte, titel)
-        elif modus == "details":
-            return self._zeige_details(x_bereich, punkte, titel)
-        elif modus == "interaktiv":
-            return self._zeige_interaktiv(x_bereich, punkte, titel)
-        else:
-            raise ValueError(f"Unbekannter Visualisierungsmodus: {modus}")
-
-    def _zeige_standard_graph(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
-        """Erstellt einen Standard-Graphen der Funktion"""
-        try:
-            import numpy as np
-            import plotly.graph_objects as go
-
-            # Berechne Punkte
-            x_werte = np.linspace(x_bereich[0], x_bereich[1], punkte)
-            y_werte = []
-
-            for x in x_werte:
-                try:
-                    y = float(self.wert(x))
-                    y_werte.append(y)
-                except (ZeroDivisionError, ValueError, OverflowError):
-                    y_werte.append(None)
-
-            # Erstelle Plot
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=x_werte,
-                    y=y_werte,
-                    mode="lines",
-                    name=self.term(),
-                    line={"color": "blue", "width": 2},
-                )
-            )
-
-            # Layout anpassen
-            fig.update_layout(
-                title=titel,
-                xaxis_title="x",
-                yaxis_title="f(x)",
-                showlegend=True,
-                hovermode="x unified",
-            )
-
-            # Aspect Ratio Control
-            fig.update_yaxes(scaleanchor="x", scaleratio=1)
-
-            return fig
-
-        except ImportError:
-            raise ImportError("Plotly wird für die Visualisierung benötigt")
-
-    def _zeige_mit_analyse(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
-        """Erstellt einen Graphen mit Analyse-Informationen"""
-        fig = self._zeige_standard_graph(x_bereich, punkte, titel)
-
-        # Füge wichtige Punkte hinzu
-        try:
-            if hasattr(self, "nullstellen") and self.ist_ganzrational:
-                nullstellen = self.nullstellen()
-                for ns in nullstellen:
-                    if (
-                        isinstance(ns, (int, float))
-                        and x_bereich[0] <= ns <= x_bereich[1]
-                    ):
-                        fig.add_vline(
-                            x=ns,
-                            line_dash="dash",
-                            line_color="red",
-                            annotation_text=f"Nullstelle: x={ns:.2f}",
-                        )
-
-            # Füge y-Achsenabschnitt hinzu
-            y_achse = self.wert(0)
-            fig.add_hline(
-                y=y_achse,
-                line_dash="dot",
-                line_color="green",
-                annotation_text=f"y-Achsenabschnitt: {y_achse:.2f}",
-            )
-
-        except Exception:
-            pass  # Ignoriere Fehler bei der Analyse
-
-        # Füge Analyse-Informationen als Annotation hinzu
-        info_text = self.get_info()
-        fig.add_annotation(
-            text=info_text,
-            xref="paper",
-            yref="paper",
-            x=0.02,
-            y=0.98,
-            showarrow=False,
-            bgcolor="rgba(255,255,255,0.8)",
-            bordercolor="black",
-            borderwidth=1,
-        )
-
-        return fig
-
-    def _zeige_vergleich(
-        self, andere_funktion: "Funktion", x_bereich: tuple, punkte: int, titel: str
-    ) -> Any:
-        """Erstellt einen Vergleichsgraphen mit zwei Funktionen"""
-        try:
-            import numpy as np
-            import plotly.graph_objects as go
-
-            # Berechne Punkte für beide Funktionen
-            x_werte = np.linspace(x_bereich[0], x_bereich[1], punkte)
-            y1_werte = []
-            y2_werte = []
-
-            for x in x_werte:
-                try:
-                    y1 = float(self.wert(x))
-                    y1_werte.append(y1)
-                except Exception:
-                    y1_werte.append(None)
-
-                try:
-                    y2 = float(andere_funktion.wert(x))
-                    y2_werte.append(y2)
-                except Exception:
-                    y2_werte.append(None)
-
-            # Erstelle Plot mit beiden Funktionen
-            fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(
-                    x=x_werte,
-                    y=y1_werte,
-                    mode="lines",
-                    name=f"f₁(x) = {self.term()}",
-                    line={"color": "blue", "width": 2},
-                )
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=x_werte,
-                    y=y2_werte,
-                    mode="lines",
-                    name=f"f₂(x) = {andere_funktion.term()}",
-                    line={"color": "red", "width": 2},
-                )
-            )
-
-            # Layout anpassen
-            fig.update_layout(
-                title=f"Vergleich: {titel}",
-                xaxis_title="x",
-                yaxis_title="f(x)",
-                showlegend=True,
-                hovermode="x unified",
-            )
-
-            # Aspect Ratio Control
-            fig.update_yaxes(scaleanchor="x", scaleratio=1)
-
-            return fig
-
-        except ImportError:
-            raise ImportError("Plotly wird für die Visualisierung benötigt")
-
-    def _zeige_details(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
-        """Erstellt eine detaillierte Visualisierung mit mehreren Subplots"""
-        try:
-            import numpy as np
-            import plotly.graph_objects as go
-            from plotly.subplots import make_subplots
-
-            # Erstelle Subplots: Funktion, 1. Ableitung, 2. Ableitung
-            fig = make_subplots(
-                rows=3,
-                cols=1,
-                subplot_titles=("Funktion", "1. Ableitung", "2. Ableitung"),
-                vertical_spacing=0.08,
-            )
-
-            # Berechne Punkte
-            x_werte = np.linspace(x_bereich[0], x_bereich[1], punkte)
-
-            # Originalfunktion
-            y_werte = []
-            for x in x_werte:
-                try:
-                    y = float(self.wert(x))
-                    y_werte.append(y)
-                except Exception:
-                    y_werte.append(None)
-
-            fig.add_trace(
-                go.Scatter(
-                    x=x_werte,
-                    y=y_werte,
-                    mode="lines",
-                    name=self.term(),
-                    line={"color": "blue", "width": 2},
-                ),
-                row=1,
-                col=1,
-            )
-
-            # Erste Ableitung (numerisch)
-            dy1_werte = []
-            for i in range(len(x_werte)):
-                if i == 0 or i == len(x_werte) - 1:
-                    dy1_werte.append(None)
-                else:
-                    try:
-                        h = x_werte[1] - x_werte[0]
-                        dy1 = (
-                            self.wert(x_werte[i] + h) - self.wert(x_werte[i] - h)
-                        ) / (2 * h)
-                        dy1_werte.append(float(dy1))
-                    except Exception:
-                        dy1_werte.append(None)
-
-            fig.add_trace(
-                go.Scatter(
-                    x=x_werte,
-                    y=dy1_werte,
-                    mode="lines",
-                    name="f'(x)",
-                    line={"color": "red", "width": 2},
-                ),
-                row=2,
-                col=1,
-            )
-
-            # Zweite Ableitung (numerisch)
-            dy2_werte = []
-            for i in range(1, len(x_werte) - 1):
-                try:
-                    h = x_werte[1] - x_werte[0]
-                    dy2 = (
-                        self.wert(x_werte[i] + h)
-                        - 2 * self.wert(x_werte[i])
-                        + self.wert(x_werte[i] - h)
-                    ) / (h**2)
-                    dy2_werte.append(float(dy2))
-                except Exception:
-                    dy2_werte.append(None)
-
-            fig.add_trace(
-                go.Scatter(
-                    x=x_werte[1:-1],
-                    y=dy2_werte,
-                    mode="lines",
-                    name="f''(x)",
-                    line={"color": "green", "width": 2},
-                ),
-                row=3,
-                col=1,
-            )
-
-            # Layout anpassen
-            fig.update_layout(
-                title=f"Detaillierte Analyse: {titel}",
-                height=800,
-                showlegend=True,
-                hovermode="x unified",
-            )
-
-            # Aspect Ratio Control für alle Subplots
-            for i in range(1, 4):
-                fig.update_yaxes(scaleanchor="x", scaleratio=1, row=i, col=1)
-
-            return fig
-
-        except ImportError:
-            raise ImportError("Plotly wird für die Visualisierung benötigt")
-
-    def _zeige_interaktiv(self, x_bereich: tuple, punkte: int, titel: str) -> Any:
-        """Erstellt einen interaktiven Plot (falls marimo verfügbar)"""
-        try:
-            import marimo as mo
-
-            # Erstelle zuerst einen Standard-Plotly-Graphen
-            fig = self._zeige_standard_graph(x_bereich, punkte, titel)
-
-            # Wandle in marimo-Widget um
-            return mo.ui.plotly(fig)
-
-        except ImportError:
-            # Fallback zu normalem Plotly-Graphen
-            return self._zeige_standard_graph(x_bereich, punkte, titel)
-
-    def exportiere_visualisierung(self, dateiname: str, format: str = "html", **kwargs):
-        """
-        Exportiert die Visualisierung in verschiedene Formate.
-
-        Args:
-            dateiname: Name der Ausgabedatei
-            format: Ausgabeformat ('html', 'png', 'pdf', 'svg')
-            **kwargs: Zusätzliche Parameter für die Visualisierung
-        """
-        fig = self.zeige(**kwargs)
-
-        if format == "html":
-            fig.write_html(dateiname)
-        elif format == "png":
-            fig.write_image(dateiname)
-        elif format == "pdf":
-            fig.write_image(dateiname)
-        elif format == "svg":
-            fig.write_image(dateiname)
-        else:
-            raise ValueError(f"Unbekanntes Format: {format}")
-
-        print(f"Visualisierung exportiert als: {dateiname}")
-
-    def __call__(self, x_wert: float) -> float | sp.Basic:
-        """
-        Macht die Funktion aufrufbar: f(2), f(0.5), etc.
-
-        Args:
-            x_wert: x-Wert, an dem die Funktion ausgewertet werden soll
-
-        Returns:
-            Der Funktionswert als float-Zahl oder symbolischer Ausdruck (bei Parametern)
-        """
+        return merkmale > 1
+
+    @property
+    def funktionstyp(self) -> str:
+        """Gibt den Funktionstyp als String zurück"""
         if self.ist_ganzrational:
-            # Optimierter Pfad für ganzrationale Funktionen
-            return self.zaehler.wert(x_wert)
+            return "ganzrational"
+        elif self.ist_gebrochen_rational:
+            return "gebrochen-rational"
+        elif self.ist_exponential_rational:
+            return "exponential-rational"
+        elif self.ist_trigonometrisch:
+            return "trigonometrisch"
+        elif self.ist_gemischt:
+            return "gemischt"
         else:
-            # Allgemeiner Fall mit Division
-            zaehler_wert = self.zaehler.wert(x_wert)
-            nenner_wert = self.nenner.wert(x_wert)
+            return "allgemein"
 
-            # Prüfe auf Polstelle
-            if isinstance(nenner_wert, (int, float)) and abs(nenner_wert) < 1e-10:
-                raise ValueError(f"x = {x_wert} ist eine Polstelle der Funktion")
-
-            # Wenn beide Werte konkrete Zahlen sind, teile sie
-            if isinstance(zaehler_wert, (int, float)) and isinstance(
-                nenner_wert, (int, float)
-            ):
-                return float(zaehler_wert) / float(nenner_wert)
-
-            # Andernfalls gib den symbolischen Ausdruck zurück
-            return zaehler_wert / nenner_wert
-
-    def wert(self, x_wert: float) -> float | sp.Basic:
-        """Berechnet den Funktionswert an einer Stelle."""
-        # Prüfe auf verbleibende freie Symbole (Parameter)
-        free_syms = self.term_sympy.free_symbols
-        if self.hauptvariable:
-            free_syms.discard(self.hauptvariable.symbol)
-
-        if free_syms:
-            # Noch Parameter vorhanden - substituiere x-Wert und gib symbolischen Ausdruck zurück
-            return self.term_sympy.subs(self._variable_symbol, x_wert)
-
-        try:
-            return float(self.term_sympy.subs(self._variable_symbol, x_wert))
-        except (TypeError, ValueError) as e:
-            raise ValueError(
-                f"Fehler bei der Werteberechnung bei x={x_wert}: {e}"
-            ) from e
-
-    def term(self) -> str:
-        """Gibt den Term als String zurück."""
-        return str(self.term_sympy).replace("**", "^").replace("*", "").replace(" ", "")
-
-    def term_latex(self) -> str:
-        """Gibt den Term als LaTeX-String zurück."""
-        return latex(self.term_sympy)
-
-    def grad(self) -> int:
-        """Gibt den Grad der Funktion zurück."""
-        try:
-            return sp.Poly(self.term_sympy, self._variable_symbol).degree()
-        except (sp.SympifyError, TypeError, ValueError):
-            # Fallback für konstante Funktionen
-            return 0
-
-    def ableitung(self, ordnung: int = 1) -> "Funktion":
-        """Berechnet die Ableitung gegebener Ordnung."""
-        abgeleitet = diff(self.term_sympy, self._variable_symbol, ordnung)
-
-        # Erstelle neue Funktion direkt mit dem abgeleiteten Ausdruck
-        neue_funktion = Funktion(abgeleitet)
-
-        # Kopiere die Symbol-Informationen
-        neue_funktion.variablen = self.variablen.copy()
-        neue_funktion.parameter = self.parameter.copy()
-        neue_funktion.hauptvariable = self.hauptvariable
-
-        neue_funktion.original_eingabe = (
-            f"Ableitung({self.original_eingabe}, {ordnung})"
-        )
-
-        return neue_funktion
-
-    def pruefe_punktsymmetrie(
-        self, x: float | sp.Basic = 0, y: float | sp.Basic = 0
-    ) -> dict:
-        """
-        Detaillierte Prüfung der Punktsymmetrie zum Punkt (x, y) mit exakter algebraischer Verifikation.
-
-        Args:
-            x: x-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung). Kann float oder SymPy-Ausdruck sein.
-            y: y-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung). Kann float oder SymPy-Ausdruck sein.
-
-        Returns:
-            dict: Detaillierte Analyseergebnisse mit:
-                - ist_punktsymmetrisch: bool
-                - details: str mit Erklärung
-                - beispiele: list mit Testwerten
-
-        Beispiele:
-            >>> f = Funktion("x^3")
-            >>> ergebnis = f.pruefe_punktsymmetrie()
-            >>> ergebnis['ist_punktsymmetrisch']  # True
-
-            >>> f = Funktion("(x-a)^3 + b")  # Parametrische Funktion
-            >>> ergebnis = f.pruefe_punktsymmetrie(sp.Symbol('a'), sp.Symbol('b'))
-            >>> ergebnis['ist_punktsymmetrisch']  # True
-        """
-        import random
-
-        import sympy as sp
-
-        details = []
-        beispiele = []
-        ist_punktsymmetrisch = True
-
-        # Konvertiere x, y zu SymPy-Ausdrücken wenn nötig
-        if isinstance(x, (int, float)):
-            x_sym = sp.sympify(x)
-        else:
-            x_sym = x
-
-        if isinstance(y, (int, float)):
-            y_sym = sp.sympify(y)
-        else:
-            y_sym = y
-
-        # Spezialfall: Betragsfunktion ist achsensymmetrisch, nicht punktsymmetrisch
-        if "abs" in self.original_eingabe.lower():
-            details.append("Betragsfunktion ist nicht punktsymmetrisch")
-            return {
-                "ist_punktsymmetrisch": False,
-                "details": " | ".join(details),
-                "beispiele": beispiele,
-            }
-
-        # 🔥 EXAKTE ALGEBRAISCHE ÜBERPRÜFUNG MIT SYMPY 🔥
-        try:
-            # Erstelle eine neue Variable für die Verschiebung
-            h = sp.Symbol("h", real=True)
-
-            # Berechne f(x + h) und f(x - h) symbolisch
-            f_plus_h = self.term_sympy.subs(self._variable_symbol, x_sym + h)
-            f_minus_h = self.term_sympy.subs(self._variable_symbol, x_sym - h)
-
-            # Prüfe die Punktsymmetrie-Bedingung: f(x+h) + f(x-h) = 2y
-            bedingung = sp.simplify(f_plus_h + f_minus_h - 2 * y_sym)
-
-            if bedingung == 0:
-                details.append("Exakte algebraische Prüfung: Bedingung erfüllt")
-                beispiele.append(f"f({x_sym} + h) + f({x_sym} - h) = 2{y_sym}")
-            else:
-                # Versuche zu prüfen, ob der Ausdruck für alle h gleich 0 ist
-                try:
-                    # Prüfe ob alle Koeffizienten von h gleich 0 sind
-                    if isinstance(bedingung, sp.Poly):
-                        koeffizienten = bedingung.all_coeffs()
-                        if all(k == 0 for k in koeffizienten):
-                            details.append(
-                                "Exakte algebraische Prüfung: Alle Koeffizienten gleich 0"
-                            )
-                        else:
-                            ist_punktsymmetrisch = False
-                            details.append(
-                                f"Exakte algebraische Prüfung: Nicht alle Koeffizienten gleich 0: {bedingung}"
-                            )
-                    else:
-                        # Versuche mit expand und collect
-                        expanded = sp.expand(bedingung)
-                        collected = sp.collect(expanded, h)
-                        if collected == 0:
-                            details.append(
-                                "Exakte algebraische Prüfung: Expandiert und vereinfacht zu 0"
-                            )
-                        else:
-                            ist_punktsymmetrisch = False
-                            details.append(
-                                f"Exakte algebraische Prüfung: {collected} ≠ 0"
-                            )
-                except (sp.SympifyError, TypeError, ValueError):
-                    # Fallback auf numerische Tests
-                    ist_punktsymmetrisch = False
-                    details.append(
-                        "Algebraische Prüfung nicht möglich, verwende numerische Tests"
-                    )
-
-                    # Numerische Tests als Fallback
-                    for _i in range(5):
-                        a = random.uniform(1, 5)
-                        try:
-                            wert_plus = (
-                                self.wert(float(x_sym) + a)
-                                if x_sym.is_number
-                                else self.wert(a)
-                            )
-                            wert_minus = (
-                                self.wert(float(x_sym) - a)
-                                if x_sym.is_number
-                                else self.wert(-a)
-                            )
-
-                            if isinstance(wert_plus, (int, float)) and isinstance(
-                                wert_minus, (int, float)
-                            ):
-                                if (
-                                    abs((wert_plus + wert_minus) - 2 * float(y_sym))
-                                    > 1e-10
-                                ):
-                                    details.append(
-                                        f"Numerische Abweichung bei h={a:.2f}"
-                                    )
-                                    break
-                        except (ValueError, TypeError, ZeroDivisionError):
-                            ist_punktsymmetrisch = False
-                            break
-        except Exception as e:
-            # Fallback auf numerische Tests
-            ist_punktsymmetrisch = False
-            details.append(f"Algebraische Prüfung fehlgeschlagen: {e}")
-
-            # Numerische Tests als Fallback
-            for _i in range(5):
-                a = random.uniform(1, 5)
-                try:
-                    wert_plus = (
-                        self.wert(float(x_sym) + a) if x_sym.is_number else self.wert(a)
-                    )
-                    wert_minus = (
-                        self.wert(float(x_sym) - a)
-                        if x_sym.is_number
-                        else self.wert(-a)
-                    )
-
-                    if isinstance(wert_plus, (int, float)) and isinstance(
-                        wert_minus, (int, float)
-                    ):
-                        if abs((wert_plus + wert_minus) - 2 * float(y_sym)) > 1e-10:
-                            details.append(f"Numerische Abweichung bei h={a:.2f}")
-                            break
-                except (ValueError, TypeError, ZeroDivisionError):
-                    ist_punktsymmetrisch = False
-                    break
-
-        return {
-            "ist_punktsymmetrisch": ist_punktsymmetrisch,
-            "details": " | ".join(details)
-            if details
-            else "Keine Abweichungen gefunden",
-            "beispiele": beispiele,
-        }
-
-    def pruefe_achsensymmetrie(self, x: float | sp.Basic = 0) -> dict:
-        """
-        Detaillierte Prüfung der Achsensymmetrie zur vertikalen Achse x = konst mit exakter algebraischer Verifikation.
-
-        Args:
-            x: x-Koordinate der Symmetrieachse (Standard: 0 = y-Achse). Kann float oder SymPy-Ausdruck sein.
-
-        Returns:
-            dict: Detaillierte Analyseergebnisse mit:
-                - ist_achsensymmetrisch: bool
-                - details: str mit Erklärung
-                - beispiele: list mit Testwerten
-
-        Beispiele:
-            >>> f = Funktion("x^2")
-            >>> ergebnis = f.pruefe_achsensymmetrie()
-            >>> ergebnis['ist_achsensymmetrisch']  # True
-
-            >>> f = Funktion("(x-a)^2")  # Parametrische Funktion
-            >>> ergebnis = f.pruefe_achsensymmetrie(sp.Symbol('a'))
-            >>> ergebnis['ist_achsensymmetrisch']  # True
-        """
-        import random
-
-        import sympy as sp
-
-        details = []
-        beispiele = []
-        ist_achsensymmetrisch = True
-
-        # Konvertiere x zu SymPy-Ausdruck wenn nötig
-        if isinstance(x, (int, float)):
-            x_sym = sp.sympify(x)
-        else:
-            x_sym = x
-
-        # Spezialfall: Betragsfunktion ist immer achsensymmetrisch zur y-Achse
-        if "abs" in self.original_eingabe.lower() and x_sym == 0:
-            details.append("Betragsfunktion ist achsensymmetrisch zur y-Achse")
-            return {
-                "ist_achsensymmetrisch": True,
-                "details": " | ".join(details),
-                "beispiele": beispiele,
-            }
-
-        # 🔥 EXAKTE ALGEBRAISCHE ÜBERPRÜFUNG MIT SYMPY 🔥
-        try:
-            # Erstelle eine neue Variable für die Verschiebung
-            h = sp.Symbol("h", real=True)
-
-            # Berechne f(x + h) und f(x - h) symbolisch
-            f_plus_h = self.term_sympy.subs(self._variable_symbol, x_sym + h)
-            f_minus_h = self.term_sympy.subs(self._variable_symbol, x_sym - h)
-
-            # Prüfe die Achsensymmetrie-Bedingung: f(x+h) = f(x-h)
-            bedingung = sp.simplify(f_plus_h - f_minus_h)
-
-            if bedingung == 0:
-                details.append("Exakte algebraische Prüfung: Bedingung erfüllt")
-                beispiele.append(f"f({x_sym} + h) = f({x_sym} - h)")
-            else:
-                # Versuche zu prüfen, ob der Ausdruck für alle h gleich 0 ist
-                try:
-                    # Prüfe ob alle Koeffizienten von h gleich 0 sind
-                    if isinstance(bedingung, sp.Poly):
-                        koeffizienten = bedingung.all_coeffs()
-                        if all(k == 0 for k in koeffizienten):
-                            details.append(
-                                "Exakte algebraische Prüfung: Alle Koeffizienten gleich 0"
-                            )
-                        else:
-                            ist_achsensymmetrisch = False
-                            details.append(
-                                f"Exakte algebraische Prüfung: Nicht alle Koeffizienten gleich 0: {bedingung}"
-                            )
-                    else:
-                        # Versuche mit expand und collect
-                        expanded = sp.expand(bedingung)
-                        collected = sp.collect(expanded, h)
-                        if collected == 0:
-                            details.append(
-                                "Exakte algebraische Prüfung: Expandiert und vereinfacht zu 0"
-                            )
-                        else:
-                            ist_achsensymmetrisch = False
-                            details.append(
-                                f"Exakte algebraische Prüfung: {collected} ≠ 0"
-                            )
-                except (sp.SympifyError, TypeError, ValueError):
-                    # Fallback auf numerische Tests
-                    ist_achsensymmetrisch = False
-                    details.append(
-                        "Algebraische Prüfung nicht möglich, verwende numerische Tests"
-                    )
-
-                    # Numerische Tests als Fallback
-                    for _i in range(5):
-                        h_val = random.uniform(1, 5)
-                        try:
-                            wert_plus = (
-                                self.wert(float(x_sym) + h_val)
-                                if x_sym.is_number
-                                else self.wert(h_val)
-                            )
-                            wert_minus = (
-                                self.wert(float(x_sym) - h_val)
-                                if x_sym.is_number
-                                else self.wert(-h_val)
-                            )
-
-                            if isinstance(wert_plus, (int, float)) and isinstance(
-                                wert_minus, (int, float)
-                            ):
-                                if abs(wert_plus - wert_minus) > 1e-10:
-                                    details.append(
-                                        f"Numerische Abweichung bei h={h_val:.2f}"
-                                    )
-                                    break
-                        except (ValueError, TypeError, ZeroDivisionError):
-                            ist_achsensymmetrisch = False
-                            break
-        except Exception as e:
-            # Fallback auf numerische Tests
-            ist_achsensymmetrisch = False
-            details.append(f"Algebraische Prüfung fehlgeschlagen: {e}")
-
-            # Numerische Tests als Fallback
-            for _i in range(5):
-                h_val = random.uniform(1, 5)
-                try:
-                    wert_plus = (
-                        self.wert(float(x_sym) + h_val)
-                        if x_sym.is_number
-                        else self.wert(h_val)
-                    )
-                    wert_minus = (
-                        self.wert(float(x_sym) - h_val)
-                        if x_sym.is_number
-                        else self.wert(-h_val)
-                    )
-
-                    if isinstance(wert_plus, (int, float)) and isinstance(
-                        wert_minus, (int, float)
-                    ):
-                        if abs(wert_plus - wert_minus) > 1e-10:
-                            details.append(f"Numerische Abweichung bei h={h_val:.2f}")
-                            break
-                except (ValueError, TypeError, ZeroDivisionError):
-                    ist_achsensymmetrisch = False
-                    break
-
-        return {
-            "ist_achsensymmetrisch": ist_achsensymmetrisch,
-            "details": " | ".join(details)
-            if details
-            else "Keine Abweichungen gefunden",
-            "beispiele": beispiele,
-        }
-
-    def _is_symbolically_zero(
-        self, condition: sp.Basic, check_variable: sp.Symbol
-    ) -> bool:
-        """
-        Internal helper to robustly check if a SymPy expression is zero.
-
-        Args:
-            condition: The SymPy expression to check (e.g., f(x+h) - f(x-h)).
-            check_variable: The variable (e.g., h) with respect to which the condition must hold.
-
-        Returns:
-            True if the expression is symbolically zero, False otherwise.
-        """
-        if condition.is_zero:
-            return True
-
-        # Try different simplification strategies
-        try:
-            # Simplification is often the most direct way
-            simplified = sp.simplify(condition)
-            if simplified.is_zero:
-                return True
-
-            # For polynomials, all coefficients of the check_variable must be zero
-            if simplified.is_polynomial(check_variable):
-                poly = sp.Poly(simplified, check_variable)
-                return all(coeff.is_zero for coeff in poly.all_coeffs())
-
-            # For other expressions, expand and collect terms
-            expanded = sp.expand(simplified)
-            collected = sp.collect(expanded, check_variable)
-            if collected.is_zero:
-                return True
-
-        except (AttributeError, TypeError, ValueError, sp.SympifyError):
-            # If any symbolic method fails, we cannot confirm symmetry this way
-            return False
-
-        return False
-
-    def _numerical_symmetry_check(
-        self, condition_func, test_values: list[float], tolerance: float = 1e-9
-    ) -> bool:
-        """
-        Numerical fallback for symmetry verification.
-
-        Args:
-            condition_func: Function that takes a test value and returns the condition result
-            test_values: List of values to test
-            tolerance: Numerical tolerance for comparison
-
-        Returns:
-            True if all tests pass, False if any fail
-        """
-        for test_val in test_values:
-            try:
-                result = condition_func(test_val)
-                if abs(result) > tolerance:
-                    return False  # Found a counterexample
-            except (ValueError, TypeError, ZeroDivisionError):
-                return False  # Numerical evaluation failed
-        return True
-
-    def ist_punktsymmetrisch(
-        self, x: float | sp.Basic = 0, y: float | sp.Basic = 0
-    ) -> bool:
-        """
-        Prüft, ob die Funktion punktsymmetrisch zum Punkt (x, y) ist mit exakter algebraischer Verifikation.
-
-        Eine Funktion f ist punktsymmetrisch zum Punkt (x, y), wenn für alle a gilt:
-        f(x + a) + f(x - a) = 2y
-
-        Args:
-            x: x-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung). Kann float oder SymPy-Ausdruck sein.
-            y: y-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung). Kann float oder SymPy-Ausdruck sein.
-
-        Returns:
-            bool: True wenn punktsymmetrisch, False sonst
-
-        Beispiele:
-            >>> f = Funktion("x^3")           # Ursprungssymmetrisch
-            >>> f.ist_punktsymmetrisch()     # True
-            >>> f.ist_punktsymmetrisch(1, 1) # False
-
-            >>> g = Funktion("(x-1)^3 + 1")  # Punktsymmetrisch zu (1, 1)
-            >>> g.ist_punktsymmetrisch(1, 1) # True
-
-            >>> import sympy as sp
-            >>> h = Funktion("(x-a)^3 + b")  # Parametrische Funktion
-            >>> h.ist_punktsymmetrisch(sp.Symbol('a'), sp.Symbol('b'))  # True
-
-            >>> k = Funktion("x^2")           # Nicht punktsymmetrisch
-            >>> k.ist_punktsymmetrisch()     # False
-        """
-        # Konvertiere x, y zu SymPy-Ausdrücken wenn nötig
-        x_sym = sp.sympify(x) if isinstance(x, (int, float)) else x
-        y_sym = sp.sympify(y) if isinstance(y, (int, float)) else y
-
-        # Erstelle eine neue Variable für die Verschiebung
-        h = sp.Symbol("h", real=True, positive=True)
-
-        # Berechne f(x + h) und f(x - h) symbolisch
-        f_plus_h = self.term_sympy.subs(self._variable_symbol, x_sym + h)
-        f_minus_h = self.term_sympy.subs(self._variable_symbol, x_sym - h)
-
-        # Die Punktsymmetrie-Bedingung: f(x+h) + f(x-h) = 2y
-        condition = f_plus_h + f_minus_h - 2 * y_sym
-
-        # Prüfe symbolisch
-        if self._is_symbolically_zero(condition, h):
-            return True
-
-        # Fallback auf numerische Prüfung
-        # Note: Eine numerische Prüfung kann nur Nicht-Symmetrie beweisen, nicht Symmetrie
-        try:
-            x_c_float = float(x_sym) if x_sym.is_number else 0
-            y_c_float = float(y_sym) if y_sym.is_number else 0
-
-            def point_condition(test_val):
-                val_plus = self.wert(x_c_float + test_val)
-                val_minus = self.wert(x_c_float - test_val)
-                return (val_plus + val_minus) - 2 * y_c_float
-
-            # Teste mehrere zufällige Werte
-            test_values = [random.uniform(0.1, 5.0) for _ in range(10)]
-            if self._numerical_symmetry_check(point_condition, test_values):
-                # Wenn numerische Tests alle bestehen, versuche nochmal die detaillierte Methode
-                ergebnis = self.pruefe_punktsymmetrie(x, y)
-                return ergebnis["ist_punktsymmetrisch"]
-            else:
-                return False  # Numerische Tests zeigen keine Symmetrie
-
-        except (ValueError, TypeError, ZeroDivisionError, AttributeError):
-            # Fallback auf die detaillierte Prüfmethode
-            ergebnis = self.pruefe_punktsymmetrie(x, y)
-            return ergebnis["ist_punktsymmetrisch"]
-
-    def ist_achsensymmetrisch(self, x: float | sp.Basic = 0) -> bool:
-        """
-        Prüft, ob die Funktion achsensymmetrisch zur vertikalen Achse x = konst ist mit exakter algebraischer Verifikation.
-
-        Eine Funktion f ist achsensymmetrisch zur Achse x = a, wenn für alle h gilt:
-        f(a + h) = f(a - h)
-
-        Args:
-            x: x-Koordinate der Symmetrieachse (Standard: 0 = y-Achse). Kann float oder SymPy-Ausdruck sein.
-
-        Returns:
-            bool: True wenn achsensymmetrisch, False sonst
-
-        Beispiele:
-            >>> f = Funktion("x^2")           # y-achsensymmetrisch
-            >>> f.ist_achsensymmetrisch()     # True
-            >>> f.ist_achsensymmetrisch(1)    # False
-
-            >>> g = Funktion("(x-1)^2")       # symmetrisch zu x=1
-            >>> g.ist_achsensymmetrisch(1)    # True
-
-            >>> import sympy as sp
-            >>> h = Funktion("(x-a)^2")       # Parametrische Funktion
-            >>> h.ist_achsensymmetrisch(sp.Symbol('a'))  # True
-
-            >>> k = Funktion("x^3")           # Nicht achsensymmetrisch
-            >>> k.ist_achsensymmetrisch()     # False
-        """
-        # Konvertiere x zu SymPy-Ausdruck wenn nötig
-        x_sym = sp.sympify(x) if isinstance(x, (int, float)) else x
-
-        # Erstelle eine neue Variable für die Verschiebung
-        h = sp.Symbol("h", real=True, positive=True)
-
-        # Berechne f(x + h) und f(x - h) symbolisch
-        f_plus_h = self.term_sympy.subs(self._variable_symbol, x_sym + h)
-        f_minus_h = self.term_sympy.subs(self._variable_symbol, x_sym - h)
-
-        # Die Achsensymmetrie-Bedingung: f(x+h) = f(x-h)
-        condition = f_plus_h - f_minus_h
-
-        # Prüfe symbolisch
-        if self._is_symbolically_zero(condition, h):
-            return True
-
-        # Fallback auf numerische Prüfung
-        # Note: Eine numerische Prüfung kann nur Nicht-Symmetrie beweisen, nicht Symmetrie
-        try:
-            x_c_float = float(x_sym) if x_sym.is_number else 0
-
-            def axis_condition(test_val):
-                val_plus = self.wert(x_c_float + test_val)
-                val_minus = self.wert(x_c_float - test_val)
-                return val_plus - val_minus
-
-            # Teste mehrere zufällige Werte
-            test_values = [random.uniform(0.1, 5.0) for _ in range(10)]
-            if self._numerical_symmetry_check(axis_condition, test_values):
-                # Wenn numerische Tests alle bestehen, versuche nochmal die detaillierte Methode
-                ergebnis = self.pruefe_achsensymmetrie(x)
-                return ergebnis["ist_achsensymmetrisch"]
-            else:
-                return False  # Numerische Tests zeigen keine Symmetrie
-
-        except (ValueError, TypeError, ZeroDivisionError, AttributeError):
-            # Fallback auf die detaillierte Prüfmethode
-            ergebnis = self.pruefe_achsensymmetrie(x)
-            return ergebnis["ist_achsensymmetrisch"]
-
-    def nullstellen(self, real: bool = True, runden=None) -> list[sp.Basic]:
-        """Berechnet die Nullstellen der Funktion."""
-        # Verwende direkt SymPy's solve
-        lösungen = solve(self.term_sympy, self._variable_symbol)
-        nullstellen_liste = []
-
-        for lösung in lösungen:
-            # Bei symbolischen Lösungen: is_real kann None sein
-            if real and lösung.is_real is False:
-                continue
-
-            if lösung.is_real is True:
-                nullstellen_liste.append(self._runde_wert(lösung, runden))
-            else:
-                # Symbolische Lösungen oder komplexe Zahlen
-                if lösung.is_real is None:
-                    # Symbolische Lösung - behalte als SymPy-Expr
-                    nullstellen_liste.append(lösung)
-                else:
-                    # Komplexe Zahl - für jetzt überspringen
-                    continue
-
-        # Sortiere Nullstellen
-        reelle_nullstellen = []
-        symbolische_nullstellen = []
-
-        for x in nullstellen_liste:
-            if hasattr(x, "is_real"):
-                if x.is_real is True:
-                    reelle_nullstellen.append(x)
-                else:
-                    # Symbolische Ausdrücke
-                    symbolische_nullstellen.append(x)
-
-        # Sortiere reelle Nullstellen
-        reelle_nullstellen.sort(key=lambda x: float(x))
-
-        return reelle_nullstellen + symbolische_nullstellen
-
-    def _runde_wert(self, wert, runden=None):
-        """Hilfsfunktion zum Runden von Werten"""
-        if runden is not None and hasattr(wert, "evalf"):
-            return float(wert.evalf(n=runden))
-        return wert
-
-    def polstellen(self) -> list[float]:
-        """Berechnet die Polstellen der Funktion (nur für echt gebrochen-rationale Funktionen)."""
-        if self.ist_ganzrational:
-            return []
-
-        # Finde Nullstellen des Nenners
-        nenner_nullstellen = self.nenner.nullstellen()
-
-        # Konvertiere zu float und filtere
-        polstellen = []
-        for ns in nenner_nullstellen:
-            try:
-                x_val = float(ns)
-                # Prüfe, dass es nicht auch eine Nullstelle des Zählers ist
-                if not any(
-                    abs(x_val - float(zs)) < 1e-10 for zs in self.zaehler.nullstellen()
-                ):
-                    polstellen.append(x_val)
-            except (ValueError, TypeError):
-                continue
-
-        return sorted(polstellen)
+    # 🔥 HILFSMETHODEN 🔥
 
     def __str__(self):
-        """String-Repräsentation der Funktion."""
         return self.term()
 
     def __repr__(self):
-        """Repräsentation für Debugging."""
-        return f"Funktion('{self.original_eingabe}')"
+        return f"Funktion('{self.term()}')"
+
+    def __eq__(self, other):
+        if not isinstance(other, Funktion):
+            return False
+        return self.term_sympy.equals(other.term_sympy)
 
 
-# 🔥 WRAPPER-FUNKTIONEN FÜR SYMMETRIE-PRÜFUNG 🔥
+# 🔥 FACTORY-FUNKTION für automatische Erkennung 🔥
 
 
-def Achsensymmetrie(funktion: Funktion, x: float | sp.Basic = 0) -> bool:
+def erstelle_funktion_automatisch(
+    eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
+    nenner: Union[str, sp.Basic, "Funktion", None] = None,
+) -> Funktion:
     """
-    Wrapper-Funktion zur Prüfung der Achsensymmetrie.
-
-    Diese Funktion nutzt die Methode funktion.ist_achsensymmetrisch(x)
-    zur Überprüfung der Achsensymmetrie.
+    Factory-Funktion, die automatisch den richtigen Funktionstyp erkennt und erstellt.
 
     Args:
-        funktion: Die zu prüfende Funktion (Funktion-Objekt)
-        x: x-Koordinate der Symmetrieachse (Standard: 0 = y-Achse).
-           Kann float oder SymPy-Ausdruck sein (z.B. 1+a)
+        eingabe: String, SymPy-Ausdruck, Funktion-Objekt oder Tuple (zaehler, nenner)
+        nenner: Optionaler Nenner (wenn eingabe nur Zähler ist)
 
     Returns:
-        bool: True wenn achsensymmetrisch, False sonst
-
-    Beispiele:
-        >>> f = Funktion("x^2")
-        >>> Achsensymmetrie(f)                    # True (y-Achse)
-        >>> Achsensymmetrie(f, 1)                 # False
-
-        >>> g = Funktion("(x-1)^2")
-        >>> Achsensymmetrie(g, 1)                 # True (x=1)
-
-        >>> import sympy as sp
-        >>> a = sp.Symbol('a')
-        >>> h = Funktion("(x-a)^2")
-        >>> Achsensymmetrie(h, a)                 # True (x=a)
+        Funktion: Automatisch erkannte und erstellte Funktion (spezialisierte Klasse)
     """
-    return funktion.ist_achsensymmetrisch(x)
+    # 🔥 FACTORY-LOGIK: Automatische Typenerkennung 🔥
 
+    # Erstelle erstmal eine Basis-Funktion zur Typanalyse
+    basis_funktion = Funktion(eingabe, nenner)
 
-def Punktsymmetrie(
-    funktion: Funktion, x: float | sp.Basic = 0, y: float | sp.Basic = 0
-) -> bool:
-    """
-    Wrapper-Funktion zur Prüfung der Punktsymmetrie.
+    # Importiere spezialisierte Klassen (zur Vermeidung von Circular Imports)
+    from .ganzrationale import GanzrationaleFunktion
+    from .gebrochen_rationale import (
+        ExponentialRationaleFunktion,
+        GebrochenRationaleFunktion,
+    )
+    from .trigonometrisch import TrigonometrischeFunktion
 
-    Diese Funktion nutzt die Methode funktion.ist_punktsymmetrisch(x, y)
-    zur Überprüfung der Punktsymmetrie.
-
-    Args:
-        funktion: Die zu prüfende Funktion (Funktion-Objekt)
-        x: x-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung).
-           Kann float oder SymPy-Ausdruck sein (z.B. 1+a)
-        y: y-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung).
-           Kann float oder SymPy-Ausdruck sein (z.B. 2+b)
-
-    Returns:
-        bool: True wenn punktsymmetrisch, False sonst
-
-    Beispiele:
-        >>> f = Funktion("x^3")
-        >>> Punktsymmetrie(f)                    # True (Ursprung)
-        >>> Punktsymmetrie(f, 1, 1)             # False
-
-        >>> g = Funktion("(x-1)^3 + 1")
-        >>> Punktsymmetrie(g, 1, 1)             # True (Punkt (1,1))
-
-        >>> import sympy as sp
-        >>> a, b = sp.symbols('a b')
-        >>> h = Funktion("(x-a)^3 + b")
-        >>> Punktsymmetrie(h, a, b)              # True (Punkt (a,b))
-    """
-    return funktion.ist_punktsymmetrisch(x, y)
-
-
-# 🔥 DETAILIERTE WRAPPER-FUNKTIONEN 🔥
-
-
-def PruefeAchsensymmetrie(funktion: Funktion, x: float | sp.Basic = 0) -> dict:
-    """
-    Wrapper-Funktion für detaillierte Achsensymmetrie-Prüfung.
-
-    Diese Funktion nutzt die Methode funktion.pruefe_achsensymmetrie(x)
-    zur detaillierten Analyse der Achsensymmetrie.
-
-    Args:
-        funktion: Die zu prüfende Funktion (Funktion-Objekt)
-        x: x-Koordinate der Symmetrieachse (Standard: 0 = y-Achse).
-           Kann float oder SymPy-Ausdruck sein
-
-    Returns:
-        dict: Detaillierte Analyseergebnisse mit:
-            - ist_achsensymmetrisch: bool
-            - details: str mit Erklärung
-            - beispiele: list mit Testwerten
-
-    Beispiele:
-        >>> f = Funktion("x^2")
-        >>> ergebnis = PruefeAchsensymmetrie(f)
-        >>> ergebnis['ist_achsensymmetrisch']     # True
-        >>> ergebnis['details']                   # Erklärung
-    """
-    return funktion.pruefe_achsensymmetrie(x)
-
-
-def PruefePunktsymmetrie(
-    funktion: Funktion, x: float | sp.Basic = 0, y: float | sp.Basic = 0
-) -> dict:
-    """
-    Wrapper-Funktion für detaillierte Punktsymmetrie-Prüfung.
-
-    Diese Funktion nutzt die Methode funktion.pruefe_punktsymmetrie(x, y)
-    zur detaillierten Analyse der Punktsymmetrie.
-
-    Args:
-        funktion: Die zu prüfende Funktion (Funktion-Objekt)
-        x: x-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung)
-        y: y-Koordinate des Symmetriezentrums (Standard: 0 = Ursprung)
-
-    Returns:
-        dict: Detaillierte Analyseergebnisse mit:
-            - ist_punktsymmetrisch: bool
-            - details: str mit Erklärung
-            - beispiele: list mit Testwerten
-
-    Beispiele:
-        >>> f = Funktion("x^3")
-        >>> ergebnis = PruefePunktsymmetrie(f)
-        >>> ergebnis['ist_punktsymmetrisch']      # True
-        >>> ergebnis['details']                   # Erklärung
-    """
-    return funktion.pruefe_punktsymmetrie(x, y)
+    # 🔥 AUTOMATISCHE TYPENERKENNUNG 🔥
+    if basis_funktion.ist_ganzrational:
+        # 🔥 FIX: GanzrationaleFunktion hat andere Signatur (kein nenner) 🔥
+        if nenner is not None:
+            # Wenn Nenner angegeben, kombiniere vorher
+            if isinstance(eingabe, tuple) and len(eingabe) == 2:
+                # Tuple-Eingabe (zaehler, nenner)
+                combined_str = f"({eingabe[0]})/({eingabe[1]})"
+                return GanzrationaleFunktion(combined_str)
+            else:
+                combined_str = f"{eingabe}/{nenner}"
+                return GanzrationaleFunktion(combined_str)
+        else:
+            # Konvertiere zu String für ganzrationale Funktion
+            if isinstance(eingabe, Funktion):
+                eingabe_str = eingabe.term()
+            else:
+                eingabe_str = str(eingabe)
+            return GanzrationaleFunktion(eingabe_str)
+    elif basis_funktion.ist_gebrochen_rational:
+        # Konvertiere zu passendem Format für gebrochen-rationale Funktion
+        if isinstance(eingabe, Funktion):
+            eingabe_str = eingabe.term()
+        else:
+            eingabe_str = str(eingabe)
+        if isinstance(nenner, Funktion):
+            nenner_str = nenner.term()
+        else:
+            nenner_str = str(nenner) if nenner is not None else None
+        return GebrochenRationaleFunktion(eingabe_str, nenner_str)
+    elif basis_funktion.ist_exponential_rational:
+        # Konvertiere zu passendem Format für exponential-rationale Funktion
+        if isinstance(eingabe, Funktion):
+            eingabe_str = eingabe.term()
+        else:
+            eingabe_str = str(eingabe)
+        return ExponentialRationaleFunktion(eingabe_str)
+    elif basis_funktion.ist_trigonometrisch:
+        # Konvertiere zu passendem Format für trigonometrische Funktion
+        if isinstance(eingabe, Funktion):
+            eingabe_str = eingabe.term()
+        else:
+            eingabe_str = str(eingabe)
+        return TrigonometrischeFunktion(eingabe_str)
+    else:
+        # Fallback auf Basis-Klasse für gemischte oder allgemeine Funktionen
+        return basis_funktion

@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from schul_analysis.ganzrationale import GanzrationaleFunktion
 from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_analysis.errors import DivisionDurchNullError
 
 
 class TestGebrochenRationaleFunktionKonstruktoren:
@@ -46,7 +47,7 @@ class TestGebrochenRationaleFunktionKonstruktoren:
         """Test: Fehler bei Null-Nenner"""
         z = GanzrationaleFunktion("x^2+1")
         n = GanzrationaleFunktion("0")
-        with pytest.raises(ValueError, match="Nenner darf nicht die Nullfunktion sein"):
+        with pytest.raises(DivisionDurchNullError, match="Division durch Nullfunktion"):
             GebrochenRationaleFunktion(z, n)
 
     def test_auto_kuerzen(self):

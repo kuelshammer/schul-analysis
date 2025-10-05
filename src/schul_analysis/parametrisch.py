@@ -7,6 +7,7 @@ f_a(x) = a x² + x, wobei 'a' ein Parameter und 'x' eine Variable ist.
 
 import sympy as sp
 
+from .funktion import Funktion
 from .ganzrationale import GanzrationaleFunktion
 from .symbolic import Parameter, Variable
 
@@ -55,7 +56,7 @@ class Funktionsaufruf:
         return f"Funktionsaufruf({self.funktion.term()}, {self.wert_substitution})"
 
 
-class ParametrischeFunktion:
+class ParametrischeFunktion(Funktion):
     """
     Repräsentiert eine parametrische Funktion mit symbolischen Parametern
 
@@ -301,9 +302,11 @@ class ParametrischeFunktion:
         # Bestimme den Grad des Polynoms
         try:
             grad = sp.degree(term_sympy, variable.symbol)
-        except Exception:
-            # Wenn es kein Polynom ist, versuchen wir es als konstanten Term
-            grad = 0
+        except (sp.PolynomialError, ValueError, TypeError) as e:
+            # Wenn es kein Polynom ist, ist es kein parametrischer Ausdruck
+            raise ValueError(
+                f"Der Ausdruck '{term_sympy}' ist kein Polynom in der Variable '{variable.symbol}': {e}"
+            ) from e
 
         # Für jeden Grad von 0 bis max_grad den Koeffizienten extrahieren
         for i in range(grad + 1):
@@ -411,9 +414,11 @@ class ParametrischeFunktion:
             # Konvertiere zu float
             konkrete_koeffizienten = [float(k) for k in koeffizienten_sympy]
 
-        except Exception:
-            # Fallback: Konstante Funktion
-            konkrete_koeffizienten = [float(konkreter_term)]
+        except (sp.PolynomialError, ValueError, TypeError) as e:
+            # Spezifische Fehlermeldung anstelle von ungenauem Fallback
+            raise ValueError(
+                f"Konnte keine Koeffizienten aus '{konkreter_term}' extrahieren: {e}"
+            ) from e
 
         return GanzrationaleFunktion(konkrete_koeffizienten)
 
@@ -612,8 +617,11 @@ class ParametrischeFunktion:
                         nullstellen_mit_bedingungen.append((loesung, None))
 
             return nullstellen_mit_bedingungen
-        except Exception:
-            return []
+        except (sp.SympifyError, ValueError, TypeError) as e:
+            # Spezifische Fehlermeldung anstelle von leere Liste
+            raise ValueError(
+                f"Konnte keine symbolischen Nullstellen berechnen: {e}"
+            ) from e
 
     def extremstellen(self) -> list[tuple[sp.Expr, str]]:
         """

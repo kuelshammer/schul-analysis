@@ -31,6 +31,14 @@ class GemischteFunktion(Funktion):
         Args:
             eingabe: String, SymPy-Ausdruck oder bestehendes GemischteFunktion-Objekt
         """
+        # Initialize required attributes from parent class
+        from sympy import symbols
+
+        self.x = symbols("x")
+        self.variablen = []
+        self.parameter = []
+        self.hauptvariable = None
+
         # Speichere die ursprüngliche Eingabe
         self.original_eingabe = str(eingabe)
 
@@ -62,7 +70,7 @@ class GemischteFunktion(Funktion):
         # Analysiere die Komponenten der gemischten Funktion
         self.komponenten = self._analysiere_komponenten()
 
-        # Bestimme die Hauptvariable
+        # Bestimme die Hauptvariable (überschreibt die von der Elternklasse)
         self.x = self._erkenne_hauptvariable()
 
         # Erstelle lesbaren Term-String
@@ -240,8 +248,14 @@ class GemischteFunktion(Funktion):
 
             return nullstellen_liste
 
-        except Exception:
+        except (AttributeError, ValueError, TypeError, ZeroDivisionError) as e:
             # Für komplexe gemischte Funktionen: numerische Annäherung
+            # Logge den Fehler für Debugging-Zwecke
+            import logging
+
+            logging.debug(
+                f"Symbolische Nullstellen-Berechnung fehlgeschlagen für {self.term_str}: {e}"
+            )
             return self._numerische_nullstellen()
 
     def _numerische_nullstellen(self) -> list[float]:
@@ -271,7 +285,7 @@ class GemischteFunktion(Funktion):
             except (TypeError, ValueError):
                 continue
 
-        return sorted(list(set(nullstellen)))
+        return sorted(set(nullstellen))
 
     def ableitung(self, ordnung: int = 1) -> "GemischteFunktion":
         """

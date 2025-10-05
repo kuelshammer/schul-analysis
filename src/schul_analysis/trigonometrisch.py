@@ -7,14 +7,14 @@ Einfache Implementierung für trigonometrische Funktionen wie sin(x), cos(x), et
 from typing import Union
 
 import sympy as sp
-from sympy import diff, latex, solve, symbols
+from sympy import diff, latex, solve
 
 from .funktion import Funktion
 
 
 class TrigonometrischeFunktion(Funktion):
     """
-    Repräsentiert trigonometrische Funktionen.
+    Pädagogischer Wrapper für trigonometrische Funktionen.
 
     Beispiele:
     - sin(x)
@@ -22,80 +22,39 @@ class TrigonometrischeFunktion(Funktion):
     - tan(x/2)
     """
 
-    def __init__(self, eingabe: Union[str, sp.Basic, "TrigonometrischeFunktion"]):
+    def __init__(self, eingabe: Union[str, sp.Basic, "Funktion"]):
         """
         Konstruktor für trigonometrische Funktionen.
 
         Args:
-            eingabe: String, SymPy-Ausdruck oder bestehendes TrigonometrischeFunktion-Objekt
+            eingabe: String, SymPy-Ausdruck oder Funktion-Objekt
         """
-        # Speichere die ursprüngliche Eingabe
+        # 🔥 PÄDAGOGISCHER WRAPPER - Keine komplexe Logik mehr! 🔥
+
+        # Speichere die ursprüngliche Eingabe für Validierung
         self.original_eingabe = str(eingabe)
 
-        # Parse zu SymPy-Ausdruck
+        # 🔥 UNIFIED ARCHITECTURE: Delegiere an Basis-Klasse 🔥
+        # Konstruiere die Eingabe für die Basisklasse
         if isinstance(eingabe, str):
-            from sympy.parsing.sympy_parser import (
-                implicit_multiplication_application,
-                parse_expr,
-                standard_transformations,
-            )
-
-            transformations = standard_transformations + (
-                implicit_multiplication_application,
-            )
-            self.term_sympy = parse_expr(
-                eingabe.replace("^", "**"), transformations=transformations
-            )
+            super().__init__(eingabe)
         elif isinstance(eingabe, sp.Basic):
-            self.term_sympy = eingabe
-        elif isinstance(eingabe, TrigonometrischeFunktion):
-            # Kopie
-            self.term_sympy = eingabe.term_sympy
+            super().__init__(eingabe)
+        elif isinstance(eingabe, Funktion):
+            super().__init__(eingabe.term())
         else:
+            raise TypeError(f"Unsupported input type: {type(eingabe)}")
+
+        # 🔥 PÄDAGOGISCHE VALIDIERUNG mit deutscher Fehlermeldung 🔥
+        if not self.ist_trigonometrisch:
             raise TypeError(
-                "Eingabe muss String, SymPy-Ausdruck oder TrigonometrischeFunktion sein"
+                f"Die Eingabe '{self.original_eingabe}' ist keine trigonometrische Funktion! "
+                "Eine trigonometrische Funktion muss sin(x), cos(x), tan(x) oder ähnliche Funktionen enthalten. "
+                "Hast du vielleicht eine ganzrationale, gebrochen-rationale oder exponentiale Funktion gemeint?"
             )
 
-        # Bestimme die Hauptvariable
-        self.x = self._erkenne_hauptvariable()
-
-        # Erstelle lesbaren Term-String
-        self.term_str = self._erstelle_term_string()
-
-    def _erkenne_hauptvariable(self) -> sp.Symbol:
-        """Erkennt die Hauptvariable im Ausdruck."""
-        alle_symbole = self.term_sympy.free_symbols
-
-        if not alle_symbole:
-            return symbols("x")  # Fallback für konstante Funktionen
-
-        # Prioritäten: x > t > y > z > andere
-        for symbol_name in ["x", "t", "y", "z"]:
-            for symbol in alle_symbole:
-                if str(symbol) == symbol_name:
-                    return symbol
-
-        # Fallback: erstes Symbol
-        return list(alle_symbole)[0]
-
-    def _erstelle_term_string(self) -> str:
-        """Erstellt einen lesbaren Term-String."""
-        return str(self.term_sympy).replace("**", "^").replace("*", "")
-
-    def wert(self, x_wert: float) -> float:
-        """
-        Berechnet den Funktionswert an einer Stelle.
-
-        Args:
-            x_wert: x-Wert an dem ausgewertet werden soll
-
-        Returns:
-            Funktionswert als float
-        """
-        try:
-            return float(self.term_sympy.subs(self.x, x_wert))
-        except (TypeError, ValueError) as e:
-            raise ValueError(f"Fehler bei der Werteberechnung bei x={x_wert}: {e}")
+        # 🔥 CACHE für wiederholte Berechnungen
+        self._cache = {}
 
     def nullstellen(self, real: bool = True, runden=None) -> list[sp.Basic]:
         """
@@ -108,9 +67,10 @@ class TrigonometrischeFunktion(Funktion):
         Returns:
             Liste der Nullstellen
         """
+        # 🔥 UNIFIED ARCHITECTURE: Verwende Basis-Klassen-Properties 🔥
         try:
             # Verwende SymPy's solve für die Gleichung
-            lösungen = solve(self.term_sympy, self.x)
+            lösungen = solve(self.term_sympy, self._variable_symbol)
 
             nullstellen_liste = []
             for lösung in lösungen:
@@ -124,8 +84,14 @@ class TrigonometrischeFunktion(Funktion):
 
             return nullstellen_liste
 
-        except Exception:
+        except (AttributeError, TypeError, ValueError) as e:
             # Für komplexe trigonometrische Funktionen: leere Liste zurückgeben
+            # Logge den Fehler für Debugging-Zwecke
+            import logging
+
+            logging.debug(
+                f"Nullstellen-Berechnung fehlgeschlagen für {self.term()}: {e}"
+            )
             return []
 
     def ableitung(self, ordnung: int = 1) -> "TrigonometrischeFunktion":
@@ -138,12 +104,14 @@ class TrigonometrischeFunktion(Funktion):
         Returns:
             Neue TrigonometrischeFunktion mit der abgeleiteten Funktion
         """
-        abgeleitet = diff(self.term_sympy, self.x, ordnung)
+        # 🔥 UNIFIED ARCHITECTURE: Verwende Basis-Klassen-Properties 🔥
+        abgeleitet = diff(self.term_sympy, self._variable_symbol, ordnung)
         return TrigonometrischeFunktion(abgeleitet)
 
     def term(self) -> str:
         """Gibt den Term als String zurück."""
-        return self.term_str
+        # 🔥 UNIFIED ARCHITECTURE: Verwende Basis-Klassen-Funktionalität 🔥
+        return super().term()
 
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück."""
@@ -194,7 +162,13 @@ class TrigonometrischeFunktion(Funktion):
 
             return None
 
-        except Exception:
+        except (AttributeError, ValueError, TypeError) as e:
+            # Logge den Fehler für Debugging-Zwecke
+            import logging
+
+            logging.debug(
+                f"Periodenlängen-Berechnung fehlgeschlagen für {self.term()}: {e}"
+            )
             return None
 
     def __str__(self):

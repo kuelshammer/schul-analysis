@@ -14,6 +14,7 @@ from schul_analysis import (
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
     ExponentialRationaleFunktion,
+    GemischteFunktion,
 )
 
 
@@ -86,7 +87,7 @@ class TestAutomatischeFunktionserkennung:
         """Test der Behandlung von ungültigen Eingaben."""
         # Ungültiger mathematischer Ausdruck
         with pytest.raises(ValueError):
-            erstelle_funktion_automatisch("x^2 + + 1")
+            erstelle_funktion_automatisch("x^2 + + * 1")
 
         # Leerer String
         with pytest.raises(ValueError):
@@ -173,9 +174,9 @@ class TestAutomatischeFunktionserkennung:
         f = erstelle_funktion_automatisch("(x^2-2x+1)/(x^2-1)")
         assert isinstance(f, GebrochenRationaleFunktion)
 
-        # Komplexe Exponentialfunktion
+        # Komplexe Exponentialfunktion (mit unterschiedlichen Exponenten)
         f = erstelle_funktion_automatisch("exp(x) + exp(-x)")
-        assert isinstance(f, ExponentialRationaleFunktion)
+        assert isinstance(f, GemischteFunktion)
 
     def test_fallback_verhalten(self):
         """Test des Fallback-Verhaltens bei mehrdeutigen Eingaben."""

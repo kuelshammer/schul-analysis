@@ -58,8 +58,13 @@ def _finde_interessante_punkte(funktion):
         if hasattr(funktion, "polstellen"):
             punkte["polstellen"] = funktion.polstellen()
 
-    except Exception:
+    except (AttributeError, ValueError, TypeError):
         # Bei Fehlern leere Listen zurückgeben
+        import logging
+
+        logging.debug(
+            f"Fehler beim Berechnen von Sonderpunkten für {getattr(funktion, 'term_str', str(funktion))}"
+        )
         pass
 
     return punkte
@@ -262,7 +267,13 @@ def _berechne_y_bereich(
 
         return (y_min_final, y_max_final)
 
-    except Exception:
+    except (ValueError, TypeError, AttributeError):
+        # Bei Fehlern Default-Bereich zurückgeben
+        import logging
+
+        logging.debug(
+            f"Fehler beim Berechnen des y-Bereichs für Funktion im Bereich ({x_min}, {x_max})"
+        )
         return min_bereich
 
 

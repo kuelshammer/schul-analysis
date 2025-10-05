@@ -69,16 +69,26 @@ class Taylorpolynom:
         try:
             self.taylor_func_numpy = lambdify(self.x, self.taylor_polynom, "numpy")
             self.original_func_numpy = lambdify(self.x, self.funktion_sympy, "numpy")
-        except Exception:
+        except (ImportError, AttributeError, ValueError):
             # Fallback to slower evaluation if lambdify fails
+            import logging
+
+            logging.debug(
+                f"Lambdify fehlgeschlagen für Taylor-Polynom bei x={self.entwicklungspunkt}"
+            )
             self.taylor_func_numpy = None
             self.original_func_numpy = None
 
         # Konvertiere zu ganzrationaler Funktion
         try:
             self.taylor_funktion = GanzrationaleFunktion(self.taylor_polynom)
-        except Exception:
+        except (ValueError, TypeError, AttributeError):
             # Fallback: Behalte als SymPy-Ausdruck
+            import logging
+
+            logging.debug(
+                f"Konvertierung zu ganzrationaler Funktion fehlgeschlagen für {self.taylor_polynom}"
+            )
             self.taylor_funktion = self.taylor_polynom
 
     def _berechne_taylorpolynom(self) -> sp.Basic:

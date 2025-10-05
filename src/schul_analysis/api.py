@@ -20,6 +20,7 @@ from .gebrochen_rationale import (
     ExponentialRationaleFunktion,
     GebrochenRationaleFunktion,
 )
+from .gemischte import GemischteFunktion
 from .lineare_gleichungssysteme import LGS
 from .parametrisch import ParametrischeFunktion
 from .taylor import Taylor
@@ -29,6 +30,7 @@ Funktionstyp = (
     GanzrationaleFunktion
     | GebrochenRationaleFunktion
     | ExponentialRationaleFunktion
+    | GemischteFunktion
     | ParametrischeFunktion
 )
 
@@ -394,7 +396,32 @@ def erstelle_exponential_rationale_funktion(
         >>> s = f.schmiegkurve()  # Schmiegkurve berechnen
         >>> r = f.stoerfunktion()  # Störfunktion berechnen
     """
-    return ExponentialRationaleFunktion(zaehler, nenner, exponent_param)
+    # 🔥 UNIFIED ARCHITECTURE FIX: Erstelle kombinierten Ausdruck statt separater Parameter 🔥
+    if exponent_param == 1.0:
+        # Für a=1: Standardfall e^x
+        zaehler_expr = (
+            zaehler.replace("x", "(exp(x)") if isinstance(zaehler, str) else zaehler
+        )
+        nenner_expr = (
+            nenner.replace("x", "(exp(x)") if isinstance(nenner, str) else nenner
+        )
+    else:
+        # Für a≠1: Ersetze x mit exp(a*x)
+        replacement = f"(exp({exponent_param}*x)"
+        zaehler_expr = (
+            zaehler.replace("x", replacement) if isinstance(zaehler, str) else zaehler
+        )
+        nenner_expr = (
+            nenner.replace("x", replacement) if isinstance(nenner, str) else nenner
+        )
+
+    # Kombiniere zu vollständigen Term
+    if isinstance(zaehler_expr, str) and isinstance(nenner_expr, str):
+        voller_term = f"({zaehler_expr})/({nenner_expr})"
+    else:
+        voller_term = f"({zaehler_expr})/({nenner_expr})"
+
+    return ExponentialRationaleFunktion(voller_term, exponent_param)
 
 
 # =============================================================================
@@ -423,27 +450,27 @@ def analysiere_funktion(funktion: Funktionstyp) -> dict[str, Any]:
 
     try:
         ergebnisse["term"] = funktion.term()
-    except Exception:
+    except (AttributeError, ValueError, TypeError):
         ergebnisse["term"] = str(funktion)
 
     try:
         ergebnisse["nullstellen"] = nullstellen(funktion)
-    except Exception:
+    except (AttributeError, ValueError, TypeError, ZeroDivisionError):
         ergebnisse["nullstellen"] = "Nicht berechenbar"
 
     try:
         ergebnisse["extrema"] = extrema(funktion)
-    except Exception:
+    except (AttributeError, ValueError, TypeError, ZeroDivisionError):
         ergebnisse["extrema"] = "Nicht berechenbar"
 
     try:
         ergebnisse["wendepunkte"] = wendepunkte(funktion)
-    except Exception:
+    except (AttributeError, ValueError, TypeError, ZeroDivisionError):
         ergebnisse["wendepunkte"] = "Nicht berechenbar"
 
     try:
         ergebnisse["symmetrie"] = symmetrie(funktion)
-    except Exception:
+    except (AttributeError, ValueError, TypeError):
         ergebnisse["symmetrie"] = "Nicht bestimmbar"
 
     return ergebnisse
