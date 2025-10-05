@@ -128,7 +128,7 @@ class Funktion:
             self.term_sympy = self.term_sympy / nenner_expr
 
     def _parse_string_to_sympy(self, eingabe: str) -> sp.Basic:
-        """Parset String-Eingabe zu SymPy-Ausdruck mit allen Transformationen"""
+        """Parset String-Eingabe zu SymPy-Ausdruck mit deutschen Fehlermeldungen"""
         from sympy.parsing.sympy_parser import (
             implicit_multiplication_application,
             parse_expr,
@@ -146,7 +146,35 @@ class Funktion:
         try:
             return parse_expr(bereinigt, transformations=transformations)
         except Exception as e:
-            raise ValueError(f"Kann '{eingabe}' nicht parsen: {e}")
+            # 🔥 PÄDAGOGISCHE FEHLERMELDUNGEN 🔥
+            if "SyntaxError" in str(e) or "invalid syntax" in str(e):
+                raise ValueError(
+                    f"Syntaxfehler in '{eingabe}'. "
+                    "Bitte überprüfe deine Eingabe. Häufige Fehler:\n"
+                    "- Klammern müssen paaren: (2x+3) statt (2x+3\n"
+                    "- Operatoren brauchen zwei Zahlen: 2*x statt 2x\n"
+                    "- Nur mathematische Zeichen verwenden"
+                )
+            elif "Symbol" in str(e) or "symbol" in str(e):
+                # Finde ungültige Symbole
+                import re
+
+                gefunden = re.findall(r"[a-zA-Z_][a-zA-Z0-9_]*", bereinigt)
+                erlaubte = {"x", "a", "b", "c", "k", "m", "n", "p", "q", "t", "y", "z"}
+                ungueltige = [s for s in gefunden if s not in erlaubte]
+                if ungueltige:
+                    raise ValueError(
+                        f"Unbekannte Variable(n) '{', '.join(ungueltige)}' in '{eingabe}'. "
+                        "Erlaubte Variablen sind: x, a, b, c, k, m, n, p, q, t, y, z.\n"
+                        "Hast du dich vielleicht vertippt?"
+                    )
+                else:
+                    raise ValueError(
+                        f"Unbekanntes Symbol in '{eingabe}'. "
+                        "Bitte überprüfe deine Eingabe auf Tippfehler."
+                    )
+            else:
+                raise ValueError(f"Kann '{eingabe}' nicht verarbeiten: {e}")
 
     def _erstelle_symbole_ausdruecke(self):
         """Erstelle SymPy-Ausdrücke und führe Initialisierung durch"""
@@ -208,7 +236,21 @@ class Funktion:
             Ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
             return float(Ergebnis) if Ergebnis.is_real else Ergebnis
         except Exception as e:
-            raise ValueError(f"Fehler bei Berechnung von f({x_wert}): {e}")
+            # 🔥 PÄDAGOGISCHE FEHLERMELDUNGEN 🔥
+            if "division by zero" in str(e).lower():
+                raise ValueError(
+                    f"Division durch Null bei f({x_wert}). "
+                    "Die Funktion ist an dieser Stelle nicht definiert. "
+                    "Überprüfe, ob der Nenner an dieser Stelle Null wird."
+                )
+            elif "complex" in str(e).lower() or "imaginary" in str(e).lower():
+                raise ValueError(
+                    f"Komplexes Ergebnis bei f({x_wert}). "
+                    "Die Funktion liefert an dieser Stelle eine komplexe Zahl. "
+                    "Für reelle Funktionen ist dies möglicherweise nicht definiert."
+                )
+            else:
+                raise ValueError(f"Fehler bei Berechnung von f({x_wert}): {e}")
 
     def ableitung(self, ordnung: int = 1) -> "Funktion":
         """Berechnet die Ableitung"""
@@ -287,6 +329,52 @@ class Funktion:
             return "gemischt"
         else:
             return "allgemein"
+
+    # 🔥 INTROSPEKTIVE METHODEN für Factory-Funktion 🔥
+
+    def ist_linear(self) -> bool:
+        """Prüft, ob die Funktion linear ist (ax + b)"""
+        if not self.ist_ganzrational:
+            return False
+
+        # Extrahiere Koeffizienten und prüfe Grad
+        try:
+            koeffizienten = self.term_sympy.as_poly(self._variable_symbol).coeffs()
+            return len(koeffizienten) <= 2  # Maximal 2 Koeffizienten (ax + b)
+        except Exception:
+            return False
+
+    def ist_quadratisch(self) -> bool:
+        """Prüft, ob die Funktion quadratisch ist (ax² + bx + c)"""
+        if not self.ist_ganzrational:
+            return False
+
+        try:
+            grad = self.term_sympy.as_poly(self._variable_symbol).degree()
+            return grad == 2
+        except Exception:
+            return False
+
+    def ist_kubisch(self) -> bool:
+        """Prüft, ob die Funktion kubisch ist (ax³ + bx² + cx + d)"""
+        if not self.ist_ganzrational:
+            return False
+
+        try:
+            grad = self.term_sympy.as_poly(self._variable_symbol).degree()
+            return grad == 3
+        except Exception:
+            return False
+
+    def grad(self) -> int:
+        """Gibt den Grad des Polynoms zurück"""
+        if not self.ist_ganzrational:
+            return 0
+
+        try:
+            return self.term_sympy.as_poly(self._variable_symbol).degree()
+        except Exception:
+            return 0
 
     # 🔥 HILFSMETHODEN 🔥
 
