@@ -61,7 +61,7 @@ def create_function_from_sliders(a, b, c):
 @mo.cell
 def analyze_function(f, term):
     """Führt mathematische Analyse durch"""
-    from schul_analysis import Nullstellen, Ableitung, Extremstellen
+    from schul_analysis import Ableitung, Extremstellen, Nullstellen
 
     try:
         # Berechne Eigenschaften

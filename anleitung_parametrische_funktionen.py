@@ -16,7 +16,7 @@ sys.path.insert(0, "src")
 print("=== MÖGLICHKEIT 1: Vordefinierte Objekte nutzen ===")
 
 # Importiere vordefinierte Variablen und Parameter
-from schul_analysis import x, a, k, t, ParametrischeFunktion
+from schul_analysis import ParametrischeFunktion, a, k, t, x
 
 # Definition: f_a(x) = a*x^2 + x
 f1 = ParametrischeFunktion([0, 1, a], [x])  # Koeffizienten: [0, 1, a] = 0 + 1*x + a*x^2
@@ -33,7 +33,7 @@ print(f"g1(t) = {g1.term()}")
 print("\n=== MÖGLICHKEIT 2: Eigene Variablen/Parameter definieren ===")
 
 # Importiere die Klassen
-from schul_analysis import Variable, Parameter, ParametrischeFunktion
+from schul_analysis import Parameter, ParametrischeFunktion, Variable
 
 # Definiere eigene Variablen und Parameter
 mein_x = Variable("x")
@@ -91,7 +91,7 @@ from schul_analysis import Graph_parametrisiert
 
 # Erzeuge multiple Graphen für verschiedene Parameterwerte
 fig = Graph_parametrisiert(f1, a=[-2, -1, 0, 1, 2])
-print(f"   Graph für f_a(x) mit a = [-2, -1, 0, 1, 2] erstellt")
+print("   Graph für f_a(x) mit a = [-2, -1, 0, 1, 2] erstellt")
 print(f"   Titel: {fig.layout.title.text}")
 
 # =============================================================================

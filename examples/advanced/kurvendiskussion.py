@@ -6,14 +6,14 @@ Kurvendiskussion, Integralrechnung und Grenzwertanalyse.
 """
 
 from schul_analysis import (
-    Funktion,
-    Nullstellen,
     Ableitung,
-    Extremstellen,
-    Wendepunkte,
-    Integral,
     AsymptotischesVerhalten,
+    Extremstellen,
+    Funktion,
     Graph,
+    Integral,
+    Nullstellen,
+    Wendepunkte,
 )
 
 

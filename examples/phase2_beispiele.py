@@ -5,8 +5,8 @@ Phase 2 Examples: Advanced Unified API Features
 Dieses Beispiel zeigt die neuen Funktionen von Phase 2 der vereinheitlichten API.
 """
 
-import sys
 import os
+import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -50,7 +50,7 @@ def main():
     for key, value in analyse["grundlegende_eigenschaften"].items():
         print(f"  {key}: {value}")
 
-    print(f"\nEmpfehlungen:")
+    print("\nEmpfehlungen:")
     for empfehlung in analyse["empfehlungen"]:
         print(f"  • {empfehlung}")
 

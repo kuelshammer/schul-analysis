@@ -5,16 +5,17 @@ Dieses Beispiel zeigt fortgeschrittene Analysetechniken des Schul-Analysis Frame
 """
 
 import numpy as np
+
 from schul_analysis import (
-    Funktion,
-    Nullstellen,
     Ableitung,
-    Extremstellen,
-    Wendepunkte,
-    Integral,
-    Grenzwert,
-    Polstellen,
     AsymptotischesVerhalten,
+    Extremstellen,
+    Funktion,
+    Grenzwert,
+    Integral,
+    Nullstellen,
+    Polstellen,
+    Wendepunkte,
 )
 
 # 1. Komplexe ganzrationale Funktion

@@ -6,7 +6,8 @@ integriert für interaktive mathematische Analysen.
 """
 
 import marimo as mo
-from schul_analysis import Funktion, Nullstellen, Ableitung, Extremstellen, Graph
+
+from schul_analysis import Ableitung, Extremstellen, Funktion, Graph, Nullstellen
 
 
 # Beispiel 1: Interaktive Funktionsanalyse

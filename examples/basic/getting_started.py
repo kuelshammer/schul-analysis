@@ -5,8 +5,8 @@ Dieses Beispiel zeigt die grundlegende Verwendung des Schul-Analysis Frameworks
 für die mathematische Analyse von Funktionen.
 """
 
-import sys
 import os
+import sys
 
 # Add src directory to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -14,11 +14,11 @@ src_path = os.path.join(project_root, "src")
 sys.path.insert(0, src_path)
 
 from schul_analysis import (
-    GanzrationaleFunktion,
-    Nullstellen,
     Ableitung,
     Extremstellen,
+    GanzrationaleFunktion,
     Graph,
+    Nullstellen,
 )
 
 # 1. Einfache ganzrationale Funktion erstellen

@@ -11,9 +11,9 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 
+from schul_analysis.errors import DivisionDurchNullError
 from schul_analysis.ganzrationale import GanzrationaleFunktion
 from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
-from schul_analysis.errors import DivisionDurchNullError
 
 
 class TestGebrochenRationaleFunktionKonstruktoren:

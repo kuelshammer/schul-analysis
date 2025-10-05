@@ -7,8 +7,8 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis.funktion import Funktion
 from schul_analysis import GanzrationaleFunktion, GebrochenRationaleFunktion
+from schul_analysis.funktion import Funktion
 
 
 def test_migration():

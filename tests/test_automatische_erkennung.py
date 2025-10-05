@@ -9,12 +9,12 @@ import pytest
 import sympy as sp
 
 from schul_analysis import (
-    erstelle_funktion_automatisch,
+    ExponentialRationaleFunktion,
     Funktion,
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
-    ExponentialRationaleFunktion,
     GemischteFunktion,
+    erstelle_funktion_automatisch,
 )
 
 

@@ -6,11 +6,12 @@ einschließlich intelligenter Skalierung, spezieller Punkte und Plotly-Integrati
 """
 
 import numpy as np
+
 from schul_analysis import (
+    Extremstellen,
     Funktion,
     Graph,
     Nullstellen,
-    Extremstellen,
     Wendepunkte,
 )
 

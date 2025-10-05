@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, "src")
 
 # Test 1: Check if the property is in the file
-with open("src/schul_analysis/funktion.py", "r") as f:
+with open("src/schul_analysis/funktion.py") as f:
     content = f.read()
     lines = content.split("\n")
     for i, line in enumerate(lines, 1):

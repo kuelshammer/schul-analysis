@@ -5,12 +5,12 @@ Test für die neuen Analyse-Funktionen: Integral, Grenzwert, AsymptotischesVerha
 import numpy as np
 
 from src.schul_analysis import (
+    Ableitung,
+    AsymptotischesVerhalten,
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
-    Integral,
     Grenzwert,
-    AsymptotischesVerhalten,
-    Ableitung,
+    Integral,
     Kürzen,
     nullstellen,
 )

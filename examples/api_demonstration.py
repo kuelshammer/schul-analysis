@@ -5,8 +5,9 @@ Dieses Beispiel zeigt alle Funktionen der neuen API und wie sie
 im Unterricht eingesetzt werden können.
 """
 
-from schul_analysis import *
 import numpy as np
+
+from schul_analysis import *
 
 # =============================================================================
 # 1. BEISPIEL: Quadratische Funktion (Kurvendiskussion)
@@ -90,7 +91,7 @@ x_werte = np.linspace(-2, 4, 9)  # x von -2 bis 4 in 9 Schritten
 y_werte = auswerten(h, x_werte)
 
 print("Wertetabelle für f(x) = x² - 2x - 3:")
-for x, y in zip(x_werte, y_werte):
+for x, y in zip(x_werte, y_werte, strict=False):
     print(f"f({x:4.1f}) = {y:6.2f}")
 
 # =============================================================================

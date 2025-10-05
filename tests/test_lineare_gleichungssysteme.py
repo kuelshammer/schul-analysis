@@ -9,9 +9,9 @@ sys.path.insert(0, "src")
 
 from schul_analysis import (
     LGS,
-    Variable,
     Parameter,
     ParametrischeFunktion,
+    Variable,
     interpolationspolynom,
 )
 

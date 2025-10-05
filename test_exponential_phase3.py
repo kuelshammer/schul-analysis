@@ -4,9 +4,8 @@ Test script for Phase 3: Exponential-rationale Funktionen
 """
 
 from schul_analysis import (
-    GanzrationaleFunktion,
-    GebrochenRationaleFunktion,
     ExponentialRationaleFunktion,
+    GebrochenRationaleFunktion,
 )
 
 
@@ -102,7 +101,7 @@ def test_vergleich_mit_rational():
     print(f"Exponential-rationale: f(x) = {f_exp.term()}")
 
     # Bei x=0: u = e^0 = 1
-    print(f"\nBei x=0 (u=e^0=1):")
+    print("\nBei x=0 (u=e^0=1):")
     try:
         print(f"  g(1) = {g_rational(1)}")
     except Exception as e:

@@ -6,11 +6,11 @@ mit Plotly für mathematisch korrekte Darstellungen.
 """
 
 from schul_analysis import (
+    Ableitung,
+    Extremstellen,
     Funktion,
     Graph,
     Nullstellen,
-    Ableitung,
-    Extremstellen,
     Wendepunkte,
 )
 
