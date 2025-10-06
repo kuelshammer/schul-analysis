@@ -43,7 +43,7 @@ e = Funktion("e^x")                    # → ExponentialFunktion
 
 ## 🚀 Schnellstart
 
-## 🔧 Neue Features in Version 1.1
+ruf## 🔧 Neue Features in Version 1.1
 
 ### 🎯 Intuitive `__call__`-Syntax für Funktionen
 

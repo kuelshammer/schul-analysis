@@ -54,13 +54,6 @@ from .exponential import ExponentialFunktion
 from .funktion import Funktion, erstelle_funktion_automatisch
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
-from .strukturiert import (
-    KompositionFunktion,
-    ProduktFunktion,
-    QuotientFunktion,
-    SummeFunktion,
-    StrukturierteFunktion,
-)
 
 # =============================================================================
 # SPEZIALKOMPONENTEN
@@ -78,6 +71,13 @@ from .schmiegung import (
     Schmiegkegel,
     SchmiegkurveAllgemein,
     Schmiegparabel,
+)
+from .strukturiert import (
+    KompositionFunktion,
+    ProduktFunktion,
+    QuotientFunktion,
+    StrukturierteFunktion,
+    SummeFunktion,
 )
 from .symbolic import Parameter, Variable
 from .symmetrie import (
