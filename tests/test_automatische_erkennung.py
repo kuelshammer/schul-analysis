@@ -9,11 +9,11 @@ import pytest
 import sympy as sp
 
 from schul_analysis import (
-    ExponentialRationaleFunktion,
+    ExponentialFunktion,
     Funktion,
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
-    GemischteFunktion,
+    SummeFunktion,
     erstelle_funktion_automatisch,
 )
 
@@ -63,17 +63,17 @@ class TestAutomatischeFunktionserkennung:
         """Test der Erkennung exponential-rationale Funktionen aus String."""
         # Einfache Exponentialfunktion
         f = erstelle_funktion_automatisch("exp(x) + 1")
-        assert isinstance(f, ExponentialRationaleFunktion)
+        assert isinstance(f, SummeFunktion)
         assert "exp" in str(f.term_sympy).lower()
 
         # Exponentialfunktion mit Koeffizient
         f = erstelle_funktion_automatisch("exp(2x) - 3")
-        assert isinstance(f, ExponentialRationaleFunktion)
+        assert isinstance(f, SummeFunktion)
         assert "exp" in str(f.term_sympy).lower()
 
         # Komplexe Exponentialfunktion
         f = erstelle_funktion_automatisch("(exp(x)+1)/(exp(x)-1)")
-        assert isinstance(f, ExponentialRationaleFunktion)
+        assert isinstance(f, QuotientFunktion)
         assert "exp" in str(f.term_sympy).lower()
 
     def test_funktion_mit_parameter(self):
@@ -97,7 +97,7 @@ class TestAutomatischeFunktionserkennung:
         """Test, dass die Funktion-Klasse auch automatische Erkennung unterstützt."""
         # Direkte Verwendung der Funktion-Klasse mit automatischer Erkennung
         f = Funktion("exp(x) + 1")
-        # Sollte als ExponentialRationaleFunktion erkannt und delegiert werden
+        # Sollte als SummeFunktion erkannt und delegiert werden
         assert hasattr(f, "term_sympy")
 
     def test_typ_erkennung_properties(self):
@@ -115,7 +115,7 @@ class TestAutomatischeFunktionserkennung:
         assert not f_gebrochen.ist_exponential_rational
 
         # Exponential-rationale Funktion
-        if hasattr(ExponentialRationaleFunktion, "ist_exponential_rational"):
+        if hasattr(SummeFunktion, "ist_exponential_rational"):
             f_exp = erstelle_funktion_automatisch("exp(x) + 1")
             assert f_exp.ist_exponential_rational
 
@@ -176,7 +176,7 @@ class TestAutomatischeFunktionserkennung:
 
         # Komplexe Exponentialfunktion (mit unterschiedlichen Exponenten)
         f = erstelle_funktion_automatisch("exp(x) + exp(-x)")
-        assert isinstance(f, GemischteFunktion)
+        assert isinstance(f, SummeFunktion)
 
     def test_fallback_verhalten(self):
         """Test des Fallback-Verhaltens bei mehrdeutigen Eingaben."""

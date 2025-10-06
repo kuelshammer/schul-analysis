@@ -50,9 +50,17 @@ from .api import (
 # =============================================================================
 # FUNKTIONSKLASSEN (für direkte Verwendung)
 # =============================================================================
-from .funktion import Funktion
+from .exponential import ExponentialFunktion
+from .funktion import Funktion, erstelle_funktion_automatisch
 from .ganzrationale import GanzrationaleFunktion
 from .gebrochen_rationale import GebrochenRationaleFunktion
+from .strukturiert import (
+    KompositionFunktion,
+    ProduktFunktion,
+    QuotientFunktion,
+    SummeFunktion,
+    StrukturierteFunktion,
+)
 
 # =============================================================================
 # SPEZIALKOMPONENTEN
@@ -120,12 +128,19 @@ __all__ = [
     "erstelle_funktion",
     "erstelle_lineares_gleichungssystem",
     "erstelle_exponential_rationale_funktion",
+    "erstelle_funktion_automatisch",
     "analysiere_funktion",
     "zeige_analyse",
     # 🏗️ FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
     "GebrochenRationaleFunktion",
+    "ExponentialFunktion",
+    "StrukturierteFunktion",
+    "ProduktFunktion",
+    "SummeFunktion",
+    "QuotientFunktion",
+    "KompositionFunktion",
     "LGS",
     # 🔤 SYMBOLISCHE KOMPONENTEN
     "Variable",
