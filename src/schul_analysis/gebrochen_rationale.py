@@ -8,7 +8,6 @@ Visualisierung mit Plotly für Marimo-Notebooks.
 import re
 from typing import Any, Union
 
-import plotly.graph_objects as go
 import sympy as sp
 from sympy import Rational, fraction, latex
 
@@ -422,36 +421,6 @@ class GebrochenRationaleFunktion(Funktion):
         )
 
         return fig
-
-    def plotly(
-        self,
-        x_range: tuple = (-5, 5),
-        punkte: int = 200,
-        zeige_polstellen: bool = True,
-        zeige_asymptoten: bool = True,
-    ) -> go.Figure:
-        """[DEPRECATED] Erzeugt eine Plotly-Visualisierung der gebrochen-rationalen Funktion.
-        Bitte verwende stattdessen f.graph() für konsistente API.
-
-        Args:
-            x_range: Tupel (xmin, xmax) für den x-Bereich
-            punkte: Anzahl der zu berechneten Punkte
-            zeige_polstellen: Ob vertikale Asymptoten bei Polstellen eingezeichnet werden sollen
-            zeige_asymptoten: Ob horizontale/schiefe Asymptoten eingezeichnet werden sollen
-
-        Returns:
-            Plotly Figure-Objekt
-        """
-        import warnings
-
-        warnings.warn(
-            "plotly() is deprecated. Use f.graph() instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-
-        # Verwende die neue graph() Methode
-        return self.graph(x_min=x_range[0], x_max=x_range[1])
 
     def _berechne_asymptoten(self) -> list[dict]:
         """

@@ -6,9 +6,9 @@ Test examples for Taylor polynomials functionality
 import math
 
 import numpy as np
+from src.schul_analysis.taylorpolynom import Taylorpolynom
 
 from src.schul_analysis import *
-from src.schul_analysis.taylorpolynom import Taylorpolynom
 
 
 def test_taylor_exponential():

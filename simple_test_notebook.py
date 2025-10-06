@@ -6,8 +6,9 @@ app = marimo.App()
 
 @app.cell
 def __():
-    import marimo as mo
     import sys
+
+    import marimo as mo
 
     sys.path.insert(0, "src")
     from schul_analysis import Funktion

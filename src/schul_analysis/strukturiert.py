@@ -76,42 +76,57 @@ class StrukturierteFunktion(Funktion):
             Typisiertes Funktionsobjekt
         """
         # Importe hier, um zirkuläre Abhängigkeiten zu vermeiden
-        from .exponential import Exponentialfunktion
+        from .exponential import ExponentialFunktion
         from .trigonometrisch import TrigonometrischeFunktion
 
-        # Stop-Bedingungen: Nicht weiter zerlegen
+        # Stop-Bedingungen: Nicht weiter zerlegen - Gibt spezifische Typen zurück
         if self._sollte_nicht_weiter_zerlegt_werden(term, typ):
-            return GanzrationaleFunktion(term)
+            if typ == "ganzrational":
+                # Für ganzrationale Funktionen: direkt spezifische Typen bestimmen
+                import sympy as sp
 
-        # Rekursiv typisierte Komponenten erstellen
-        if typ == "ganzrational":
-            return GanzrationaleFunktion(term)
+                try:
+                    expr = sp.sympify(term, rational=True)
+                    grad = expr.as_poly(sp.symbols("x")).degree()
+
+                    from .lineare import LineareFunktion
+                    from .quadratisch import QuadratischeFunktion
+
+                    if grad == 1:
+                        return LineareFunktion(term)
+                    elif grad == 2:
+                        return QuadratischeFunktion(term)
+                    else:
+                        return GanzrationaleFunktion(term)
+                except Exception:
+                    return GanzrationaleFunktion(term)
+            elif typ == "konstante":
+                return GanzrationaleFunktion(term)
+
+        # Für komplexe Typen: Erstelle spezifische Instanzen
         elif typ == "exponentiell":
-            return Exponentialfunktion(term)
+            return ExponentialFunktion(term)
         elif typ == "trigonometrisch":
             return TrigonometrischeFunktion(term)
         elif typ == "logarithmisch":
             # TODO: Logarithmische Funktion implementieren
             return Funktion(term)
-        elif typ == "konstante":
-            return GanzrationaleFunktion(term)
         else:
-            # Für unbekannte Typen: Standard-Funktion (wird wieder typisiert)
+            # Für unbekannte Typen: Standard-Funktion
             return Funktion(term)
 
     def _sollte_nicht_weiter_zerlegt_werden(self, term: str, typ: str) -> bool:
         """
         Intelligente Stop-Bedingungen für die Zerlegungstiefe.
 
-        Args:
-            term: Der zu prüfende Term
-            typ: Der erkannte Typ
-
-        Returns:
-            True, wenn der Term nicht weiter zerlegt werden soll
+        Rekursion bricht ab, wenn eine ganzrationale Funktion erkannt wird!
         """
-        # Konstanten und einfache ganzrationale Ausdrücke nicht weiter zerlegen
-        if typ in ["konstante", "ganzrational"]:
+        # Jede ganzrationale Funktion stoppt die Rekursion
+        if typ == "ganzrational":
+            return True
+
+        # Konstanten auch stoppen
+        if typ == "konstante":
             return True
 
         # Prüfe, ob es sich um einen "einfachen" Ausdruck handelt

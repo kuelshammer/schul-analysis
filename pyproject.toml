@@ -57,6 +57,7 @@ target-version = "py311"
 # Line length
 line-length = 88
 
+[tool.ruff.lint]
 # Enable rules
 select = [
     "E",  # pycodestyle errors

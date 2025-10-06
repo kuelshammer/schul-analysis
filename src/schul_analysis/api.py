@@ -23,8 +23,6 @@ from .gebrochen_rationale import (
 from .gemischte import GemischteFunktion
 from .lineare_gleichungssysteme import LGS
 from .parametrisch import ParametrischeFunktion
-from .taylor import taylorpolynom, tangente
-from .symmetrie import Achsensymmetrie, Punktsymmetrie
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
@@ -64,7 +62,30 @@ def nullstellen(
         die Schüler aus dem Unterricht kennen: "Berechne die Nullstellen von f"
     """
     try:
-        return funktion.nullstellen(real=real, runden=runden)
+        # Handle both property and method cases
+        if hasattr(funktion, "nullstellen"):
+            attr = getattr(funktion, "nullstellen")
+            if callable(attr):
+                # It's a method - try with parameters first
+                try:
+                    return funktion.nullstellen(real=real, runden=runden)
+                except TypeError:
+                    # Method doesn't accept parameters, call without them
+                    result = funktion.nullstellen()
+            else:
+                # It's a property - access it directly
+                result = funktion.nullstellen
+                # Apply filtering and rounding if needed
+                if real:
+                    result = [n for n in result if hasattr(n, "is_real") and n.is_real]
+                if runden is not None:
+                    result = [
+                        round(float(n), runden) if hasattr(n, "__float__") else n
+                        for n in result
+                    ]
+                return result
+        else:
+            raise AttributeError("Keine nullstellen Eigenschaft oder Methode gefunden")
     except AttributeError:
         raise UngueltigeFunktionError(
             "Nullstellenberechnung",
@@ -309,7 +330,7 @@ def auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
 # =============================================================================
 
 
-def erstelle_polynom(koeffizienten: list[float | int]) -> GanzrationaleFunktion:
+def erstelle_polynom(koeffizienten: list[float | int]) -> "GanzrationaleFunktion":
     """
     Erstellt ein Polynom aus Koeffizienten.
 
@@ -328,11 +349,48 @@ def erstelle_polynom(koeffizienten: list[float | int]) -> GanzrationaleFunktion:
     Didaktischer Hinweis:
         Diese Funktion ist besonders für Anfänger geeignet,
         da sie die Polynom-Erstellung sehr einfach macht.
+
+    Magic Factory Hinweis:
+        Alternativ kann jetzt auch Funktion("x^2 - 4x + 3") verwendet werden,
+        was automatisch die richtige Funktionstyp zurückgibt.
     """
-    return GanzrationaleFunktion(koeffizienten)
+    from .funktion import Funktion
+
+    # Erstelle String aus Koeffizienten und verwende Magic Factory
+    if not koeffizienten:
+        raise ValueError("Koeffizientenliste darf nicht leer sein")
+
+    # Erstelle Term aus Koeffizienten
+    termbestandteile = []
+    for i, koeff in enumerate(koeffizienten):
+        if koeff == 0:
+            continue
+        if i == 0:
+            termbestandteile.append(str(koeff))
+        elif i == 1:
+            if koeff == 1:
+                termbestandteile.append("x")
+            elif koeff == -1:
+                termbestandteile.append("-x")
+            else:
+                termbestandteile.append(f"{koeff}*x")
+        else:
+            if koeff == 1:
+                termbestandteile.append(f"x^{i}")
+            elif koeff == -1:
+                termbestandteile.append(f"-x^{i}")
+            else:
+                termbestandteile.append(f"{koeff}*x^{i}")
+
+    if not termbestandteile:
+        term = "0"
+    else:
+        term = " + ".join(termbestandteile).replace("+ -", "- ")
+
+    return Funktion(term)
 
 
-def erstelle_funktion(term: str) -> GanzrationaleFunktion:
+def erstelle_funktion(term: str) -> Any:
     """
     Erstellt eine Funktion aus einem Term-String.
 
@@ -340,17 +398,24 @@ def erstelle_funktion(term: str) -> GanzrationaleFunktion:
         term: Der mathematische Term als String
 
     Returns:
-        Eine ganzrationale Funktion
+        Eine Funktion (automatisch typisiert durch Magic Factory)
 
     Beispiele:
         >>> f = erstelle_funktion("x^2 - 4x + 3")    # x² - 4x + 3
         >>> g = erstelle_funktion("2*x + 5")          # 2x + 5
         >>> h = erstelle_funktion("(x-2)*(x+1)")     # (x-2)(x+1) = x² - x - 2
+        >>> i = erstelle_funktion("x^2/(x+1)")      # QuotientFunktion!
 
     Didaktischer Hinweis:
         Unterstützt verschiedene Schreibweisen, die Schüler aus dem Unterricht kennen.
+
+    Magic Factory Hinweis:
+        Diese Funktion nutzt jetzt die Magic Factory und gibt automatisch den
+        richtigen Funktionstyp zurück (QuadratischeFunktion, ProduktFunktion, etc.)
     """
-    return GanzrationaleFunktion(term)
+    from .funktion import Funktion
+
+    return Funktion(term)
 
 
 def erstelle_lineares_gleichungssystem(

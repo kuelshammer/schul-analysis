@@ -19,7 +19,7 @@ try:
     # Try to access marimo's app context
     mo.md("# 🎓 Schul-Analysis Framework in Marimo")
     IN_MARIMO = True
-except:
+except Exception:
     IN_MARIMO = False
     print("Dieses Beispiel ist für die Verwendung in Marimo-Notebooks optimiert.")
     print("Starten Sie mit: marimo edit marimo_examples.py")
@@ -52,7 +52,7 @@ def create_function_from_sliders(a, b, c):
     try:
         f = Funktion(term)
         return f, term
-    except:
+    except Exception:
         # Fallback: einfache quadratische Funktion
         f = Funktion("x^2")
         return f, "x^2"

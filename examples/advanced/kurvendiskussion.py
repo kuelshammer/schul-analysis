@@ -36,7 +36,7 @@ def kurvendiskussion(funktion, name="f"):
                 print("   Definitionsbereich: ℝ")
         else:
             print("   Definitionsbereich: ℝ")
-    except:
+    except Exception:
         print("   Definitionsbereich: ℝ")
 
     # 2. Nullstellen
@@ -82,7 +82,7 @@ def kurvendiskussion(funktion, name="f"):
         if asymptotisch:
             for beschreibung in asymptotisch:
                 print(f"   {beschreibung}")
-    except:
+    except Exception:
         print("   Keine Asymptoten analysiert")
 
     # 7. Integral (falls definiert)
@@ -90,7 +90,7 @@ def kurvendiskussion(funktion, name="f"):
     try:
         stammfunktion = Integral(funktion)
         print(f"   ∫f(x)dx = {stammfunktion.term()} + C")
-    except:
+    except Exception:
         print("   Integral nicht berechenbar")
 
 
@@ -132,9 +132,7 @@ def main():
     print("=" * 60)
     try:
         print("Erstelle Graph der kubischen Funktion...")
-        graph = Graph(
-            f1, x_bereich=(-4, 6), titel="Kubische Funktion f(x) = x³ - 3x² - 9x + 5"
-        )
+        Graph(f1, x_bereich=(-4, 6), titel="Kubische Funktion f(x) = x³ - 3x² - 9x + 5")
         print("Graph erfolgreich erstellt!")
         print(
             "Tipp: In einem interaktiven Environment (Jupyter/Marimo) können Sie den Graph anzeigen mit:"

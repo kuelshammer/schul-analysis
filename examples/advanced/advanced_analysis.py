@@ -102,7 +102,7 @@ def kurvendiskussion(funktion, name="f"):
             print(f"Definitionsbereich: ℝ \\ {polstellen}")
         else:
             print("Definitionsbereich: ℝ")
-    except:
+    except Exception:
         print("Definitionsbereich: ℝ")
 
     # Nullstellen
@@ -131,7 +131,7 @@ def kurvendiskussion(funktion, name="f"):
         asympt = AsymptotischesVerhalten(funktion)
         if asympt:
             print(f"Asymptoten: {asympt}")
-    except:
+    except Exception:
         pass
 
 

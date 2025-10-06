@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Test script to verify the refactored Funktion.__init__ works correctly"""
 
-
 from src.schul_analysis.funktion import Funktion, erstelle_funktion_automatisch
 
 

@@ -78,17 +78,17 @@ class Funktion:
             temp_funktion._erstelle_symbole_ausdruecke()
 
             # Importiere spezialisierte Klassen
+            from .exponential import ExponentialFunktion
             from .ganzrationale import GanzrationaleFunktion
             from .lineare import LineareFunktion
             from .quadratisch import QuadratischeFunktion
-            from .exponential import ExponentialFunktion
-            from .trigonometrisch import TrigonometrischeFunktion
             from .strukturiert import (
-                ProduktFunktion,
-                SummeFunktion,
-                QuotientFunktion,
                 KompositionFunktion,
+                ProduktFunktion,
+                QuotientFunktion,
+                SummeFunktion,
             )
+            from .trigonometrisch import TrigonometrischeFunktion
 
             # Automatische Typenerkennung - Prioritätenreihenfolge:
 
@@ -334,15 +334,68 @@ class Funktion:
         """Gibt den Term als LaTeX-String zurück"""
         return latex(self.term_sympy)
 
-    def __call__(self, x_wert):
-        """Ermöglicht f(x) Syntax für Funktionsauswertung"""
-        return self.wert(x_wert)
+    def __call__(self, x_wert, **kwargs):
+        """
+        Ermöglicht f(x) Syntax für Funktionsauswertung mit optionaler Parameter-Substitution.
+
+        Diese Methode wurde erweitert, um symbolische Ergebnisse zurückzugeben,
+        wenn die Funktion noch Parameter enthält.
+
+        Args:
+            x_wert: x-Wert für die Auswertung
+            **kwargs: Optionale Parameter-Substitution (z.B. a=3)
+
+        Returns:
+            Numerisches oder symbolisches Ergebnis
+
+        Examples:
+            >>> f = Funktion("a*x^2 + b*x + c")
+            >>> f(4)              # 16*a + 4*b + c (symbolisch)
+            >>> f(4, a=2)        # 32 + 4*b + c (teilweise substituiert)
+            >>> f(4, a=2, b=3)   # 47 (vollständig substituiert)
+        """
+        # Kombiniere kwargs mit eventuell vorhandenen Parametern
+        if kwargs:
+            # Erstelle temporäre Funktion mit substituierten Parametern
+            temp_funktion = self.setze_parameter(**kwargs)
+            return temp_funktion.wert(x_wert)
+        else:
+            # Normale Auswertung ohne zusätzliche Parameter
+            return self.wert(x_wert)
 
     def wert(self, x_wert):
-        """Berechnet den Funktionswert an einer Stelle"""
+        """
+        Berechnet den Funktionswert an einer Stelle.
+
+        Gibt symbolische Ergebnisse zurück, wenn die Funktion noch Parameter enthält.
+
+        Args:
+            x_wert: x-Wert für die Auswertung
+
+        Returns:
+            Numerisches oder symbolisches Ergebnis
+
+        Examples:
+            >>> f = Funktion("a*x^2 + b*x + c")
+            >>> f.wert(4)         # 16*a + 4*b + c
+            >>> f2 = f.setze_parameter(a=3)
+            >>> f2.wert(4)        # 48 + 4*b + c
+        """
         try:
-            Ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
-            return Ergebnis  # Behalte exakte SymPy-Werte bei
+            # Substituiere den x-Wert
+            ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
+
+            # Vereinfache das Ergebnis
+            ergebnis = ergebnis.simplify()
+
+            # Prüfe, ob das Ergebnis noch Parameter enthält
+            if ergebnis.free_symbols - {self._variable_symbol}:
+                # Symbolisches Ergebnis zurückgeben (mit Parameter)
+                return ergebnis
+            else:
+                # Numerisches Ergebnis zurückgeben
+                return ergebnis
+
         except Exception as e:
             # Pädagogische Fehlermeldungen
             if "division by zero" in str(e).lower():
@@ -359,6 +412,72 @@ class Funktion:
                 )
             else:
                 raise ValueError(f"Fehler bei Berechnung von f({x_wert}): {e}")
+
+    def setze_parameter(self, **kwargs):
+        """
+        Setzt Parameter und gibt neue Funktion zurück.
+
+        Diese Methode ermöglicht die intuitive Manipulation parametrisierter
+        Funktionen durch Substitution von Parameterwerten.
+
+        Args:
+            **kwargs: Parameter-Wert-Paare (z.B. a=3, b=2)
+
+        Returns:
+            Funktion: Neue Funktion mit gesetzten Parametern
+
+        Raises:
+            ValueError: Wenn ungültige Parameter angegeben werden
+
+        Examples:
+            >>> f = Funktion("a*x^2 + b*x + c")
+            >>> f2 = f.setze_parameter(a=3)    # 3*x^2 + b*x + c
+            >>> f3 = f.setze_parameter(a=3, b=2)  # 3*x^2 + 2*x + c
+            >>> result = f.setze_parameter(a=3)(4)  # 48 + 4b + c
+
+        Didaktischer Hinweis:
+            Diese Methode ist perfekt für den Unterricht geeignet, da sie eine
+            intuitive Möglichkeit bietet, Parameter in Funktionen zu setzen und
+            die Auswirkungen sofort zu sehen. Sie unterstützt typische
+            Unterrichtsszenarien wie Parameterbestimmung aus Bedingungen.
+        """
+        try:
+            # Prüfe, ob die angegebenen Parameter existieren
+            for param_name in kwargs.keys():
+                param_symbol = sp.Symbol(param_name)
+                if param_symbol not in self.term_sympy.free_symbols:
+                    # Pädagogische Fehlermeldung
+                    verfügbare_parameter = [str(p) for p in self.parameter]
+                    if verfügbare_parameter:
+                        raise ValueError(
+                            f"Parameter '{param_name}' kommt in der Funktion "
+                            f"f(x) = {self.term()} nicht vor. "
+                            f"Verfügbare Parameter: {verfügbare_parameter}"
+                        )
+                    else:
+                        raise ValueError(
+                            f"Die Funktion f(x) = {self.term()} hat keine Parameter. "
+                            "Nur Funktionen mit Parametern können mit setze_parameter() manipuliert werden."
+                        )
+
+            # Führe die Substitution durch
+            new_expr = self.term_sympy.subs(kwargs)
+
+            # Erstelle neue Funktion mit dem substituierten Ausdruck
+            neue_funktion = Funktion(new_expr)
+
+            return neue_funktion
+
+        except Exception as e:
+            if isinstance(e, ValueError):
+                # Pädagogische Fehlermeldungen bereits oben
+                raise e
+            else:
+                # Technische Fehler in pädagogischer Form
+                raise ValueError(
+                    f"Fehler bei der Parameter-Substitution: {str(e)}. "
+                    "Bitte überprüfe, ob alle Parameter korrekt angegeben wurden."
+                )
 
     def ableitung(self, ordnung: int = 1) -> "Funktion":
         """Berechnet die Ableitung"""
