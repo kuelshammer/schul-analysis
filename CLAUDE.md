@@ -1,334 +1,495 @@
-# Schul-Analysis Framework - Development Guidelines
+# Schul-Analysis Framework - Entwicklungshandbuch
 
 ## 🎯 Projekt-Überblick
 
-Python Framework für Schul-Analysis mit exakten Berechnungen, Marimo-Integration und mathematisch korrekter Visualisierung. Entwickelt für Mathematiklehrer und Schüler.
+Modernes Python Framework für symbolische Mathematik im Schulunterricht mit Magic Factory Architektur, entwickelt für deutsche Mathematiklehrer und Schüler. Kombiniert pädagogische Exaktheit mit technischer Überlegenheit.
 
-### 🎓 **PÄDAGOGISCHE KERNPRINZIPIEN**
+### 🎓 **Pädagogische Kernprinzipien**
 
-#### **Deutsche Schul-Mathematik**
+#### **Deutsche Schul-Mathematik (Durchgängig Konsistent)**
 
-- **API auf Deutsch**: Alle öffentlichen Methoden, Funktionen und Klassen haben deutsche Namen
-- **Fehlermeldungen auf Deutsch**: Klare, verständliche Fehlermeldungen für Schüler
-- **Dokumentation auf Deutsch**: Docstrings und Erklärungen in deutscher Sprache
-- **Begriffe aus dem Unterricht**: Verwendung bekannter mathematischer Begriffe
+- **API auf Deutsch**: Alle öffentlichen Methoden und Klassen verwenden deutsche Fachbegriffe
+- **Fehlermeldungen auf Deutsch**: Verständliche, konstruktive Fehlermeldungen für Schüler
+- **Dokumentation auf Deutsch**: Alle Erklärungen in deutscher Fachsprache
+- **Schulbuch-Konsistenz**: Begriffe und Notation entsprechen dem deutschen Unterricht
 
-#### **Unterrichtsnahes API-Design**
-
-- **Funktionsorientierte Syntax**: `Nullstellen(f)` statt `f.nullstellen()` - näher an mathematischer Notation
-- **Wrapper-Funktionen**: Einfache prozedurale API für schnelle Anwendung
-- **Intuitive Parameter**: Parameter-Namen entsprechen Unterrichtssprache
-- **Klare Struktur**: Aufbau entspricht typischem Unterrichtsablauf
-
-#### **Schülerfreundliche Features**
-
-- **Einfache Konstruktoren**: Mehrere Wege zur Funktions-Erstellung (Koeffizienten, String, etc.)
-- **Interaktive Visualisierung**: Plotly-Diagramme mit Erklärungen
-- **Exakte Berechnungen**: SymPy für symbolische Mathematik (keine numerischen Fehler)
-- **Caching für Performance**: Schnelle interaktive Nutzung im Unterricht
-
-#### **Beispiel-API für Schüler**
+#### **Unterrichtsnahes API-Design (Magic Factory Pattern)**
 
 ```python
-# Einfache Erstellung
-f = ErstellePolynom([1, -4, 3])      # x² - 4x + 3
-g = ErstelleFunktion("2*x + 5")      # Beliebige Terme
-
-# Natürliche Syntax wie im Unterricht
-xs = Nullstellen(f)                  # statt f.nullstellen()
-f1 = Ableitung(f, 1)                 # statt f.ableitung(1)
-ext = Extrema(f)                     # statt f.extrema()
-wp = Wendepunkte(f)                  # statt f.wendepunkte()
-
-# Visualisierung
-Zeichne(f, x_bereich=(-5, 5))        # statt f.zeige_funktion()
+# Natürliche mathematische Syntax
+f = Funktion("x^2 + 2x - 3")        # Automatische Typ-Erkennung
+print(f(2))                         # f(2) statt f.wert(2)
+xs = Nullstellen(f)                  # Funktion statt Methode
+f_strich = Ableitung(f)              # f' = df/dx
+Zeichne(f, x_bereich=(-5, 5))        # Visualisierung als Aktion
 ```
 
-## 🔧 Entwicklungstools & Prinzipien
+#### **Kognitive Entlastung**
 
-### **Package Management: uv**
+- **Einfache Konstruktoren**: String, Liste, Dictionary - alles möglich
+- **Intuitive Parameter**: Namen wie `ordnung`, `bereich`, `punkt`
+- **Visuelle Unterstützung**: Plotly-Graphen mit perfekter mathematischer Darstellung
+- **Exakte Berechnungen**: SymPy vermeidet numerische Verwirrung
 
-- **Immer `uv` für Python-Pakete verwenden**
-- Installation: `uv sync` (Core) oder `uv sync --group viz-math` (für Plotly)
-- Neue Pakete hinzufügen: `uv add <package>`
-- Dev-Pakete: `uv add --group dev <package>`
+## 🔧 Moderne Entwicklungstools & Workflow
 
-### **Code Quality: ruff**
-
-- **Linting**: `uv run ruff check`
-- **Formatting**: `uv run ruff format`
-- Vor jedem Commit ausführen!
-- Konfiguration in `pyproject.toml`
-
-### **Type Checking: ty (Astral)**
-
-- **Type checking**: `uv run ty check`
-- Vor jedem Commit ausführen!
-- Typos statt mypy verwenden
-
-### **Testing: pytest**
-
-- **Tests ausführen**: `uv run pytest`
-- **Mit Coverage**: `uv run pytest --cov=schul_analysis`
-- Vor jedem Merge ausführen!
-
-## 🔄 Git Workflow
-
-### **Grundprinzip: Jedes Feature = eigener Branch**
+### **Package Management: uv (Zentral)**
 
 ```bash
-# 1. Aktuellen Stand commiten
-git add .
-git commit -m "feat: Implementiere Basis-Klasse"
+# Basis-Installation (Core Dependencies)
+uv sync
 
-# 2. Neuen Feature-Branch erstellen
-git checkout -b feature/plotly-visualisierung
+# Vollständige Entwicklungsumgebung
+uv sync --all-groups
+
+# Selektive Installation
+uv sync --group dev          # Entwicklungstools
+uv sync --group viz-math      # Mathematische Visualisierung
+uv sync --group viz-stats     # Statistische Diagramme
+uv sync --group docs          # Dokumentation
+uv sync --group types         # Type Stubs
+```
+
+### **Code Quality Pipeline**
+
+```bash
+# Vor jedem Commit ausführen!
+uv run ty check               # Type Checking (Astral)
+uv run ruff check            # Linting
+uv run ruff format           # Formatting
+uv run pytest                # Testing
+uv run pytest --cov          # Testing mit Coverage
+```
+
+### **Quality Gates**
+
+- **Type Safety**: 100% ty check bestanden
+- **Code Style**: 100% ruff formatting
+- **Test Coverage**: Mindestens 80%
+- **Documentation**: Alle öffentlichen APIs dokumentiert
+
+## 🏗️ Moderne Architektur (Magic Factory Pattern)
+
+### **Kernkonzept: Automatische Typ-Erkennung**
+
+```python
+# Eine API für alle Funktionstypen
+f = Funktion("x^2 + 1")           # → QuadratischeFunktion
+g = Funktion("2x + 3")            # → LineareFunktion
+h = Funktion("(x^2+1)/(x-1)")    # → GebrochenRationaleFunktion
+e = Funktion("e^x")              # → ExponentialFunktion
+t = Funktion("sin(x)")           # → TrigonometrischeFunktion
+```
+
+### **Aktuelle Module-Struktur (21 Module)**
+
+```
+src/schul_analysis/
+├── __init__.py              # Haupt-API mit Magic Factory
+├── api.py                   # Wrapper-Funktionen für Schüler
+├── funktion.py              # Magic Factory Basisklasse
+├── konfiguration.py         # Zentrale Konfiguration
+├── fehler.py               # Fehlerbehandlung auf Deutsch
+├── symbolisch.py           # Symbolische Hilfsfunktionen
+├── visuell.py              # Visualisierungs-Koordination
+│
+├── ganzrationale.py         # Polynomfunktionen beliebigen Grades
+├── quadratisch.py           # Quadratische Funktionen (spezialisiert)
+├── lineare.py              # Lineare Funktionen
+├── exponential.py           # Exponentialfunktionen
+├── trigonometrisch.py       # Trigonometrische Funktionen
+├── gebrochen_rationale.py   # Rationale Funktionen (Brüche)
+├── gemischte.py            # Gemischte Ausdrücke (z.B. sin(x) + x²)
+├── parametrisch.py         # Parametrisierte Funktionen
+├── strukturiert.py         # Strukturierte Funktionen (Summen, Produkte)
+│
+├── analyse.py              # Umfassende Funktionsanalyse
+├── ableitungen.py          # Ableitungen aller Ordnungen
+├── nullstellen.py          # Nullstellenberechnung
+├── extremstellen.py        # Extremwertanalyse
+├── wendepunkte.py          # Wendepunktanalyse
+├── symmetrie.py            # Symmetrieanalyse
+├── taylor.py               # Taylor-Reihenentwicklung
+├── schmiegkurven.py        # Schmiegkurven
+├── lineare_gleichungssysteme.py  # LGS-Löser
+└── visualisierung.py       # Plotly/Altair/Matplotlib Integration
+```
+
+### **Design-Prinzipien**
+
+1. **Single Source of Truth**: Magic Factory als zentraler Einstiegspunkt
+2. **Automatische Delegation**: Erkennung → Spezialisiertes Modul → Rückgabe
+3. **Konsistente API**: Alle Funktionstypen haben gleiche Grundmethoden
+4. **Deutsch als Default**: Alle öffentlichen APIs auf Deutsch
+
+## 🔄 Git Workflow (uv-basiert)
+
+### **Grundprinzip: Feature-Branch mit uv**
+
+```bash
+# 1. Aktuellen Stand sichern
+git add .
+git commit -m "feat: Implementiere Magic Factory Pattern"
+
+# 2. Feature-Branch erstellen
+git checkout -b feature/setze_parameter-methode
 
 # 3. Am Feature arbeiten
-# ... Code schreiben, testen, commiten ...
+# ... Code schreiben, testen, uv run checks ...
 
-# 4. Feature fertigstellen
+# 4. Regelmäßig commits
+git commit -m "feat: setze_parameter() Methode hinzugefügt"
+git commit -m "test: Tests für Parameter-Substitution"
+git commit -m "docs: Dokumentation aktualisiert"
+
+# 5. Feature fertigstellen
 git checkout main
-git merge feature/plotly-visualisierung
-git branch -d feature/plotly-visualisierung
+git merge feature/setze_parameter-methode
+git branch -d feature/setze_parameter-methode
+git push origin main
 ```
 
-### **Commit-Konvention**
+### **Commit-Konvention (Semantic Commit Messages)**
 
-- **feat**: Neues Feature
-- **fix**: Bugfix
-- **docs**: Dokumentation
-- **style**: Code-Formatierung (ruff)
-- **refactor**: Refactoring
-- **test**: Tests hinzugefügt/geändert
-- **chore**: Build/Tool-Änderungen
+| Typ        | Beschreibung          | Beispiel                                                 |
+| ---------- | --------------------- | -------------------------------------------------------- |
+| `feat`     | Neues Feature         | `feat: Implementiere setze_parameter() Methode`          |
+| `fix`      | Bugfix                | `fix: Korrigiere Aspect Ratio in Plotly-Darstellung`     |
+| `docs`     | Dokumentation         | `docs: README.md mit Magic Factory erweitert`            |
+| `style`    | Code-Formatierung     | `style: ruff format ausgeführt`                          |
+| `refactor` | Refactoring           | `refactor: Funktionserkennung optimiert`                 |
+| `test`     | Tests                 | `test: Tests für parametrisierte Funktionen hinzugefügt` |
+| `chore`    | Build/Tool-Änderungen | `chore: uv.lock aktualisiert`                            |
 
-**Beispiele:**
+### **Quality Checks vor jedem Commit**
 
 ```bash
-git commit -m "feat: Implementiere perfekte Parabel-Darstellung mit Plotly"
-git commit -m "fix: Korrigiere Aspect Ratio in Visualisierung"
-git commit -m "docs: Aktualisiere README mit Installationsanleitung"
-git commit -m "style: Führe ruff format aus"
+# Vor dem Commit immer ausführen:
+uv run ty check && uv run ruff check && uv run ruff format && uv run pytest
 ```
 
-### **Regelmäßiges Commiten**
+## 📦 Abhängigkeitsmanagement (uv groups)
 
-- **Vor jeder größeren Änderung**: Stand commiten
-- **Nach jedem Feature**: Commit erstellen
-- **Vor Merge/Rebase**: Sicherstellen, dass alles committet ist
-- **Rollback immer möglich** durch regelmäßige Commits
+### **Core Dependencies (Immer installiert)**
 
-## 📦 Wichtige Module für die Entwicklung
-
-### **Core Dependencies (immer installiert)**
-
-- `sympy>=1.14.0` - Symbolische Mathematik
-- `marimo>=0.16.3` - Interaktive Notebooks
-
-### **Visualization Groups**
-
-- **viz-math**: `plotly>=6.3.0`, `numpy>=2.3.3` (🔥 EMPFOHLEN)
-- **viz-stats**: `altair>=5.5.0`, `pandas>=2.3.3` (für Statistik)
-- **viz-static**: `matplotlib>=3.8.0` (für Exporte)
-
-### **Development Tools**
-
-- `ruff>=0.13.2` - Linting & Formatting
-- `ty>=0.0.1a21` - Type checking (Astral)
-- `pytest>=8.4.2` - Testing
-- `pytest-cov>=7.0.0` - Coverage
-
-### **Dokumentation**
-
-- `sphinx>=7.0.0` - Dokumentations-Generator
-- `sphinx-rtd-theme>=1.3.0` - Theme
-
-## 🏗️ Projektstruktur
-
-```
-schul-analysis/
-├── src/schul_analysis/          # Source code
-│   ├── __init__.py
-│   ├── basis/                   # Base classes
-│   │   └── __init__.py
-│   ├── ganzrationale/           # Polynomial functions
-│   │   ├── __init__.py
-│   │   └── funktion.py
-│   ├── exponential/             # Exponential functions
-│   │   ├── __init__.py
-│   │   └── funktion.py
-│   └── trigonometrisch/         # Trigonometric functions
-│       ├── __init__.py
-│       └── funktion.py
-├── tests/                       # Test files
-│   ├── __init__.py
-│   ├── test_ganzrationale.py
-│   └── fixtures/
-├── docs/                        # Documentation
-│   ├── conf.py
-│   └── source/
-├── examples/                    # Example notebooks
-│   ├── perfekte_parabel_plotly.py
-│   └── grundlagen.py
-├── notebooks/                   # Marimo notebooks
-├── .gitignore
-├── pyproject.toml
-├── README.md
-└── CLAUDE.md                   # Diese Datei
+```toml
+dependencies = [
+    "marimo>=0.16.3",     # Interaktive Notebooks
+    "plotly>=6.3.0",      # Mathematische Visualisierung
+    "sympy>=1.14.0",      # Symbolische Mathematik
+]
 ```
 
-## 🧪 Testing-Strategie
+### **Development Groups**
 
-### **Test-Dateien erstellen**
+```toml
+[dependency-groups]
+dev = [
+    "ruff>=0.13.2",       # Linting & Formatting
+    "ty>=0.0.1a21",       # Type Checking
+    "pytest>=8.4.2",      # Testing Framework
+    "pytest-cov>=7.0.0",  # Coverage
+    "scipy>=1.16.2",      # Wissenschaftliche Berechnungen
+]
 
-- Jedes Modul bekommt eigene Test-Datei
-- Tests in `tests/` Verzeichnis
-- Fixtures für häufig genutzte Test-Daten
+viz-math = [
+    "plotly>=6.3.0",      # Haupt-Visualisierung
+    "numpy>=2.3.3",       # Numerische Grundlagen
+]
 
-### **Test-Beispiele**
+viz-stats = [
+    "altair>=5.5.0",      # Statistische Diagramme
+    "pandas>=2.3.3",      # Datenmanipulation
+]
+```
+
+### **Installationsstrategie**
+
+```bash
+# Für Endbenutzer (minimal)
+uv sync --no-dev
+
+# Für Lehrer (mit Visualisierung)
+uv sync --group viz-math
+
+# Für Entwickler (komplett)
+uv sync --all-groups
+```
+
+## 🧪 Moderne Testing-Strategie
+
+### **Test-Organisation**
+
+```
+tests/
+├── test_funktion.py              # Magic Factory Tests
+├── test_setze_parameter.py       # Parameter-Substitution
+├── test_automatische_erkennung.py # Typ-Erkennung
+├── test_ganzrationale.py         # Polynomfunktionen
+├── test_gebrochen_rationale.py   # Rationale Funktionen
+├── test_exponential.py           # Exponentialfunktionen
+├── test_lineare_gleichungssysteme.py # LGS-Löser
+├── test_visualisierung.py        # Plotly/Altair Tests
+└── fixtures/                     # Testdaten
+    ├── funktionen.py             # Standard-Funktionen
+    └── parameter.py              # Parameter-Konfiguration
+```
+
+### **Test-Prinzipien**
+
+1. **SymPy.equals()**: Für symbolische Vergleiche statt String-Vergleich
+2. **Echte Testabdeckung**: Alle Code-Paths testen
+3. **Deutsche Testnamen**: Verständlich für Entwickler
+4. **Fixtures**: Wiederverwendbare Testdaten
+
+### **Test-Beispiel (Moderne Struktur)**
 
 ```python
-# tests/test_ganzrationale.py
+# tests/test_setze_parameter.py
 import pytest
-from schul_analysis.ganzrationale import GanzrationaleFunktion
+from schul_analysis import Funktion
 
-def test_konstruktor_string():
-    f = GanzrationaleFunktion("x^2-4x+3")
-    assert f.term() == "x^2-4x+3"
+class TestSetzeParameter:
+    """Teste die setze_parameter() Methode für parametrisierte Funktionen."""
 
-def test_nullstellen():
-    f = GanzrationaleFunktion([1, -4, 3])
-    assert f.nullstellen() == [1.0, 3.0]
+    def test_einfache_substitution(self):
+        """Teste einfache Parameter-Substitution."""
+        f = Funktion("a*x^2 + b*x + c")
+        f2 = f.setze_parameter(a=2)
+        expected = Funktion("2*x^2 + b*x + c")
+        assert f2.term_sympy.equals(expected.term_sympy)
+
+    def test_kombinierte_nutzung(self):
+        """Teste kombinierte Nutzung f.setze_parameter(...)(x)."""
+        f = Funktion("a*x^2 + b*x + c")
+        result = f.setze_parameter(a=2, b=3)(4)
+        expected = 2*16 + 3*4 + c  # 32 + 12 + c = 44 + c
+        assert result == expected
 ```
 
-### **Test-Coverage**
+### **Coverage-Ziele**
 
-- Mindestens 80% Coverage anstreben
-- Regelmäßig mit `pytest --cov` prüfen
+- **Minimum**: 80% Coverage
+- **Ziel**: 90% Coverage für Kernmodule
+- **Core Module**: 95% Coverage (funktion.py, analyse.py)
 
-## 📋 Entwicklungs-Checkliste
-
-### **Vor dem Coden**
-
-- [ ] Feature-Branch erstellen
-- [ ] Letzten Stand commiten
-- [ ] Benötigte Pakete mit `uv` installieren
-
-### **Während des Codens**
-
-- [ ] Typos mit `uv run ty check` prüfen
-- [ ] Ruff mit `uv run ruff check` und `uv run ruff format` ausführen
-- [ ] Tests schreiben und mit `uv run pytest` prüfen
-
-### **Vor dem Commit**
-
-- [ ] Alle Tests bestehen
-- [ ] Code formatiert (ruff)
-- [ ] Types geprüft (ty)
-- [ ] Commit-Nachricht folgt Konvention
-
-### **Nach dem Feature**
-
-- [ ] Branch zu main mergen
-- [ ] Feature-Branch löschen
-- [ ] Dokumentation aktualisieren
-
-## 🔍 Code-Style-Regeln
-
-### **Python Style**
-
-- PEP 8 konform
-- Maximale Zeilenlänge: 88 Zeichen
-- Docstrings für alle öffentlichen Methoden
-- Type hints verwenden
-
-### **Namenskonventionen**
-
-- Klassen: `PascalCase` (`GanzrationaleFunktion`)
-- Methoden: `snake_case` (`zeige_funktion_plotly`)
-- Variablen: `snake_case` (`koeffizienten`)
-- Konstanten: `UPPER_SNAKE_CASE` (`MAX_POINTS`)
-
-### **Dokumentation**
-
-- Deutsch für pädagogische Methoden
-- Englisch für technische Dokumentation
-- LaTeX in Docstrings für mathematische Formeln
-
-## 🎓 **PÄDAGOGISCHE ENTWICKLUNGSRICHTLINIEN**
+## 🎓 Pädagogische Entwicklungsrichtlinien
 
 ### **API-Design für Schüler**
 
-- **Funktionen statt Methoden**: Bevorzuge `Nullstellen(f)` über `f.nullstellen()`
-- **Deutsche Begriffe**: Alle öffentlichen APIs verwenden deutsche Namen
-- **Natürliche Parameter**: Parameter-Namen wie `ordnung`, `bereich`, `punkt`
-- **Verständliche Fehler**: Fehlermeldungen erklären das Problem in einfachem Deutsch
-
-### **Namenskonventionen für Schul-Mathematik**
-
-- **Wrapper-Funktionen**: `PascalCase` wie `Nullstellen`, `Ableitung`, `Extrema`
-- **Klassen**: `PascalCase` mit deutschen Namen wie `GanzrationaleFunktion`
-- **Methoden**: `snake_case` wie `zeige_funktion`, `bereiche_integral`
-- **Variablen**: `snake_case` wie `koeffizienten`, `nullstellen_liste`
-
-### **Wrapper-API implementieren**
-
-Jede Funktionsklasse sollte entsprechende Wrapper-Funktionen haben:
+#### **1. Funktion vor Methode**
 
 ```python
-# In api.py oder wrapper.py
-def Nullstellen(funktion): return funktion.nullstellen()
-def Ableitung(funktion, ordnung=1): return funktion.ableitung(ordnung)
-def Extrema(funktion): return funktion.extrema()
-def Zeichne(funktion, bereich=None): return funktion.zeige_funktion(bereich)
+# ✅ GUT: Funktionale Syntax
+xs = Nullstellen(f)
+f1 = Ableitung(f, 1)
+ext = Extrema(f)
+
+# ❌ SCHLECHT: Methoden-basiert
+xs = f.nullstellen()
+f1 = f.ableitung(1)
+ext = f.extrema()
 ```
 
-### **Unterrichtliche Reihenfolge berücksichtigen**
+#### **2. Natürliche mathematische Notation**
 
-- Aufbau der Module folgt typischem Schul-Curriculum
-- Einfache Funktionen zuerst, dann komplexe
-- Jedes Modul sollte unabhängig für sich funktionieren
-- Klare Beispiele und Übungsaufgaben bereitstellen
+```python
+# ✅ GUT: Mathematisch natürlich
+f(2)                           # Funktionswert
+f_strich = Ableitung(f)         # Ableitung f'
+f2_strich = Ableitung(f_strich) # Zweite Ableitung f''
 
-## 🚀 Deployment
+# ❌ SCHLECHT: Technisch
+f.wert(2)
+f.ableitung()
+f.ableitung().ableitung()
+```
 
-### **Veröffentlichung mit uv**
+#### **3. Deutsche Fachbegriffe durchgängig**
+
+```python
+# ✅ GUT: Deutsche Terminologie
+f.setze_parameter(a=2, b=3)
+f.zeige_nullstellen_weg()
+f.scheitelpunkt()
+
+# ❌ SCHLECHT: Englische Begriffe
+f.set_parameters(a=2, b=3)
+f.show_roots_path()
+f.vertex()
+```
+
+### **Namenskonventionen**
+
+| Element        | Konvention             | Beispiele                               |
+| -------------- | ---------------------- | --------------------------------------- |
+| **Klassen**    | `PascalCase` (Deutsch) | `GanzrationaleFunktion`, `Schmiegkurve` |
+| **Methoden**   | `snake_case` (Deutsch) | `zeige_funktion`, `berechne_integral`   |
+| **Funktionen** | `PascalCase` (Deutsch) | `Nullstellen`, `Ableitung`, `Extrema`   |
+| **Variablen**  | `snake_case` (Deutsch) | `koeffizienten`, `nullstellen_liste`    |
+| **Konstanten** | `UPPER_SNAKE_CASE`     | `MAX_PRECISION`, `DEFAULT_RANGE`        |
+
+### **Fehlerbehandlung**
+
+```python
+# ✅ GUT: Pädagogische Fehlermeldungen
+try:
+    f.setze_parameter(x=5)  # x ist Variable, kein Parameter
+except ValueError as e:
+    # "Parameter 'x' kommt in der Funktion f(x) = a*x^2 + b*x + c nicht vor."
+    # "Verfügbare Parameter: a, b, c"
+    pass
+
+# ❌ SCHLECHT: Technische Fehlermeldungen
+except ValueError as e:
+    # "Invalid parameter: x not in free_symbols"
+    pass
+```
+
+## 🚀 Deployment & Veröffentlichung
+
+### **Versionierung (Semantic Versioning)**
+
+```python
+# src/schul_analysis/__init__.py
+__version__ = "0.2.0"  # MAJOR.MINOR.PATCH
+```
+
+- **MAJOR**: Breaking Changes (neue API)
+- **MINOR**: Neue Features (rückwärtskompatibel)
+- **PATCH**: Bugfixes (kleine Änderungen)
+
+### **Build & Publish mit uv**
 
 ```bash
 # Build
 uv build
 
+# Lokaler Test
+uv run pip install dist/*.whl --force-reinstall
+
 # Publish zu PyPI
 uv publish
 ```
 
-### **Versionierung**
+### **CHANGELOG Pflege**
 
-- Semantic Versioning: `MAJOR.MINOR.PATCH`
-- `__version__` in `__init__.py` pflegen
-- Changelog in `CHANGELOG.md` führen
+```markdown
+## [0.2.0] - 2024-10-06
 
-## 💡 Best Practices
+### Added
 
-### **Mathematische Korrektheit**
+- Magic Factory Pattern für automatische Funktionserkennung
+- setze_parameter() Methode für parametrisierte Funktionen
+- Prime-Notation für Ableitungen (f' = Ableitung(f))
+- Umfassende Taylor-Reihen-Integration
 
-- Immer SymPy für exakte Berechnungen verwenden
-- Keine numerischen Approximationen ohne Warnung
-- Aspect Ratio Control bei Plotly Visualisierungen
+### Changed
 
-### **Performance**
+- Komplette Überarbeitung der API-Architektur
+- Migration zu uv als Paketmanager
+- Verbesserte Fehlermeldungen auf Deutsch
 
-- SymPy-Ausdrücke cachen wo möglich
-- Komplexe Berechnungen nur bei Bedarf ausführen
-- Plotly-Graphen mit vernünftiger Punktanzahl
+### Fixed
 
-### **User Experience**
+- Aspect Ratio Probleme in Plotly-Visualisierungen
+- Numerische Ungenauigkeiten bei SymPy-Berechnungen
+```
 
-- Intuitive Konstruktoren für Schüler
-- Klare Fehlermeldungen
-- Gute Visualisierungen mit Erklärungen
+## 💡 Best Practices & Patterns
+
+### **Magic Factory Implementierung**
+
+```python
+# funktion.py - Kern der Architektur
+class Funktion:
+    """Magic Factory für automatische Funktionserkennung."""
+
+    def __new__(cls, eingabe, **kwargs):
+        """Automatische Erkennung und Delegation."""
+        # 1. Typ-Erkennung basierend auf Eingabe
+        funktionstyp = cls._erkenne_funktionstyp(eingabe)
+
+        # 2. Delegation an spezialisierte Klasse
+        spezialisierte_klasse = cls._hole_spezialklasse(funktionstyp)
+
+        # 3. Instanz erstellen und zurückgeben
+        return spezialisierte_klasse(eingabe, **kwargs)
+```
+
+### **Wrapper-API Implementierung**
+
+```python
+# api.py - Schülerfreundliche Schnittstelle
+def Nullstellen(funktion):
+    """Berechne die Nullstellen einer Funktion.
+
+    Args:
+        funktion: Ein Funktionsobjekt
+
+    Returns:
+        list: Liste der Nullstellen
+
+    Example:
+        >>> f = Funktion("x^2 - 4")
+        >>> xs = Nullstellen(f)  # [-2.0, 2.0]
+    """
+    return funktion.nullstellen()
+```
+
+### **Visuelle Konsistenz**
+
+```python
+# Alle Visualisierungsmethoden folgen dem gleichen Pattern
+def zeige_funktion_plotly(self, x_bereich=None, **kwargs):
+    """Erstelle Plotly-Visualisierung mit konsistentem Styling."""
+    # 1. Standard-Konfiguration
+    config = self._get_default_plot_config()
+
+    # 2. Bereich anpassen
+    if x_bereich is None:
+        x_bereich = self._empfohlener_bereich()
+
+    # 3. Plot erstellen
+    fig = self._erstelle_plotly_figure(x_bereich, config)
+
+    # 4. Mathematische Korrektheit sicherstellen
+    fig.update_layout(
+        scaleanchor="y",
+        scaleratio=1,
+        xaxis=dict(zeroline=True, zerolinewidth=2),
+        yaxis=dict(zeroline=True, zerolinewidth=2)
+    )
+
+    return fig
+```
+
+## 🎯 Qualitätsstandards
+
+### **Code Quality**
+
+- [ ] **Type Safety**: 100% ty check bestanden
+- [ ] **Style**: 100% ruff formatiert
+- [ ] **Complexity**: Zyklomatische Komplexität < 10
+- [ ] **Documentation**: Alle öffentlichen APIs dokumentiert
+
+### **Test Quality**
+
+- [ ] **Coverage**: > 80% für alle Module
+- [ ] **Integration**: End-to-End Tests für kritische Pfade
+- [ ] **Performance**: Tests mit großen Eingaben
+- [ ] **Edge Cases**: Grenzwerte und Fehlerfälle testen
+
+### **Documentation Quality**
+
+- [ ] **API Docs**: Vollständige Funktionsbeschreibungen
+- [ ] **Examples**: Ausführbare Beispiele für alle Features
+- [ ] **Tutorials**: Schritt-für-Schritt Anleitungen
+- [ ] **Changelog**: Regelmäßige Updates bei Änderungen
 
 ---
 
-**Wichtig:** Diese Guidelines immer aktuell halten und bei Änderungen am Workflow anpassen!
+**Wichtig**: Dieses Development Handbook ist die zentrale Referenz für alleContributor:innen. Es muss bei Architekturänderungen始终保持 aktualisiert werden.
+
+**Letztes Update**: Oktober 2024
+**Maintainer**: Development Team
