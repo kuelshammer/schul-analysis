@@ -6,19 +6,8 @@ und wie sie im Unterricht eingesetzt werden können.
 """
 
 import numpy as np
-from schul_analysis import (
-    Funktion,
-    Nullstellen,
-    Ableitung,
-    Extrema,
-    Zeichne,
-    LGS,
-    Parameter,
-    Variable,
-)
 
-print("🎯 Schul-Analysis Framework - Komprehensive API Demonstration")
-print("=" * 70)
+from schul_analysis import *
 
 # =============================================================================
 # 1. BEISPIEL: Quadratische Funktion (Magic Factory)
@@ -30,121 +19,61 @@ print("-" * 55)
 # Automatische Funktionserkennung
 f = Funktion("3x^2 - 4x + 1")
 print(f"f(x) = {f.term()}")
-print(f"Erkannter Typ: {f.funktionstyp}")
 
-# Natürliche mathematische Syntax
-print(f"\nFunktionswerte:")
-print(f"f(0) = {f(0)}")
-print(f"f(1) = {f(1)}")
-print(f"f(2) = {f(2)}")
+# Analysiere die Funktion mit der neuen Syntax
+print(f"Nullstellen: {nullstellen(f)}")
+print(f"1. Ableitung: {ableitung(f).term()}")
+print(f"2. Ableitung: {ableitung(f, 2).term()}")
+print(f"Extrema: {extrema(f)}")
+print(f"Symmetrie: {symmetrie(f)}")
 
-# Analysen mit pädagogischer API
-print(f"\nAnalyse:")
-print(f"Nullstellen: {Nullstellen(f)}")
-print(f"1. Ableitung f'(x) = {Ableitung(f).term()}")
-print(f"2. Ableitung f''(x) = {Ableitung(f, 2).term()}")
-print(f"Extrema: {Extrema(f)}")
-print(f"Symmetrie: {f.symmetrie()}")
+# Werteberechnung
+print(f"f(0) = {auswerten(f, 0)}")
+print(f"f(1) = {auswerten(f, 1)}")
 
 # =============================================================================
-# 2. BEISPIEL: Kubische Funktion mit erweiterter Analyse
+# 2. BEISPIEL: Kubische Funktion
 # =============================================================================
 
-print("\n📊 BEISPIEL 2: Kubische Funktion - Volle Analyse")
-print("-" * 50)
+print("\n=== BEISPIEL 2: Kubische Funktion ===")
+print("Kurvendiskussion einer kubischen Funktion")
 
-g = Funktion("x^3 - 3x^2 - 4x + 12")
+# Erstelle kubische Funktion
+g = erstelle_funktion("x^3 - 3x^2 - 4x + 12")
 print(f"g(x) = {g.term()}")
-print(f"Typ: {g.funktionstyp}")
 
-# Umfassende Analyse
-print(f"\nEigenschaften:")
-print(f"Definitionsbereich: {g.definitionsbereich()}")
-print(f"Wertebereich: {g.wertebereich()}")
-print(f"Nullstellen: {Nullstellen(g)}")
-print(f"Extremstellen: {Extrema(g)}")
-print(f"Wendepunkte: {g.wendepunkte()}")
-print(f"Monotonie: {g.monotonie()}")
-print(f"Krümmung: {g.kruemmung()}")
+# Volle Analyse
+analyse = analysiere_funktion(g)
+print(zeige_analyse(g))
 
 # =============================================================================
 # 3. BEISPIEL: Lineare Funktionen und Schnittpunkte
 # =============================================================================
 
-print("\n📏 BEISPIEL 3: Lineare Funktionen - Schnittpunkte")
-print("-" * 48)
+print("\n=== BEISPIEL 3: Lineare Funktionen ===")
 
-# Automatische Erkennung linearer Funktionen
-f1 = Funktion("2x + 3")
-f2 = Funktion("-x + 5")
+# Zwei lineare Funktionen
+f1 = erstelle_polynom([2, 3])  # 2x + 3
+f2 = erstelle_polynom([-1, 5])  # -x + 5
 
-print(f"f1(x) = {f1.term()} (Typ: {f1.funktionstyp})")
-print(f"f2(x) = {f2.term()} (Typ: {f2.funktionstyp})")
+print(f"f1(x) = {f1.term()}")
+print(f"f2(x) = {f2.term()}")
 
-# Eigenschaften linearer Funktionen
-print(f"\nEigenschaften:")
-print(f"f1: Steigung = {f1.steigung()}, y-Achsenabschnitt = {f1.y_achsenabschnitt()}")
-print(f"f2: Steigung = {f2.steigung()}, y-Achsenabschnitt = {f2.y_achsenabschnitt()}")
-
-# Schnittpunkt berechnen
-print(f"\nSchnittpunktberechnung:")
-# Methode 1: Differenzfunktion
-differenz = Funktion("(2x + 3) - (-x + 5)")  # 3x - 2
-schnittpunkt_x = Nullstellen(differenz)[0]
-schnittpunkt_y = f1(schnittpunkt_x)
-print(f"Schnittpunkt: ({schnittpunkt_x}, {schnittpunkt_y})")
-
-# Methode 2: Direktes Lösen
-print(f"Überprüfung f1({schnittpunkt_x}) = {f1(schnittpunkt_x)}")
-print(f"Überprüfung f2({schnittpunkt_x}) = {f2(schnittpunkt_x)}")
+# Schnittpunkt berechnen (Nullstellen der Differenz)
+differenz = erstelle_polynom([3, -2])  # (2x+3) - (-x+5) = 3x - 2
+schnittpunkt = nullstellen(differenz)
+print(f"Schnittpunkt bei x = {schnittpunkt}")
 
 # =============================================================================
-# 4. BEISPIEL: Parametrisierte Funktionen mit setze_parameter()
+# 4. BEISPIEL: Lineares Gleichungssystem
 # =============================================================================
 
-print("\n🔍 BEISPIEL 4: Parametrisierte Funktionen - Neue setze_parameter() API")
-print("-" * 62)
+print("\n=== BEISPIEL 4: Lineares Gleichungssystem ===")
 
-# Parametrische Funktion erstellen
-f_param = Funktion("a*x^2 + b*x + c")
-print(f"Parametrisch: f(x) = {f_param.term()}")
-print(f"Parameter: {f_param.parameter}")
+# Erstelle LGS: 2x + 3y = 8, x - 2y = -3
+lgs = erstelle_lineares_gleichungssystem([[2, 3], [1, -2]], [8, -3])
 
-# Parameter setzen und analysieren
-print(f"\nParameter-Substitution:")
-f2 = f_param.setze_parameter(a=2, b=3)
-print(f"Mit a=2, b=3: f(x) = {f2.term()}")
-
-f3 = f_param.setze_parameter(a=1, b=-4, c=3)
-print(f"Mit a=1, b=-4, c=3: f(x) = {f3.term()}")
-
-# Kombinierte Nutzung: f[parameter](x)
-result = f_param.setze_parameter(a=3)(2)
-print(f"f[3](2) = {result}")  # 3*4 + b*2 + c = 12 + 2b + c
-
-# =============================================================================
-# 5. BEISPIEL: Lineare Gleichungssysteme (LGS) mit Funktionen
-# =============================================================================
-
-print("\n⚖️ BEISPIEL 5: Lineare Gleichungssysteme mit Funktionen")
-print("-" * 54)
-
-# LGS für Parabel durch drei Punkte
-a, b, c = Parameter("a"), Parameter("b"), Parameter("c")
-x = Variable("x")
-f_lgs = Funktion([a, b, c], [x])  # ax² + bx + c
-
-print("Finde Parabel durch P(1|2), Q(2|3), R(3|6)")
-
-# Bedingungen als Gleichungen aufstellen
-bedingungen = [
-    f_lgs(1) == 2,  # a + b + c = 2
-    f_lgs(2) == 3,  # 4a + 2b + c = 3
-    f_lgs(3) == 6,  # 9a + 3b + c = 6
-]
-
-# LGS erstellen und lösen
-lgs = LGS(*bedingungen)
+# Löse das System
 try:
     loesung = lgs.löse()
     print(f"Lösung: {loesung}")
@@ -181,165 +110,83 @@ funktionen = [
     ("Trigonometrisch", "sin(x)"),
 ]
 
-x_werte = np.linspace(-2, 2, 9)  # 9 Punkte von -2 bis 2
-
-print(f"{'Funktion':<15} | {'Typ':<15} | {'Werte':<40}")
-print("-" * 75)
-
-for name, term in funktionen:
-    try:
-        f = Funktion(term)
-        y_werte = [f(x) for x in x_werte]
-        werte_str = ", ".join([f"{y:.2f}" for y in y_werte])
-        print(f"{name:<15} | {f.funktionstyp:<15} | {werte_str}")
-    except Exception as e:
-        print(f"{name:<15} | Fehler: {e}")
+print("Wertetabelle für f(x) = x² - 2x - 3:")
+for x, y in zip(x_werte, y_werte, strict=False):
+    print(f"f({x:4.1f}) = {y:6.2f}")
 
 # =============================================================================
-# 7. BEISPIEL: Praktische Anwendung - Physik
+# 6. BEISPIEL: Funktion mit Parameter
 # =============================================================================
 
-print("\n🚀 BEISPIEL 7: Praktische Anwendung - Physik")
-print("-" * 48)
+print("\n=== BEISPIEL 6: Funktion mit Parameter ===")
 
-print("Problem: Ein Ball wird mit v₀ = 20 m/s senkrecht nach oben geworfen")
-print("g ≈ 10 m/s², Luftvernachlässigung vernachlässigt")
 
-# Höhenfunktion: h(t) = -5t² + 20t
-h = Funktion("-5t^2 + 20t")
-print(f"Höhenfunktion: h(t) = {h.term()} m")
+# Normalparabel mit Parameter
+def normale_parabel(a=1, b=0, c=0):
+    """Erstellt eine Normalparabel f(x) = ax² + bx + c"""
+    return erstelle_polynom([c, b, a])
 
-# Physikalische Analyse
-print(f"\nPhysikalische Analyse:")
-geschwindigkeit = Ableitung(h)
-beschleunigung = Ableitung(geschwindigkeit)
 
-print(f"Geschwindigkeit: v(t) = {geschwindigkeit.term()} m/s")
-print(f"Beschleunigung: a(t) = {beschleunigung.term()} m/s²")
+# Verschiedene Parabeln
+parabel1 = normale_parabel(1, 0, 0)  # x²
+parabel2 = normale_parabel(-1, 0, 0)  # -x²
+parabel3 = normale_parabel(2, -4, 3)  # 2x² - 4x + 3
 
-# Maximale Höhe
-extremstellen = Extrema(h)
-if extremstellen:
-    max_zeit = extremstellen[0][0]
-    max_hoehe = h(max_zeit)
-    print(f"Maximale Höhe: {max_hoehe:.1f} m nach {max_zeit:.1f} s")
+print("Verschiedene Parabeln:")
+print(f"f1(x) = {parabel1.term()}")
+print(f"f2(x) = {parabel2.term()}")
+print(f"f3(x) = {parabel3.term()}")
 
-# Landezeit
-nullstellen = Nullstellen(h)
-if len(nullstellen) >= 2:
-    landezeit = nullstellen[1]  # Zweite Nullstelle (t > 0)
-    print(f"Landezeit: {landezeit:.1f} s")
-    print(f"Landegeschwindigkeit: {geschwindigkeit(landezeit):.1f} m/s")
+print("Analysen:")
+for i, p in enumerate([parabel1, parabel2, parabel3], 1):
+    print(f"  Parabel {i}: Nullstellen bei {nullstellen(p)}, Extremum bei {extrema(p)}")
 
 # =============================================================================
-# 8. BEISPIEL: Erweiterte Funktionstypen
+# 7. BEISPIEL: Praktische Anwendung
 # =============================================================================
 
-print("\n🏗️ BEISPIEL 8: Magic Factory - Verschiedene Funktionstypen")
-print("-" * 55)
+print("\n=== BEISPIEL 7: Praktische Anwendung ===")
+print("Ein Ball wird mit v₀ = 20 m/s senkrecht nach oben geworfen")
 
-# Teste die automatische Erkennung mit komplexen Funktionen
-test_funktionen = [
-    ("Rationale Funktion", "(x^2 + 1)/(x - 1)"),
-    ("Gemischt", "sin(x) + x^2"),
-    ("Produkt", "x * sin(x)"),
-    ("Summe", "e^x + x^3"),
-    ("Bruch", "1/(x^2 + 1)"),
-    ("Wurzel", "sqrt(x^2 + 1)"),
-    ("Logarithmus", "ln(x + 1)"),
-]
+# Höhenfunktion: h(t) = -5t² + 20t (g ≈ 10 m/s²)
+h = erstelle_polynom([0, 20, -5])  # -5t² + 20t
 
-print(f"{'Eingabe':<25} | {'Erkannter Typ':<20} | {'Erfolg'}")
-print("-" * 60)
+print(f" Höhe: h(t) = {h.term()} m")
 
-for beschreibung, term in test_funktionen:
-    try:
-        f = Funktion(term)
-        print(f"{beschreibung:<25} | {f.funktionstyp:<20} | ✅")
-    except Exception as e:
-        print(f"{beschreibung:<25} | Fehler: {str(e):<18} | ❌")
+# Wann erreicht der Ball die maximale Höhe?
+max_zeit = extrema(h)[0][0]  # x-Koordinate des Maximums
+max_hoehe = auswerten(h, max_zeit)
+print(f"  Maximale Höhe von {max_hoehe} m nach {max_zeit} s")
+
+# Wann landet der Ball wieder?
+landezeiten = nullstellen(h)
+print(f"  Landung nach {landezeiten[1]} s")
+
+# Geschwindigkeit als 1. Ableitung
+v = ableitung(h)
+print(f"  Geschwindigkeit: v(t) = {v.term()} m/s")
 
 # =============================================================================
-# 9. BEISPIEL: Taylor-Reihenentwicklung
+# 8. BEISPIEL: Vergleich von Funktionen
 # =============================================================================
 
-print("\n📐 BEISPIEL 9: Taylor-Reihenentwicklung")
-print("-" * 40)
+print("\n=== BEISPIEL 8: Funktionsvergleich ===")
 
-from schul_analysis import Taylorpolynom
+# Zwei ähnliche Funktionen vergleichen
+f_a = erstelle_polynom([1, -3, 2])  # x² - 3x + 2 = (x-1)(x-2)
+f_b = erstelle_polynom([1, -4, 4])  # x² - 4x + 4 = (x-2)²
 
-# Funktion für Taylor-Entwicklung
-f_taylor = Funktion("sin(x)")
-print(f"Original: f(x) = {f_taylor.term()}")
+print("Vergleich zweier quadratischer Funktionen:")
+print(f"  f_A(x) = {f_a.term()}")
+print(f"  f_B(x) = {f_b.term()}")
 
-# Taylor-Polynome verschiedenen Grades
-for grad in [1, 3, 5, 7]:
-    taylor = Taylorpolynom(f_taylor, entwicklungspunkt=0, grad=grad)
-    print(f"Taylor {grad}. Ordnung: {taylor.term()}")
+print("Eigenschaften:")
+for name, func in [("f_A", f_a), ("f_B", f_b)]:
+    print(f"  {name}:")
+    print(f"    Nullstellen: {nullstellen(func)}")
+    print(f"    Extrema: {extrema(func)}")
+    print(f"    Symmetrie: {symmetrie(func)}")
 
-# Vergleich an einem Punkt
-x_test = 1.0
-print(f"\nVergleich bei x = {x_test}:")
-print(f"f({x_test}) = {f_taylor(x_test):.6f}")
-for grad in [1, 3, 5, 7]:
-    taylor = Taylorpolynom(f_taylor, entwicklungspunkt=0, grad=grad)
-    approx = taylor(x_test)
-    fehler = abs(approx - f_taylor(x_test))
-    print(f"Taylor {grad}: {approx:.6f} (Fehler: {fehler:.2e})")
-
-# =============================================================================
-# 10. BEISPIEL: Visualisierungs-Strategien
-# =============================================================================
-
-print("\n📊 BEISPIEL 10: Visualisierungs-Strategien")
-print("-" * 45)
-
-f_vis = Funktion("x^3 - 3x^2 - 9x + 5")
-
-print("Visualisierungsmöglichkeiten:")
-print("1. Plotly (mathematisch korrekt)")
-print("2. Altair (statistisch)")
-print("3. Matplotlib (statisch)")
-
-try:
-    # Plotly-Visualisierung (empfohlen)
-    graph_plotly = Zeichne(f_vis, x_bereich=(-3, 5))
-    print("✅ Plotly-Graph erstellt (mathematisch korrekt)")
-    print("   Features: Aspect Ratio Control, Interaktivität")
-
-    # In interaktiven Umgebungen:
-    # graph_plotly.show()
-
-except Exception as e:
-    print(f"⚠️  Plotly nicht verfügbar: {e}")
-
-print("\n" + "=" * 70)
-print("🎉 ZUSAMMENFASSUNG: Magic Factory API Vorteile")
-print("=" * 70)
-
-print("✨ Automatische Funktionserkennung - Eine API für alle Typen")
-print("📐 Natürliche mathematische Syntax - f(x), f'(x)")
-print("🎓 Deutsche pädagogische API - Nullstellen(f), Ableitung(f)")
-print("🔍 setze_parameter() - Intuitive Parameter-Substitution")
-print("📊 Mathematisch korrekte Visualisierung")
-print("⚖️ LGS-Löser mit Funktionsbedingungen")
-print("🧮 Symbolische Exaktheit mit SymPy")
-print("🚀 Modernes uv-basiertes Dependency Management")
-
-print(f"\n📈 Framework-Statistik:")
-print(f"• Unterstützte Funktionstypen: 6+ Hauptkategorien")
-print(f"• Mathematische Methoden: 50+ Funktionen")
-print(f"• Visualisierungs-Backends: Plotly, Altair, Matplotlib")
-print(f"• Test-Coverage: >80%")
-print(f"• Python-Version: 3.11+")
-
-print("\n🎯 Einsatzbereiche:")
-print("• Mittelstufe: Lineare/quadratische Funktionen")
-print("• Oberstufe: Kurvendiskussion, Analysis")
-print("• Studienvorbereitung: Symbolische Mathematik")
-print("• Lehrer: Unterrichtsvorbereitung, Demonstration")
-
-print("\n🔧 Nächste Schritte:")
-print("• uv sync --group viz-math    # Für Visualisierung")
-print("• siehe examples/advanced/     # Weitere Beispiele")
-print("• siehe docs/                  # Methoden-Dokumentation")
+print("\n=== ENDE DER DEMONSTRATION ===")
+print("Die neue API ermöglicht eine intuitive und pädagogisch wertvolle")
+print("Arbeit mit mathematischen Funktionen im Schulunterricht.")
