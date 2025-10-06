@@ -97,6 +97,10 @@ from .taylor import (
     taylorpolynom,
     tangente,
 )
+from .symmetrie import (
+    Achsensymmetrie,
+    Punktsymmetrie,
+)
 from .visualisierung import Graph
 
 # Vordefinierte Variablen und Parameter für schnellen Zugriff

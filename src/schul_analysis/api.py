@@ -24,6 +24,7 @@ from .gemischte import GemischteFunktion
 from .lineare_gleichungssysteme import LGS
 from .parametrisch import ParametrischeFunktion
 from .taylor import taylorpolynom, tangente
+from .symmetrie import Achsensymmetrie, Punktsymmetrie
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (

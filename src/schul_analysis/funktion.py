@@ -58,6 +58,8 @@ class Funktion:
 
         This makes Funktion("x^2") return a QuadratischeFunktion automatically
         while keeping the simple API for users.
+
+        Extended with automatic structure detection for products, sums, quotients, compositions.
         """
         # Wenn es bereits eine Instanz ist, gib sie zurück
         if cls is not Funktion:
@@ -79,20 +81,65 @@ class Funktion:
             from .ganzrationale import GanzrationaleFunktion
             from .lineare import LineareFunktion
             from .quadratisch import QuadratischeFunktion
+            from .exponential import ExponentialFunktion
+            from .trigonometrisch import TrigonometrischeFunktion
+            from .strukturiert import (
+                ProduktFunktion,
+                SummeFunktion,
+                QuotientFunktion,
+                KompositionFunktion,
+            )
 
-            # Automatische Typenerkennung
+            # Automatische Typenerkennung - Prioritätenreihenfolge:
+
+            # 1. Spezialisierte Typen (Lineare/Quadratische haben höchste Priorität)
             if temp_funktion.ist_linear():
                 # Lineare Funktion -> LineareFunktion
                 return LineareFunktion(eingabe)
             elif temp_funktion.ist_quadratisch():
                 # Quadratische Funktion -> QuadratischeFunktion
                 return QuadratischeFunktion(eingabe)
-            elif temp_funktion.ist_ganzrational:
+
+            # 2. Strukturierte Typen (Produkte, Summen, Quotienten, Kompositionen)
+            # Diese Analyse muss nach der Grundfunktions-Analyse erfolgen
+            struktur_info = None
+            try:
+                from .struktur import analysiere_funktionsstruktur
+
+                struktur_info = analysiere_funktionsstruktur(temp_funktion)
+
+                # Nur für komplexe Strukturen strukturierte Klassen verwenden
+                if struktur_info["struktur"] in [
+                    "produkt",
+                    "summe",
+                    "quotient",
+                    "komposition",
+                ]:
+                    if struktur_info["struktur"] == "produkt":
+                        return ProduktFunktion(eingabe, struktur_info)
+                    elif struktur_info["struktur"] == "summe":
+                        return SummeFunktion(eingabe, struktur_info)
+                    elif struktur_info["struktur"] == "quotient":
+                        return QuotientFunktion(eingabe, struktur_info)
+                    elif struktur_info["struktur"] == "komposition":
+                        return KompositionFunktion(eingabe, struktur_info)
+            except Exception:
+                # Bei Fehlern in der Strukturanalyse: weiter mit anderer Typenerkennung
+                pass
+
+            # 3. Grundfunktionen (ganzrational, exponential, trigonometrisch)
+            if temp_funktion.ist_ganzrational:
                 # Andere ganzrationale Funktion -> GanzrationaleFunktion
                 return GanzrationaleFunktion(eingabe)
-            else:
-                # Für alle anderen Typen: verwende Basis-Funktion
-                return super().__new__(cls)
+            elif temp_funktion.ist_exponential_rational:
+                # Exponentialfunktion
+                return ExponentialFunktion(eingabe)
+            elif temp_funktion.ist_trigonometrisch:
+                # Trigonometrische Funktion
+                return TrigonometrischeFunktion(eingabe)
+
+            # 4. Basis-Funktion für alle anderen Fälle
+            return super().__new__(cls)
 
         except Exception:
             # Bei Fehlern bei der Typenerkennung: verwende Basis-Funktion
