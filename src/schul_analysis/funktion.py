@@ -5,7 +5,7 @@ Dies ist die zentrale, echte unified Klasse - keine Wrapper-Logik mehr!
 Alle spezialisierten Klassen erben von dieser Basis-Klasse.
 """
 
-from typing import Union
+from typing import Any, Union
 
 import sympy as sp
 from sympy import diff, latex, solve, symbols
@@ -180,6 +180,7 @@ class Funktion:
         self.hauptvariable: _Variable | None = None
         self.original_eingabe = ""
         self._cache = {}
+        self.name = None  # Standardmäßig kein Name
 
     def _verarbeite_eingabe(
         self,
@@ -482,14 +483,95 @@ class Funktion:
     def ableitung(self, ordnung: int = 1) -> "Funktion":
         """Berechnet die Ableitung"""
         abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
-        return Funktion(abgeleiteter_term)
 
+        # Erstelle neue Funktion mit Namen
+        abgeleitete_funktion = Funktion(abgeleiteter_term)
+
+        # Setze Namen für abgeleitete Funktion
+        if hasattr(self, "name") and self.name:
+            base_name = self.name
+            if ordnung == 1:
+                abgeleitete_funktion.name = f"{base_name}'"
+            elif ordnung == 2:
+                abgeleitete_funktion.name = f"{base_name}''"
+            elif ordnung == 3:
+                abgeleitete_funktion.name = f"{base_name}'''"
+            else:
+                abgeleitete_funktion.name = f"{base_name}^{{{ordnung}}}"
+        else:
+            # Standardnamen wenn kein Basisname vorhanden
+            if ordnung == 1:
+                abgeleitete_funktion.name = "f'"
+            elif ordnung == 2:
+                abgeleitete_funktion.name = "f''"
+            elif ordnung == 3:
+                abgeleitete_funktion.name = "f'''"
+            else:
+                abgeleitete_funktion.name = f"f^{{{ordnung}}}"
+
+        return abgeleitete_funktion
+
+    @property
     def nullstellen(self) -> list:
         """Berechnet die Nullstellen"""
         try:
             lösungen = solve(self.term_sympy, self._variable_symbol)
             return [lösung for lösung in lösungen if lösung.is_real]
         except Exception:
+            return []
+
+    @property
+    def extremstellen(self) -> list[tuple[Any, str]]:
+        """
+        Berechnet die Extremstellen der Funktion.
+
+        Returns:
+            Liste von (x_wert, art) Tupeln, wobei art "Minimum" oder "Maximum" sein kann
+
+        Examples:
+            >>> f = Funktion("x^2 - 4x + 3")
+            >>> extremstellen = f.extremstellen()  # [(2.0, "Minimum")]
+        """
+        try:
+            # Berechne erste Ableitung
+            f_strich = sp.diff(self.term_sympy, self._variable_symbol)
+
+            # Löse f'(x) = 0
+            kritische_punkte = solve(f_strich, self._variable_symbol)
+
+            # Filtere reelle Lösungen
+            reelle_punkte = [p for p in kritische_punkte if p.is_real]
+
+            # Bestimme Art der Extremstellen durch zweite Ableitung
+            f_doppelstrich = sp.diff(f_strich, self._variable_symbol)
+            extremstellen = []
+
+            for punkt in reelle_punkte:
+                try:
+                    # Werte zweite Ableitung an diesem Punkt aus
+                    wert = f_doppelstrich.subs(self._variable_symbol, punkt)
+                    if wert > 0:
+                        art = "Minimum"
+                    elif wert < 0:
+                        art = "Maximum"
+                    else:
+                        art = "Sattelpunkt"
+
+                    # Konvertiere zu numerischem Wert wenn möglich
+                    if hasattr(punkt, "evalf"):
+                        x_wert = punkt.evalf()
+                    else:
+                        x_wert = float(punkt) if hasattr(punkt, "__float__") else punkt
+
+                    extremstellen.append((x_wert, art))
+                except Exception:
+                    # Bei Berechnungsfehlern überspringen wir den Punkt
+                    continue
+
+            return extremstellen
+
+        except Exception:
+            # Bei Fehlern leere Liste zurückgeben
             return []
 
     # Typenerkennung - Alle zentral!
@@ -607,10 +689,34 @@ class Funktion:
     def __repr__(self):
         return f"Funktion('{self.term()}')"
 
+    def _repr_latex_(self):
+        """
+        LaTeX-Darstellung für Jupyter Notebooks und IPython.
+
+        Returns:
+            str: LaTeX-String der Funktion
+        """
+        return self.term_latex()
+
     def __eq__(self, other):
         if not isinstance(other, Funktion):
             return False
         return self.term_sympy.equals(other.term_sympy)
+
+    def definitionsbereich(self) -> str:
+        """Gibt den Definitionsbereich der Funktion zurück."""
+        return "ℝ (alle reellen Zahlen)"
+
+    def polstellen(self) -> list:
+        """Berechnet die Polstellen der Funktion."""
+        # Für allgemeine Funktionen Standard-Implementierung
+        return []
+
+    def zeige_funktion_plotly(self, x_bereich=None, **kwargs):
+        """Visualisiert die Funktion mit Plotly."""
+        from .visualisierung import Graph
+
+        return Graph(self, x_bereich=x_bereich, **kwargs)
 
 
 # Factory-Funktion für Konsistenz und Abwärtskompatibilität

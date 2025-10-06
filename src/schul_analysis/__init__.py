@@ -30,7 +30,6 @@ from .analysis import (
 )
 from .api import (
     LGS,
-    ExponentialRationaleFunktion,
     # Komfort-Funktionen für den Unterricht
     ableitung,
     analysiere_funktion,
@@ -52,7 +51,8 @@ from .api import (
 # FUNKTIONSKLASSEN (für direkte Verwendung)
 # =============================================================================
 from .funktion import Funktion
-from .parametrisch import ParametrischeFunktion
+from .ganzrationale import GanzrationaleFunktion
+from .gebrochen_rationale import GebrochenRationaleFunktion
 
 # =============================================================================
 # SPEZIALKOMPONENTEN
@@ -124,7 +124,8 @@ __all__ = [
     "zeige_analyse",
     # 🏗️ FUNKTIONSKLASSEN
     "Funktion",
-    "ParametrischeFunktion",
+    "GanzrationaleFunktion",
+    "GebrochenRationaleFunktion",
     "LGS",
     # 🔤 SYMBOLISCHE KOMPONENTEN
     "Variable",

@@ -40,7 +40,7 @@ def example_perfect_parabola():
 
         # Erstelle Graph
         try:
-            graph = Graph(f, titel=f"{beschreibung}: f(x) = {term}")
+            Graph(f, titel=f"{beschreibung}: f(x) = {term}")
             print("✓ Graph erstellt")
         except Exception as e:
             print(f"✗ Fehler: {e}")
@@ -65,7 +65,7 @@ def example_multiple_functions():
 
     try:
         # Erstelle Graph mit allen Funktionen
-        graph = Graph(
+        Graph(
             f1,
             f2,
             f3,
@@ -107,7 +107,7 @@ def example_rational_functions():
             else:
                 bereich = (-5, 5)
 
-            graph = Graph(f, x_bereich=bereich, titel=f"{beschreibung}")
+            Graph(f, x_bereich=bereich, titel=f"{beschreibung}")
             print("✓ Graph erstellt")
         except Exception as e:
             print(f"✗ Fehler: {e}")
@@ -142,19 +142,15 @@ def example_derivatives_analysis():
     # Erstelle Graphen
     try:
         # Originalfunktion
-        graph_f = Graph(f, x_bereich=(-2, 4), titel="Funktion f(x)")
+        Graph(f, x_bereich=(-2, 4), titel="Funktion f(x)")
         print("✓ Graph von f(x) erstellt")
 
         # Erste Ableitung
-        graph_f_strich = Graph(
-            f_strich, x_bereich=(-2, 4), titel="Erste Ableitung f'(x)"
-        )
+        Graph(f_strich, x_bereich=(-2, 4), titel="Erste Ableitung f'(x)")
         print("✓ Graph von f'(x) erstellt")
 
         # Zweite Ableitung
-        graph_f_strich_strich = Graph(
-            f_strich_strich, x_bereich=(-2, 4), titel="Zweite Ableitung f''(x)"
-        )
+        Graph(f_strich_strich, x_bereich=(-2, 4), titel="Zweite Ableitung f''(x)")
         print("✓ Graph von f''(x) erstellt")
 
     except Exception as e:
@@ -198,7 +194,7 @@ def example_asymptotic_behavior():
             else:
                 bereich = (-4, 4)
 
-            graph = Graph(f, x_bereich=bereich, titel=f"{beschreibung}: f(x) = {term}")
+            Graph(f, x_bereich=bereich, titel=f"{beschreibung}: f(x) = {term}")
             print("✓ Graph erstellt")
         except Exception as e:
             print(f"✗ Fehler: {e}")

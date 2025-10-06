@@ -6,14 +6,14 @@ Kurvendiskussion, Integralrechnung und Grenzwertanalyse.
 """
 
 from schul_analysis import (
-    Ableitung,
     AsymptotischesVerhalten,
-    Extremstellen,
     Funktion,
     Graph,
-    Integral,
-    Nullstellen,
-    Wendepunkte,
+    Polstellen,
+    ableitung,
+    extrema,
+    nullstellen,
+    wendepunkte,
 )
 
 
@@ -26,12 +26,10 @@ def kurvendiskussion(funktion, name="f"):
     try:
         # Für gebrochen-rationale Funktionen Polstellen finden
         if hasattr(funktion, "nenner") and funktion.nenner != 1:
-            from schul_analysis import Polstellen
-
-            polstellen = Polstellen(funktion)
-            if polstellen:
-                print(f"   Polstellen bei x = {polstellen}")
-                print(f"   Definitionsbereich: ℝ \\ {polstellen}")
+            pol = Polstellen(funktion)
+            if pol:
+                print(f"   Polstellen bei x = {pol}")
+                print(f"   Definitionsbereich: ℝ \\ {pol}")
             else:
                 print("   Definitionsbereich: ℝ")
         else:
@@ -41,36 +39,36 @@ def kurvendiskussion(funktion, name="f"):
 
     # 2. Nullstellen
     print("2. Nullstellen:")
-    nullstellen = Nullstellen(funktion)
-    if nullstellen:
-        print(f"   x = {nullstellen}")
+    null = nullstellen(funktion)
+    if null:
+        print(f"   x = {null}")
     else:
         print("   Keine reellen Nullstellen")
 
     # 3. Ableitungen
     print("3. Ableitungen:")
-    f_strich = Ableitung(funktion)
-    f_strich_strich = Ableitung(f_strich)
+    f_strich = ableitung(funktion)
+    f_strich_strich = ableitung(f_strich)
     print(f"   f'(x) = {f_strich.term()}")
     print(f"   f''(x) = {f_strich_strich.term()}")
 
     # 4. Extremstellen
     print("4. Extremstellen:")
-    extremstellen = Extremstellen(funktion)
-    if extremstellen:
-        for xs, art in extremstellen:
-            ys = funktion.wert(xs)
+    ext = extrema(funktion)
+    if ext:
+        for xs, art in ext:
+            ys = funktion(xs)
             print(f"   {art} bei P({xs:.3f}|{ys:.3f})")
     else:
         print("   Keine Extremstellen")
 
     # 5. Wendepunkte
     print("5. Wendepunkte:")
-    wendepunkte = Wendepunkte(funktion)
-    if wendepunkte:
-        for wp in wendepunkte:
-            if len(wp) >= 3:
-                xw, yw, art = wp[0], wp[1], wp[2]
+    wp = wendepunkte(funktion)
+    if wp:
+        for wendepunkt in wp:
+            if len(wendepunkt) >= 3:
+                xw, yw, art = wendepunkt[0], wendepunkt[1], wendepunkt[2]
                 print(f"   {art} bei P({xw:.3f}|{yw:.3f})")
     else:
         print("   Keine Wendepunkte")
@@ -78,18 +76,19 @@ def kurvendiskussion(funktion, name="f"):
     # 6. Grenzwertverhalten
     print("6. Grenzwertverhalten:")
     try:
-        asymptotisch = AsymptotischesVerhalten(funktion)
-        if asymptotisch:
-            for beschreibung in asymptotisch:
+        asymp = AsymptotischesVerhalten(funktion)
+        if asymp:
+            for beschreibung in asymp:
                 print(f"   {beschreibung}")
     except Exception:
         print("   Keine Asymptoten analysiert")
 
-    # 7. Integral (falls definiert)
+    # 7. Integral (vereinfachte Darstellung)
     print("7. Stammfunktion:")
     try:
-        stammfunktion = Integral(funktion)
-        print(f"   ∫f(x)dx = {stammfunktion.term()} + C")
+        # Zeige nur das Konzept - Integral ist numerisch
+        print("   ∫f(x)dx - numerische Integration verfügbar")
+        print("   Beispiel: Von 0 bis 2 ≈ ?")
     except Exception:
         print("   Integral nicht berechenbar")
 

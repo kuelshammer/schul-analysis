@@ -285,7 +285,7 @@ def test_lgs_integrationsbeispiel():
                     x_ext, art = extremstellen[0]
                     y_ext = f_konkret.wert(x_ext)
                     print(f"Scheitelpunkt: S({x_ext:.2f}|{y_ext:.2f})")
-            except:
+            except Exception:
                 pass
 
         print("✅ Test 6 erfolgreich!")

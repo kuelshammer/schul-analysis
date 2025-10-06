@@ -5,9 +5,7 @@ Dieses Beispiel zeigt alle Funktionen der neuen API mit automatischer Funktionse
 und wie sie im Unterricht eingesetzt werden können.
 """
 
-import numpy as np
-
-from schul_analysis import *
+from schul_analysis import Funktion, ableitung, extrema, nullstellen, symmetrie
 
 # =============================================================================
 # 1. BEISPIEL: Quadratische Funktion (Magic Factory)
@@ -19,6 +17,7 @@ print("-" * 55)
 # Automatische Funktionserkennung
 f = Funktion("3x^2 - 4x + 1")
 print(f"f(x) = {f.term()}")
+print(f"Funktionstyp: {f.funktionstyp}")
 
 # Analysiere die Funktion mit der neuen Syntax
 print(f"Nullstellen: {nullstellen(f)}")
@@ -27,166 +26,196 @@ print(f"2. Ableitung: {ableitung(f, 2).term()}")
 print(f"Extrema: {extrema(f)}")
 print(f"Symmetrie: {symmetrie(f)}")
 
-# Werteberechnung
-print(f"f(0) = {auswerten(f, 0)}")
-print(f"f(1) = {auswerten(f, 1)}")
+# Werteberechnung mit natürlicher Syntax
+print(f"f(0) = {f(0)}")
+print(f"f(1) = {f(1)}")
 
 # =============================================================================
 # 2. BEISPIEL: Kubische Funktion
 # =============================================================================
 
-print("\n=== BEISPIEL 2: Kubische Funktion ===")
-print("Kurvendiskussion einer kubischen Funktion")
+print("\n🎲 BEISPIEL 2: Kubische Funktion")
+print("-" * 40)
 
 # Erstelle kubische Funktion
-g = erstelle_funktion("x^3 - 3x^2 - 4x + 12")
+g = Funktion("x^3 - 3x^2 - 4x + 12")
 print(f"g(x) = {g.term()}")
+print(f"Funktionstyp: {g.funktionstyp}")
 
-# Volle Analyse
-analyse = analysiere_funktion(g)
-print(zeige_analyse(g))
+# Analyse der kubischen Funktion
+print(f"Nullstellen: {nullstellen(g)}")
+print(f"1. Ableitung: {ableitung(g).term()}")
+print(f"2. Ableitung: {ableitung(ableitung(g)).term()}")
+
+# Extremstellen analysieren
+ext = extrema(g)
+if ext:
+    print("Extremstellen:")
+    for x_ext, art in ext:
+        y_ext = g(x_ext)
+        print(f"  {art} bei ({x_ext:.2f}, {y_ext:.2f})")
 
 # =============================================================================
 # 3. BEISPIEL: Lineare Funktionen und Schnittpunkte
 # =============================================================================
 
-print("\n=== BEISPIEL 3: Lineare Funktionen ===")
+print("\n📏 BEISPIEL 3: Lineare Funktionen")
+print("-" * 35)
 
 # Zwei lineare Funktionen
-f1 = erstelle_polynom([2, 3])  # 2x + 3
-f2 = erstelle_polynom([-1, 5])  # -x + 5
+f1 = Funktion("2x + 3")  # 2x + 3
+f2 = Funktion("-x + 5")  # -x + 5
 
 print(f"f1(x) = {f1.term()}")
 print(f"f2(x) = {f2.term()}")
 
 # Schnittpunkt berechnen (Nullstellen der Differenz)
-differenz = erstelle_polynom([3, -2])  # (2x+3) - (-x+5) = 3x - 2
+differenz = Funktion("(2x + 3) - (-x + 5)")  # 3x - 2
 schnittpunkt = nullstellen(differenz)
 print(f"Schnittpunkt bei x = {schnittpunkt}")
 
+if schnittpunkt:
+    y_schnitt = f1(schnittpunkt[0])
+    print(f"Schnittpunkt: ({schnittpunkt[0]:.2f}, {y_schnitt:.2f})")
+
 # =============================================================================
-# 4. BEISPIEL: Lineares Gleichungssystem
+# 4. BEISPIEL: Gebrochen-rationale Funktion
 # =============================================================================
 
-print("\n=== BEISPIEL 4: Lineares Gleichungssystem ===")
+print("\n🔢 BEISPIEL 4: Gebrochen-rationale Funktion")
+print("-" * 45)
 
-# Erstelle LGS: 2x + 3y = 8, x - 2y = -3
-lgs = erstelle_lineares_gleichungssystem([[2, 3], [1, -2]], [8, -3])
+h = Funktion("(x^2 - 4)/(x - 2)")
+print(f"h(x) = {h.term()}")
+print(f"Funktionstyp: {h.funktionstyp}")
 
-# Löse das System
+# Spezielle Eigenschaften
+print(f"Definitionsbereich: {h.definitionsbereich()}")
+
 try:
-    loesung = lgs.löse()
-    print(f"Lösung: {loesung}")
+    pol = h.polstellen()
+    print(f"Polstellen: {pol}")
+except AttributeError:
+    print("Polstellen: Nicht verfügbar für diesen Funktionstyp")
 
-    # Ergebnis als konkrete Funktion
-    if loesung:
-        ergebnis_funktion = Funktion(
-            f"{loesung[a]}*x^2 + {loesung[b]}*x + {loesung[c]}"
-        )
-        print(f"Gefundene Parabel: f(x) = {ergebnis_funktion.term()}")
-
-        # Verifizierung
-        print(f"Verifizierung:")
-        print(f"  f(1) = {ergebnis_funktion(1)} (sollte 2 sein)")
-        print(f"  f(2) = {ergebnis_funktion(2)} (sollte 3 sein)")
-        print(f"  f(3) = {ergebnis_funktion(3)} (sollte 6 sein)")
-
-except Exception as e:
-    print(f"Fehler bei LGS-Lösung: {e}")
+print(f"Nullstellen: {nullstellen(h)}")
 
 # =============================================================================
-# 6. BEISPIEL: Wertetabelle mit verschiedenen Funktionstypen
+# 5. BEISPIEL: Wertetabelle erstellen
 # =============================================================================
 
-print("\n📋 BEISPIEL 6: Wertetabelle mit verschiedenen Funktionstypen")
-print("-" * 52)
+print("\n📊 BEISPIEL 5: Wertetabelle")
+print("-" * 25)
 
-# Verschiedene Funktionstypen
-funktionen = [
-    ("Linear", "2x + 1"),
-    ("Quadratisch", "x^2 - 2x - 3"),
-    ("Kubisch", "0.5x^3 - x"),
-    ("Exponentiell", "e^x"),
-    ("Trigonometrisch", "sin(x)"),
-]
+# Funktion für Wertetabelle
+tabellen_funktion = Funktion("x^2 - 2x - 3")
+print(f"Funktion: f(x) = {tabellen_funktion.term()}")
 
+# Wertetabelle
+x_werte = [-2, -1, 0, 1, 2, 3, 4]
 print("Wertetabelle für f(x) = x² - 2x - 3:")
-for x, y in zip(x_werte, y_werte, strict=False):
+for x, y in zip(x_werte, [tabellen_funktion(x) for x in x_werte], strict=False):
     print(f"f({x:4.1f}) = {y:6.2f}")
 
 # =============================================================================
-# 6. BEISPIEL: Funktion mit Parameter
+# 6. BEISPIEL: Parameter-Bestimmung
 # =============================================================================
 
-print("\n=== BEISPIEL 6: Funktion mit Parameter ===")
+print("\n🎯 BEISPIEL 6: Parameter-Bestimmung")
+print("-" * 38)
 
+# Parabel durch Punkte f(1)=2, f(2)=3, f(0)=6
+print("Gesucht: Parabel f(x) = ax² + bx + c mit:")
+print("  f(1) = 2")
+print("  f(2) = 3")
+print("  f(0) = 6")
 
-# Normalparabel mit Parameter
-def normale_parabel(a=1, b=0, c=0):
-    """Erstellt eine Normalparabel f(x) = ax² + bx + c"""
-    return erstelle_polynom([c, b, a])
+# Lösung: c = 6, a + b + 6 = 2 → a + b = -4, 4a + 2b + 6 = 3 → 4a + 2b = -3
+# Aus a + b = -4 folgt b = -4 - a
+# Einsetzen: 4a + 2(-4 - a) = -3 → 4a - 8 - 2a = -3 → 2a = 5 → a = 2.5, b = -6.5
 
+print("\nLösung:")
+print("  c = 6 (aus f(0) = 6)")
+print("  a + b = -4 (aus f(1) = 2)")
+print("  4a + 2b = -3 (aus f(2) = 3)")
+print("  → a = 2.5, b = -6.5, c = 6")
 
-# Verschiedene Parabeln
-parabel1 = normale_parabel(1, 0, 0)  # x²
-parabel2 = normale_parabel(-1, 0, 0)  # -x²
-parabel3 = normale_parabel(2, -4, 3)  # 2x² - 4x + 3
+# Ergebnis als konkrete Funktion
+ergebnis_funktion = Funktion("2.5x^2 - 6.5x + 6")
+print(f"\nGefundene Parabel: f(x) = {ergebnis_funktion.term()}")
 
-print("Verschiedene Parabeln:")
-print(f"f1(x) = {parabel1.term()}")
-print(f"f2(x) = {parabel2.term()}")
-print(f"f3(x) = {parabel3.term()}")
-
-print("Analysen:")
-for i, p in enumerate([parabel1, parabel2, parabel3], 1):
-    print(f"  Parabel {i}: Nullstellen bei {nullstellen(p)}, Extremum bei {extrema(p)}")
+# Verifizierung
+print("\nVerifizierung:")
+print(f"  f(1) = {ergebnis_funktion(1)} (sollte 2 sein)")
+print(f"  f(2) = {ergebnis_funktion(2)} (sollte 3 sein)")
 
 # =============================================================================
-# 7. BEISPIEL: Praktische Anwendung
+# 7. BEISPIEL: Ableitungs-Kette
 # =============================================================================
 
-print("\n=== BEISPIEL 7: Praktische Anwendung ===")
-print("Ein Ball wird mit v₀ = 20 m/s senkrecht nach oben geworfen")
+print("\n🔗 BEISPIEL 7: Ableitungs-Kette")
+print("-" * 35)
+
+# Ausgangsfunktion
+original = Funktion("x^4 - 2x^3 + x^2 - 4x + 1")
+print(f"Original: f(x) = {original.term()}")
+
+# Ableitungen mit automatischer Namensgebung
+f1 = ableitung(original)  # f'
+f2 = ableitung(f1)  # f''
+f3 = ableitung(f2)  # f'''
+
+print(f"f'(x) = {f1.term()} (Name: {f1.name})")
+print(f"f''(x) = {f2.term()} (Name: {f2.name})")
+print(f"f'''(x) = {f3.term()} (Name: {f3.name})")
+
+# =============================================================================
+# 8. BEISPIEL: Physikalische Anwendung
+# =============================================================================
+
+print("\n🚀 BEISPIEL 8: Physikalische Anwendung")
+print("-" * 40)
 
 # Höhenfunktion: h(t) = -5t² + 20t (g ≈ 10 m/s²)
-h = erstelle_polynom([0, 20, -5])  # -5t² + 20t
-
-print(f" Höhe: h(t) = {h.term()} m")
+h = Funktion("-5t^2 + 20t")
+print(f"Höhe: h(t) = {h.term()} m")
 
 # Wann erreicht der Ball die maximale Höhe?
-max_zeit = extrema(h)[0][0]  # x-Koordinate des Maximums
-max_hoehe = auswerten(h, max_zeit)
-print(f"  Maximale Höhe von {max_hoehe} m nach {max_zeit} s")
+max_zeit = extrema(h)[0][0] if extrema(h) else None
+if max_zeit is not None:
+    max_hoehe = h(max_zeit)
+    print(f"  Maximale Höhe von {max_hoehe} m nach {max_zeit} s")
 
 # Wann landet der Ball wieder?
 landezeiten = nullstellen(h)
-print(f"  Landung nach {landezeiten[1]} s")
+if len(landezeiten) > 1:
+    print(f"  Landung nach {landezeiten[1]} s")
 
 # Geschwindigkeit als 1. Ableitung
 v = ableitung(h)
 print(f"  Geschwindigkeit: v(t) = {v.term()} m/s")
 
 # =============================================================================
-# 8. BEISPIEL: Vergleich von Funktionen
+# ZUSAMMENFASSUNG
 # =============================================================================
 
-print("\n=== BEISPIEL 8: Funktionsvergleich ===")
+print("\n" + "=" * 60)
+print("🎉 ZUSAMMENFASSUNG DER MAGIC FACTORY API")
+print("=" * 60)
 
-# Zwei ähnliche Funktionen vergleichen
-f_a = erstelle_polynom([1, -3, 2])  # x² - 3x + 2 = (x-1)(x-2)
-f_b = erstelle_polynom([1, -4, 4])  # x² - 4x + 4 = (x-2)²
+print("✨ NEUE FEATURES:")
+print("• 🎯 Magic Factory: Funktion('term') - automatische Typenerkennung")
+print("• 📝 LaTeX-Darstellung: f zeigt automatisch f(x) = term an")
+print("• 🏷️  Automatische Namensgebung: f → f' → f''")
+print("• 🧮 Natürliche Syntax: f(2) statt auswerten(f, 2)")
+print("• 🔍 Kleingeschriebene Funktionen: nullstellen(), ableitung(), extrema()")
+print("• 📊 Plotly-Integration: mathematisch korrekte Graphen")
 
-print("Vergleich zweier quadratischer Funktionen:")
-print(f"  f_A(x) = {f_a.term()}")
-print(f"  f_B(x) = {f_b.term()}")
+print("\n🎓 PÄDAGOGISCHE VORTEILE:")
+print("• Einfache, intuitive Syntax für Schüler")
+print("• Automatische Funktionsklassen-Erkennung")
+print("• Deutsche Fehlermeldungen")
+print("• Mathematisch korrekte Darstellung")
+print("• Perfekt für interaktiven Unterricht")
 
-print("Eigenschaften:")
-for name, func in [("f_A", f_a), ("f_B", f_b)]:
-    print(f"  {name}:")
-    print(f"    Nullstellen: {nullstellen(func)}")
-    print(f"    Extrema: {extrema(func)}")
-    print(f"    Symmetrie: {symmetrie(func)}")
-
-print("\n=== ENDE DER DEMONSTRATION ===")
-print("Die neue API ermöglicht eine intuitive und pädagogisch wertvolle")
-print("Arbeit mit mathematischen Funktionen im Schulunterricht.")
+print("\n" + "=" * 60)

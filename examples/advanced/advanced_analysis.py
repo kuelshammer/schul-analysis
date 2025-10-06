@@ -7,15 +7,15 @@ Dieses Beispiel zeigt fortgeschrittene Analysetechniken des Schul-Analysis Frame
 import numpy as np
 
 from schul_analysis import (
-    Ableitung,
     AsymptotischesVerhalten,
-    Extremstellen,
     Funktion,
     Grenzwert,
-    Integral,
-    Nullstellen,
     Polstellen,
-    Wendepunkte,
+    ableitung,
+    extrema,
+    integral,
+    nullstellen,
+    wendepunkte,
 )
 
 # 1. Komplexe ganzrationale Funktion
@@ -24,21 +24,21 @@ f = Funktion("x^3 - 6x^2 + 11x - 6")
 print(f"Funktion: f(x) = {f.term()}")
 
 # Nullstellen analysieren
-nullstellen = Nullstellen(f)
-print(f"Nullstellen: {nullstellen}")
+nullst = nullstellen(f)
+print(f"Nullstellen: {nullst}")
 
 # Ableitungen und Extremstellen
-f_strich = Ableitung(f)
-f_doppelt = Ableitung(f, ordnung=2)
+f_strich = ableitung(f)
+f_doppelt = ableitung(f, ordnung=2)
 
 print(f"f'(x) = {f_strich.term()}")
 print(f"f''(x) = {f_doppelt.term()}")
 
-extremstellen = Extremstellen(f)
-print(f"Extremstellen: {extremstellen}")
+extremst = extrema(f)
+print(f"Extremstellen: {extremst}")
 
-wendepunkte = Wendepunkte(f)
-print(f"Wendepunkte: {wendepunkte}")
+wendep = wendepunkte(f)
+print(f"Wendepunkte: {wendep}")
 
 # 2. Gebrochen-rationale Funktion mit Asymptoten
 print("\n=== 2. Gebrochen-rationale Funktion ===")
@@ -46,8 +46,8 @@ g = Funktion("(x^2 - 4)/(x^2 - 1)")
 print(f"Funktion: g(x) = {g.term()}")
 
 # Polstellen finden
-polstellen = Polstellen(g)
-print(f"Polstellen: {polstellen}")
+polst = Polstellen(g)
+print(f"Polstellen: {polst}")
 
 # Asymptotisches Verhalten
 try:
@@ -59,10 +59,10 @@ except Exception as e:
 # Grenzwerte analysieren
 print("\nGrenzwerte:")
 grenzwerte = [
-    ("x->∞", Grenzwert(g, "oo")),
-    ("x->-∞", Grenzwert(g, "-oo")),
-    ("x->1+", Grenzwert(g, 1, seite="+")),
-    ("x->1-", Grenzwert(g, 1, seite="-")),
+    ("x->∞", Grenzwert(g, float("inf"))),
+    ("x->-∞", Grenzwert(g, float("-inf"))),
+    ("x->1+", Grenzwert(g, 1.001)),
+    ("x->1-", Grenzwert(g, 0.999)),
 ]
 
 for beschreibung, wert in grenzwerte:
@@ -73,8 +73,8 @@ print("\n=== 3. Integralberechnung ===")
 h = Funktion("x^2 + 2x + 1")
 print(f"Funktion: h(x) = {h.term()}")
 
-# Unbestimmtes Integral
-integral_h = Integral(h)
+# Unbestimmtes Integral (symbolisch)
+integral_h = integral(h)
 print(f"∫h(x)dx = {integral_h.term()}")
 
 # Bestimmtes Integral (numerisch)
@@ -82,7 +82,7 @@ try:
     x_vals = np.linspace(0, 2, 100)
     y_vals = [h.wert(x) for x in x_vals]
     # Trapezregel für numerische Integration
-    integral_numeric = np.trapz(y_vals, x_vals)
+    integral_numeric = np.trapezoid(y_vals, x_vals)
     print(f"∫₀² h(x)dx ≈ {integral_numeric:.6f}")
 except Exception as e:
     print(f"Numerische Integration fehlgeschlagen: {e}")
@@ -107,21 +107,21 @@ def kurvendiskussion(funktion, name="f"):
 
     # Nullstellen
     try:
-        nullst = Nullstellen(funktion)
+        nullst = nullstellen(funktion)
         print(f"Nullstellen: {nullst}")
     except Exception as e:
         print(f"Nullstellen: Fehler - {e}")
 
     # Extremstellen
     try:
-        ext = Extremstellen(funktion)
+        ext = extrema(funktion)
         print(f"Extremstellen: {ext}")
     except Exception as e:
         print(f"Extremstellen: Fehler - {e}")
 
     # Wendepunkte
     try:
-        wp = Wendepunkte(funktion)
+        wp = wendepunkte(funktion)
         print(f"Wendepunkte: {wp}")
     except Exception as e:
         print(f"Wendepunkte: Fehler - {e}")

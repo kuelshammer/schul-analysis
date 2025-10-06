@@ -125,7 +125,7 @@ def test_arithmetische_operationen():
     try:
         ergebnis = 6 / g
         print(f"6 / g = {ergebnis.term()}")
-        assert False, "6 / g sollte TypeError werfen (kein Polynom)"
+        raise AssertionError("6 / g sollte TypeError werfen (kein Polynom)")
     except TypeError as e:
         print(f"6 / g = TypeError: {e} (erwartet)")
 
@@ -155,7 +155,7 @@ def test_arithmetische_operationen():
     try:
         ergebnis = g ** (-1)
         print(f"g ** (-1) = {ergebnis} (sollte TypeError sein)")
-        assert False, "g ** (-1) sollte TypeError werfen"
+        raise AssertionError("g ** (-1) sollte TypeError werfen")
     except TypeError as e:
         print(
             f"g ** (-1) = TypeError: {e} (erwartet, da NotImplemented zurückgegeben wird)"
@@ -206,7 +206,7 @@ def test_arithmetische_operationen():
     try:
         ergebnis = g / 0
         print("FEHLER: Division durch Null sollte ZeroDivisionError werfen!")
-        assert False
+        raise AssertionError("Division durch Null sollte ZeroDivisionError werfen")
     except ZeroDivisionError:
         print("g / 0 = ZeroDivisionError (erwartet)")
 
@@ -215,7 +215,9 @@ def test_arithmetische_operationen():
     try:
         ergebnis = f / null_func
         print("FEHLER: Division durch Null-Funktion sollte ZeroDivisionError werfen!")
-        assert False
+        raise AssertionError(
+            "Division durch Null-Funktion sollte ZeroDivisionError werfen"
+        )
     except ZeroDivisionError:
         print("f / null_func = ZeroDivisionError (erwartet)")
 
@@ -223,7 +225,7 @@ def test_arithmetische_operationen():
     try:
         ergebnis = "test" + g
         print("FEHLER: String+Funktion sollte NotImplemented geben!")
-        assert False
+        raise AssertionError("String+Funktion sollte TypeError werfen")
     except TypeError:
         print("'test'+g = TypeError (erwartet bei unpassender Typkombination)")
 

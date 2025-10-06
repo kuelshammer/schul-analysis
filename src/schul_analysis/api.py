@@ -22,7 +22,6 @@ from .gebrochen_rationale import (
 )
 from .gemischte import GemischteFunktion
 from .lineare_gleichungssysteme import LGS
-from .parametrisch import ParametrischeFunktion
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
@@ -30,7 +29,6 @@ Funktionstyp = (
     | GebrochenRationaleFunktion
     | ExponentialRationaleFunktion
     | GemischteFunktion
-    | ParametrischeFunktion
 )
 
 
@@ -64,7 +62,7 @@ def nullstellen(
     try:
         # Handle both property and method cases
         if hasattr(funktion, "nullstellen"):
-            attr = getattr(funktion, "nullstellen")
+            attr = funktion.nullstellen
             if callable(attr):
                 # It's a method - try with parameters first
                 try:
@@ -600,9 +598,7 @@ __all__ = [
     # Funktionstypen (für direkten Zugriff)
     "GanzrationaleFunktion",
     "GebrochenRationaleFunktion",
-    "ParametrischeFunktion",
     "LGS",
-    "Taylor",
     # Type-Hints
     "Funktionstyp",
 ]

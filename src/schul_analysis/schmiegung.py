@@ -5,7 +5,7 @@ Dieses Modul enthält Funktionen zur Erzeugung und Analyse von Schmiegkurven,
 die durch Punkte mit optionalen Tangenten- oder Normalenbedingungen definiert sind.
 """
 
-from .parametrisch import ParametrischeFunktion
+from .funktion import Funktion
 from .schmiegkurven import Schmiegkurve
 
 
@@ -161,8 +161,8 @@ def Graph_parametrisiert(parametrische_funktion, **parameter_werte):
         # Mit Marimo anzeigen:
         >>> mo.ui.plotly(fig)
     """
-    if not isinstance(parametrische_funktion, ParametrischeFunktion):
-        raise TypeError("Erste Argument muss eine ParametrischeFunktion sein")
+    if not isinstance(parametrische_funktion, Funktion):
+        raise TypeError("Erste Argument muss eine Funktion sein")
 
     if not parameter_werte:
         raise ValueError("Mindestens ein Parameter mit Werten muss angegeben werden")

@@ -68,7 +68,7 @@ def test_parametrische_funktionen():
             try:
                 y_wert = f_a.wert(x_wert)
                 print(f"  f({x_wert}) = {y_wert:.2f}")
-            except:
+            except Exception:
                 print(f"  f({x_wert}) = undefiniert")
 
     # 6. Teste Graph_parametrisiert

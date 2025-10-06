@@ -163,7 +163,7 @@ def test_schulbeispiele():
             try:
                 nullstellen = f.nullstellen()
                 print(f"   Nullstellen: {nullstellen}")
-            except:
+            except Exception:
                 print(
                     "   Nullstellen: Konnten nicht berechnet werden (Parameter vorhanden)"
                 )

@@ -2,7 +2,11 @@
 Test für die neue Schnittpunkt-Funktion
 """
 
-from src.schul_analysis import *
+from schul_analysis import (
+    GanzrationaleFunktion,
+    GebrochenRationaleFunktion,
+    Schnittpunkt,
+)
 
 
 def test_schnittpunkt_funktion():
@@ -33,11 +37,11 @@ def test_schnittpunkt_funktion():
     # Beispiel 3: Gebrochen-rationale mit ganzrationaler Funktion
     print("\n📊 Beispiel 3: Hyperbel und Gerade")
     k = GebrochenRationaleFunktion("1/x")
-    l = GanzrationaleFunktion("x")
+    l_func = GanzrationaleFunktion("x")
 
     print(f"  k(x) = {k.term()}")
-    print(f"  l(x) = {l.term()}")
-    schnittpunkte_kl = Schnittpunkt(k, l)
+    print(f"  l(x) = {l_func.term()}")
+    schnittpunkte_kl = Schnittpunkt(k, l_func)
     print(f"  Schnittpunkte: {schnittpunkte_kl}")
 
     # Beispiel 4: Komplexeres Beispiel
@@ -75,8 +79,8 @@ def test_schnittpunkt_validierung():
     # Teste mit Funktionen, die sich an Polstellen schneiden
     print("\nTest 3: Funktionen mit Polstellen")
     k = GebrochenRationaleFunktion("1/(x-1)")
-    l = GanzrationaleFunktion("x")
-    schnittpunkte_pol = Schnittpunkt(k, l)
+    l_func = GanzrationaleFunktion("x")
+    schnittpunkte_pol = Schnittpunkt(k, l_func)
     print(f"  Mit Polstellen: {schnittpunkte_pol}")
 
 

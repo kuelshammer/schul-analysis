@@ -208,25 +208,25 @@ class TestStaticExponentialDetection:
         """Test der Erkennung von exp() in Strings."""
         from schul_analysis.funktion import _ist_exponential_funktion_static
 
-        assert _ist_exponential_funktion_static("exp(x)") == True
-        assert _ist_exponential_funktion_static("exp(2x)") == True
-        assert _ist_exponential_funktion_static("exp(x) + 1") == True
-        assert _ist_exponential_funktion_static("x^2 + 1") == False
+        assert _ist_exponential_funktion_static("exp(x)")
+        assert _ist_exponential_funktion_static("exp(2x)")
+        assert _ist_exponential_funktion_static("exp(x) + 1")
+        assert not _ist_exponential_funktion_static("x^2 + 1")
 
     def test_string_erkennung_exp_gross(self):
         """Test der Erkennung von EXP() in Strings (case-insensitive)."""
         from schul_analysis.funktion import _ist_exponential_funktion_static
 
-        assert _ist_exponential_funktion_static("EXP(x)") == True
-        assert _ist_exponential_funktion_static("Exp(x)") == True
+        assert _ist_exponential_funktion_static("EXP(x)")
+        assert _ist_exponential_funktion_static("Exp(x)")
 
     def test_string_erkennung_e_potenz(self):
         """Test der Erkennung von e^ in Strings."""
         from schul_analysis.funktion import _ist_exponential_funktion_static
 
-        assert _ist_exponential_funktion_static("e^x") == True
-        assert _ist_exponential_funktion_static("e^(2x)") == True
-        assert _ist_exponential_funktion_static("E^x") == True  # Case-insensitive
+        assert _ist_exponential_funktion_static("e^x")
+        assert _ist_exponential_funktion_static("e^(2x)")
+        assert _ist_exponential_funktion_static("E^x")  # Case-insensitive
 
     def test_sympy_erkennung(self):
         """Test der Erkennung in SymPy-Ausdrücken."""
@@ -236,16 +236,16 @@ class TestStaticExponentialDetection:
         expr_exp = sp.exp(x)
         expr_poly = x**2 + 1
 
-        assert _ist_exponential_funktion_static(expr_exp) == True
-        assert _ist_exponential_funktion_static(expr_poly) == False
+        assert _ist_exponential_funktion_static(expr_exp)
+        assert not _ist_exponential_funktion_static(expr_poly)
 
     def test_kombinierte_ausdrücke(self):
         """Test der Erkennung in kombinierten Ausdrücken."""
         from schul_analysis.funktion import _ist_exponential_funktion_static
 
         # Sollte als Exponentialfunktion erkannt werden
-        assert _ist_exponential_funktion_static("exp(x) + x^2") == True
-        assert _ist_exponential_funktion_static("x*exp(x)") == True
+        assert _ist_exponential_funktion_static("exp(x) + x^2")
+        assert _ist_exponential_funktion_static("x*exp(x)")
 
         # Sollte nicht als Exponentialfunktion erkannt werden
-        assert _ist_exponential_funktion_static("x^2 + 2x + 1") == False
+        assert not _ist_exponential_funktion_static("x^2 + 2x + 1")

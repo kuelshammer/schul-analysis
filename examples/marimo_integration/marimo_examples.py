@@ -1,7 +1,7 @@
 """
 Marimo Integration Examples
 
-Dieses Beispiel zeigt die Verwendung des Schul-Analysis Frameworks in Marimo-Notebooks.
+Dieses Beispiel zeigt die Verwendung des modernen Schul-Analysis Frameworks in Marimo-Notebooks.
 Marimo ist ein reaktives Notebook-System, das perfekt für mathematische Analysen geeignet ist.
 
 Installation:
@@ -9,210 +9,232 @@ Installation:
 
 Starten:
     marimo edit marimo_examples.py
-
 """
 
-import marimo as mo
 
-# Initialize marimo if not already in a marimo notebook
-try:
-    # Try to access marimo's app context
-    mo.md("# 🎓 Schul-Analysis Framework in Marimo")
-    IN_MARIMO = True
-except Exception:
-    IN_MARIMO = False
-    print("Dieses Beispiel ist für die Verwendung in Marimo-Notebooks optimiert.")
-    print("Starten Sie mit: marimo edit marimo_examples.py")
+__generated_with = "0.16.5"
+app = marimo.App()
 
 
-@mo.cell
-def create_function_sliders():
-    """Interaktive Funktionserstellung mit Sliders"""
+@app.cell
+def _():
+    """Setup und Importe"""
+    from schul_analysis import Funktion, ableitung, extrema, nullstellen
+
+    return Funktion, nullstellen, ableitung, extrema
+
+
+@app.cell
+def _(mo):
+    """Titel und Einführung"""
+    mo.md("""
+    # 🎓 Schul-Analysis Framework in Marimo
+
+    Dieses Beispiel zeigt die moderne Magic Factory API in interaktiven Marimo-Notebooks.
+
+    ## Features:
+    - ✅ Automatische Funktionserkennung
+    - ✅ LaTeX-Darstellung
+    - ✅ Interaktive Analyse
+    - ✅ Plotly-Visualisierung
+    """)
+    return
+
+
+@app.cell
+def _(mo):
+    """Interaktive Funktionserstellung"""
     # Coefficients for quadratic function: ax² + bx + c
-    a = mo.ui.slider(-5, 5, value=1, step=0.1, label="a (x²)")
-    b = mo.ui.slider(-5, 5, value=0, step=0.1, label="b (x)")
-    c = mo.ui.slider(-5, 5, value=0, step=0.1, label="c (konstant)")
+    a_slider = mo.ui.slider(-5, 5, value=1, step=0.1, label="a (x²)")
+    b_slider = mo.ui.slider(-5, 5, value=0, step=0.1, label="b (x)")
+    c_slider = mo.ui.slider(-5, 5, value=0, step=0.1, label="c (konstant)")
 
-    return a, b, c
+    mo.md("### 📐 Parameter für quadratische Funktion:")
+    return a_slider, b_slider, c_slider
 
 
-@mo.cell
-def create_function_from_sliders(a, b, c):
-    """Erstellt Funktion aus Slider-Werten"""
-    from schul_analysis import Funktion
-
+@app.cell
+def _(a_slider, b_slider, c_slider, Funktion):
+    """Funktion aus Slider-Werten erstellen"""
     # Erstelle Funktion mit den Slider-Werten
-    if a.value != 0:
-        term = f"{a.value}x^2 + {b.value}x + {c.value}"
-    elif b.value != 0:
-        term = f"{b.value}x + {c.value}"
+    if a_slider.value != 0:
+        term = f"{a_slider.value}x^2 + {b_slider.value}x + {c_slider.value}"
+    elif b_slider.value != 0:
+        term = f"{b_slider.value}x + {c_slider.value}"
     else:
-        term = f"{c.value}"
+        term = f"{c_slider.value}"
+
+    f = Funktion(term)
+
+    return f, term
+
+
+@app.cell
+def _(f, mo):
+    """LaTeX-Darstellung der Funktion"""
+    mo.md(f"### 📝 Funktion: {f._repr_latex_()}")
+    return
+
+
+@app.cell
+def _(f, mo):
+    """Automatische Analyse"""
+    mo.md("### 🔍 Automatische Analyse:")
+
+    analyse_resultate = [
+        f"**Funktionstyp:** {f.funktionstyp}",
+        f"**Nullstellen:** {nullstellen(f)}",
+        f"**Extrema:** {extrema(f)}",
+    ]
+
+    for resultat in analyse_resultate:
+        mo.md(f"- {resultat}")
+
+    return (analyse_resultate,)
+
+
+@app.cell
+def _(f, ableitung, mo):
+    """Ableitungen mit automatischer Namensgebung"""
+    mo.md("### 📈 Ableitungen:")
+
+    f1 = ableitung(f)  # f'
+    f2 = ableitung(f1)  # f''
+
+    mo.md(f"- **f'(x) = {f1.term()}** (Name: {f1.name})")
+    mo.md(f"- **f''(x) = {f2.term()}** (Name: {f2.name})")
+
+    return f1, f2
+
+
+@app.cell
+def _(f, mo):
+    """Wertetabelle interaktiv"""
+    mo.md("### 📊 Wertetabelle:")
+
+    x_werte = [-3, -2, -1, 0, 1, 2, 3]
+    tabelle_daten = []
+
+    for x in x_werte:
+        y = f(x)
+        tabelle_daten.append(f"| x = {x:2.0f} | y = {y:6.2f} |")
+
+    mo.md("| x | y |")
+    mo.md("|---|---|")
+    for zeile in tabelle_daten:
+        mo.md(zeile)
+
+    return tabelle_daten, x_werte
+
+
+@app.cell
+def _(f, mo):
+    """Visualisierung (falls Plotly installiert)"""
+    mo.md("### 📊 Visualisierung:")
 
     try:
-        f = Funktion(term)
-        return f, term
-    except Exception:
-        # Fallback: einfache quadratische Funktion
-        f = Funktion("x^2")
-        return f, "x^2"
-
-
-@mo.cell
-def analyze_function(f, term):
-    """Führt mathematische Analyse durch"""
-    from schul_analysis import Ableitung, Extremstellen, Nullstellen
-
-    try:
-        # Berechne Eigenschaften
-        nullstellen = Nullstellen(f)
-        f_strich = Ableitung(f)
-        extremstellen = Extremstellen(f)
-
-        # Erstelle Markdown mit Ergebnissen
-        analysis_md = mo.md(f"""
-## 📊 Analyse der Funktion f(x) = {term}
-
-### Eigenschaften:
-- **Funktionstyp**: {"Quadratisch" if "x^2" in term else "Linear" if "x" in term and "x^2" not in term else "Konstant"}
-- **Term**: {f.term()}
-
-### Nullstellen:
-{f"**x = {nullstellen}**" if nullstellen else "Keine reellen Nullstellen"}
-
-### Extremstellen:
-{"".join([f"**{art}** bei x = {xs:.3f}<br>" for xs, art in extremstellen]) if extremstellen else "Keine Extremstellen"}
-
-### Ableitung:
-f'(x) = {f_strich.term()}
-        """)
-
-        return analysis_md, nullstellen, extremstellen
-
+        graph = f.zeige_funktion_plotly(x_bereich=(-5, 5))
+        mo.ui.plotly(graph)
+    except ImportError:
+        mo.md("⚠️ **Plotly nicht installiert**")
+        mo.md("Installieren Sie mit:")
+        mo.md("```bash")
+        mo.md("uv sync --group viz-math")
+        mo.md("```")
     except Exception as e:
-        return mo.md(f"Fehler bei der Analyse: {e}"), [], []
+        mo.md(f"⚠️ **Fehler**: {e}")
+
+    return (graph,)
 
 
-@mo.cell
-def create_interactive_plot(f, term):
-    """Erstelle interaktiven Plot"""
-    try:
-        from schul_analysis import Graph
-
-        # Erstelle Graph mit intelligenter Skalierung
-        graph = Graph(f, titel=f"f(x) = {term}")
-
-        # In Marimo: plotly chart anzeigen
-        plotly_chart = mo.ui.plotly(graph)
-
-        return plotly_chart
-
-    except Exception as e:
-        return mo.md(f"Fehler bei der Visualisierung: {e}")
-
-
-@mo.cell
-def taylor_series_demo():
-    """Taylor-Reihe interaktiv demonstrieren"""
-
-    # Basisfunktion (z.B. sin(x), cos(x), e^x)
-    basisfunktion = mo.ui.dropdown(
-        options=["sin(x)", "cos(x)", "e^x"], value="sin(x)", label="Basisfunktion"
-    )
+@app.cell
+def _(mo):
+    """Interaktive Taylor-Demonstration"""
+    mo.md("### 🔄 Taylor-Reihe Demo")
 
     # Taylor-Ordnung
-    ordnung = mo.ui.slider(1, 10, value=3, step=1, label="Taylor-Ordnung")
+    ordnung_slider = mo.ui.slider(1, 5, value=3, step=1, label="Taylor-Ordnung")
 
-    # Entwicklungspunkt
-    x0 = mo.ui.slider(-3, 3, value=0, step=0.5, label="Entwicklungspunkt x₀")
-
-    return basisfunktion, ordnung, x0
+    return (ordnung_slider,)
 
 
-@mo.cell
-def create_taylor_approximation(basisfunktion, ordnung, x0):
-    """Erstelle Taylor-Approximation"""
-    try:
-        from schul_analysis import Taylor
+@app.cell
+def _(ordnung_slider, mo):
+    """Taylor-Approximation erstellen"""
+    from schul_analysis import Funktion
 
-        # Erstelle Taylor-Polynom
-        taylor_func = Taylor(Funktion(basisfunktion.value), ordnung.value, x0.value)
+    # Approximiere sin(x) mit Taylor-Reihe
+    x0 = 0  # Entwicklungspunkt
 
-        # Zeige beide Funktionen
-        original_func = Funktion(basisfunktion.value)
+    if ordnung_slider.value == 1:
+        taylor_term = "x"
+    elif ordnung_slider.value == 2:
+        taylor_term = "x - x^3/6"
+    elif ordnung_slider.value == 3:
+        taylor_term = "x - x^3/6 + x^5/120"
+    elif ordnung_slider.value == 4:
+        taylor_term = "x - x^3/6 + x^5/120 - x^7/5040"
+    else:
+        taylor_term = "x - x^3/6 + x^5/120 - x^7/5040 + x^9/362880"
 
-        return original_func, taylor_func
+    taylor_func = Funktion(taylor_term)
+    original_func = Funktion("sin(x)")
 
-    except Exception as e:
-        return None, mo.md(f"Fehler: {e}")
+    mo.md(f"**{ordnung_slider.value}. Taylor-Polynom für sin(x) um x=0:**")
+    mo.md(f"T(x) = {taylor_term}")
+
+    return original_func, taylor_func, taylor_term, x0
 
 
-@mo.cell
-def main_interface():
-    """Hauptoberfläche für das Marimo-Notebook"""
+@app.cell
+def _(original_func, taylor_func, mo):
+    """Vergleich der Funktionen"""
+    mo.md("### 📈 Vergleich Original vs. Approximation:")
 
-    if IN_MARIMO:
-        # Erstelle Tabs für verschiedene Demos
-        tabs = mo.ui.tabs(
-            {
-                "Funktionsanalyse": [
-                    mo.md("# 🎯 Interaktive Funktionsanalyse"),
-                    create_function_sliders(),
-                    create_function_from_sliders,
-                    analyze_function,
-                    create_interactive_plot,
-                ],
-                "Taylor-Reihen": [
-                    mo.md("# 📈 Taylor-Reihen Approximation"),
-                    taylor_series_demo(),
-                    create_taylor_approximation,
-                ],
-                "Über": [
-                    mo.md("""
-                # 📚 Über dieses Beispiel
+    # Vergleich an einigen Punkten
+    test_punkte = [-1, -0.5, 0, 0.5, 1]
 
-                Dieses Marimo-Notebook demonstriert die Integration des Schul-Analysis Frameworks.
-
-                **Features:**
-                - Interaktive Funktionsanalyse mit Sliders
-                - Automatische Berechnung von Nullstellen, Extremstellen, Ableitungen
-                - Echtzeit-Visualisierung mit Plotly
-                - Taylor-Reihen Approximation
-
-                **Technologie:**
-                - Schul-Analysis Framework für mathematische Berechnungen
-                - Marimo für reaktives Interface
-                - Plotly für interaktive Graphen
-
-                **Nutzung:**
-                1. Starten Sie Marimo: `marimo edit marimo_examples.py`
-                2. Wählen Sie einen Tab
-                3. Passen Sie die Parameter mit den Sliders an
-                4. Beobachten Sie die automatische Aktualisierung
-                """)
-                ],
-            }
+    vergleich = []
+    for x in test_punkte:
+        orig_val = original_func(x)
+        taylor_val = taylor_func(x)
+        fehler = abs(orig_val - taylor_val)
+        vergleich.append(
+            f"| x = {x:4.1f} | sin(x) = {orig_val:6.3f} | T(x) = {taylor_val:6.3f} | Fehler = {fehler:6.3f} |"
         )
 
-        return tabs
-    else:
-        return mo.md("""
-        # 🚫 Nicht in Marimo-Umgebung
+    mo.md("| x | sin(x) | T(x) | Fehler |")
+    mo.md("|---|---|---|---|")
+    for zeile in vergleich:
+        mo.md(zeile)
 
-        Dieses Beispiel ist für die Verwendung in Marimo-Notebooks optimiert.
+    return test_punkte, vergleich
 
-        **Installation:**
-        ```bash
-        pip install marimo
-        ```
 
-        **Starten:**
-        ```bash
-        marimo edit marimo_examples.py
-        ```
-        """)
+@app.cell
+def _(mo):
+    """Zusammenfassung"""
+    mo.md("""
+    ## 🎯 Zusammenfassung
+
+    Dieses Beispiel zeigt die Stärken der modernen Schul-Analysis API:
+
+    - **🎯 Magic Factory**: `Funktion("term")` - einfache Erstellung
+    - **📝 LaTeX-Darstellung**: Automatische Anzeige von f(x) = term
+    - **🏷️ Intelligente Namen**: Ableitungen bekommen automatisch Namen (f', f'')
+    - **🔍 Deutsche API**: `nullstellen()`, `ableitung()`, `extrema()`
+    - **📊 Interaktiv**: Perfekt für Marimo-Notebooks
+    - **🎓 Pädagogisch**: Optimiert für den Mathematikunterricht
+
+    ## 💡 Tipps für den Unterricht:
+
+    1. **Interaktive Parameter**: Schüler können Parameter live verändern
+    2. **Automatische Analyse**: Keine manuellen Berechnungen nötig
+    3. **Visuelles Feedback**: Direkte Darstellung von Änderungen
+    4. **Taylor-Reihen**: Verständliche Approximationen
+    """)
+    return
 
 
 if __name__ == "__main__":
-    # Starte die Hauptoberfläche
-    main_interface()
+    app.run()
