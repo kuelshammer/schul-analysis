@@ -37,7 +37,8 @@ from .api import (
     GebrochenRationaleFunktion,
     GemischteFunktion,
     ParametrischeFunktion,
-    Taylor,
+    taylorpolynom,
+    tangente,
     ableitung,
     # Komfort-Funktionen für den Unterricht
     analysiere_funktion,
@@ -93,13 +94,8 @@ from .symbolic import Parameter, Variable
 # SYMBOLISCHE KOMPONENTEN
 # =============================================================================
 from .taylor import (
-    Konvergenzradius,
-    MacLaurin,
-    TaylorKoeffizienten,
-    Taylorpolynom,
-    TaylorRestglied,
-    TaylorStandardbeispiele,
-    TaylorVergleich,
+    taylorpolynom,
+    tangente,
 )
 from .visualisierung import Graph
 

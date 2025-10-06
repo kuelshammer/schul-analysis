@@ -4,7 +4,6 @@ Lineare Funktionen für das Schul-Analysis Framework.
 Spezialisierte Klasse für lineare Funktionen der Form f(x) = mx + b.
 """
 
-
 import sympy as sp
 
 from .ganzrationale import GanzrationaleFunktion
@@ -25,11 +24,11 @@ class LineareFunktion(GanzrationaleFunktion):
 
     def __init__(
         self,
-        eingabe: str | list[float] | dict[int, float] | sp.Basic = None,
-        m: float = None,
-        b: float = None,
-        variable: str = None,
-        parameter: list[str] = None,
+        eingabe: str | list[float] | dict[int, float] | sp.Basic | None = None,
+        m: float | None = None,
+        b: float | None = None,
+        variable: str | None = None,
+        parameter: list[str] | None = None,
     ):
         """
         Konstruktor für lineare Funktionen.

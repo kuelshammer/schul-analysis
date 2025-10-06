@@ -24,12 +24,12 @@ class QuadratischeFunktion(GanzrationaleFunktion):
 
     def __init__(
         self,
-        eingabe: str | list[float] | dict[int, float] | sp.Basic = None,
-        a: float = None,
-        b: float = None,
-        c: float = None,
-        variable: str = None,
-        parameter: list[str] = None,
+        eingabe: str | list[float] | dict[int, float] | sp.Basic | None = None,
+        a: float | None = None,
+        b: float | None = None,
+        c: float | None = None,
+        variable: str | None = None,
+        parameter: list[str] | None = None,
     ):
         """
         Konstruktor für quadratische Funktionen.

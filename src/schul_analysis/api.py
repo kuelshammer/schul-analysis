@@ -23,7 +23,7 @@ from .gebrochen_rationale import (
 from .gemischte import GemischteFunktion
 from .lineare_gleichungssysteme import LGS
 from .parametrisch import ParametrischeFunktion
-from .taylor import Taylor
+from .taylor import taylorpolynom, tangente
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
