@@ -235,8 +235,8 @@ class TestAusmultiplizierenFehlerbehandlung:
         """Test: Ungültige Funktion sollte Fehler werfen"""
         # Dies sollte durch die Typenprüfung im Konstruktor abgefangen werden
         with pytest.raises((ValueError, TypeError)):
-            # Ungültiger mathematischer Ausdruck
-            f = Funktion("x++y")
+            # Ungültiger mathematischer Ausdruck (Syntaxfehler mit doppeltem Operator)
+            f = Funktion("x**y++")
             Ausmultiplizieren(f)
 
     def test_division_durch_null_erhalten(self):
