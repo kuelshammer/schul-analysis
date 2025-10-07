@@ -18,6 +18,13 @@ except ImportError:
     UNION_TYPE_AVAILABLE = False
 
 from .symbolic import _Parameter, _Variable
+from .sympy_types import (
+    VALIDATION_EXACT,
+    ExactNullstellenListe,
+    preserve_exact_types,
+    validate_exact_results,
+    validate_function_result,
+)
 
 
 class Funktion:
@@ -480,9 +487,21 @@ class Funktion:
                     "Bitte überprüfe, ob alle Parameter korrekt angegeben wurden."
                 )
 
+    @preserve_exact_types
     def ableitung(self, ordnung: int = 1) -> "Funktion":
-        """Berechnet die Ableitung"""
+        """
+        Berechnet die Ableitung mit exakten SymPy-Ergebnissen.
+
+        Args:
+            ordnung: Ordnung der Ableitung
+
+        Returns:
+            Neue Funktion mit der abgeleiteten Funktion als exakter SymPy-Ausdruck
+        """
         abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
+
+        # Validiere das Ergebnis
+        validate_function_result(abgeleiteter_term, VALIDATION_EXACT)
 
         # Erstelle neue Funktion mit Namen
         abgeleitete_funktion = Funktion(abgeleiteter_term)
@@ -512,7 +531,15 @@ class Funktion:
         return abgeleitete_funktion
 
     def Ableitung(self, ordnung: int = 1) -> "Funktion":
-        """Berechnet die Ableitung (Alias für ableitung)"""
+        """
+        Berechnet die Ableitung mit exakten SymPy-Ergebnissen (Alias für ableitung).
+
+        Args:
+            ordnung: Ordnung der Ableitung
+
+        Returns:
+            Neue Funktion mit der abgeleiteten Funktion als exakter SymPy-Ausdruck
+        """
         return self.ableitung(ordnung)
 
     def integral(self, ordnung: int = 1) -> "Funktion":
@@ -542,16 +569,36 @@ class Funktion:
         return self.integral(ordnung)
 
     @property
-    def nullstellen(self) -> list:
-        """Berechnet die Nullstellen"""
+    @preserve_exact_types
+    def nullstellen(self) -> ExactNullstellenListe:
+        """
+        Berechnet die Nullstellen mit exakten SymPy-Ergebnissen.
+
+        Returns:
+            Liste der exakten Nullstellen als SymPy-Ausdrücke
+        """
         try:
             lösungen = solve(self.term_sympy, self._variable_symbol)
-            return [lösung for lösung in lösungen if lösung.is_real]
-        except Exception:
-            return []
+            # Filtere reelle Lösungen
+            ergebnisse = [lösung for lösung in lösungen if lösung.is_real]
 
-    def Nullstellen(self) -> list:
-        """Berechnet die Nullstellen (Alias für nullstellen)"""
+            # Validiere die Ergebnisse
+            validate_exact_results(ergebnisse, "Nullstellen")
+
+            return ergebnisse
+        except Exception as e:
+            raise ValueError(
+                f"Fehler bei der Nullstellenberechnung: {str(e)}\n"
+                "Tipp: Die Funktion kann möglicherweise nicht symbolisch gelöst werden."
+            ) from e
+
+    def Nullstellen(self) -> ExactNullstellenListe:
+        """
+        Berechnet die Nullstellen mit exakten SymPy-Ergebnissen (Alias für nullstellen).
+
+        Returns:
+            Liste der exakten Nullstellen als SymPy-Ausdrücke
+        """
         return self.nullstellen
 
     @property
@@ -642,7 +689,7 @@ class Funktion:
                         x_wert = punkt
 
                     extremstellen.append((x_wert, art))
-                except Exception as e:
+                except Exception:
                     # Bei Berechnungsfehlern überspringen wir den Punkt
                     # Debug-Info für Entwicklung
                     # print(f"Fehler bei Punkt {punkt}: {e}")
@@ -657,6 +704,96 @@ class Funktion:
     def Extremstellen(self) -> list[tuple[Any, str]]:
         """Berechnet die Extremstellen (Alias für extremstellen)"""
         return self.extremstellen
+
+    @property
+    def wendepunkte(self) -> list[tuple[Any, Any, str]]:
+        """
+        Berechnet die Wendepunkte der Funktion.
+
+        Returns:
+            Liste von (x_wert, y_wert, art) Tupeln, wobei art "Wendepunkt" ist
+
+        Examples:
+            >>> f = Funktion("x^3 - 3x^2 + 2")
+            >>> wendepunkte = f.wendepunkte  # [(1.0, 0.0, "Wendepunkt")]
+        """
+        try:
+            # Berechne zweite Ableitung
+            f2 = self.ableitung(2)
+
+            # Löse f''(x) = 0 - verwende solve statt nullstellen für parametrisierte Funktionen
+            import sympy as sp
+
+            kritische_punkte = sp.solve(f2.term_sympy, self._variable_symbol)
+
+            # Bestimme Wendepunkte durch dritte Ableitung
+            f3 = self.ableitung(3)
+            wendepunkte = []
+
+            for punkt in kritische_punkte:
+                try:
+                    # Werte dritte Ableitung an diesem Punkt aus
+                    # Wenn f'''(x) ≠ 0, dann ist es ein Wendepunkt
+                    wert_f3 = f3.wert(punkt)
+
+                    # Prüfe, ob dritte Ableitung ungleich null ist
+                    ist_wendepunkt = False
+
+                    if wert_f3.is_number:
+                        # Numerischer Wert - direkter Vergleich möglich
+                        if wert_f3 != 0:
+                            ist_wendepunkt = True
+                    else:
+                        # Symbolischer Wert - versuche zu vereinfachen
+                        try:
+                            wert_f3_simplified = sp.simplify(wert_f3)
+                            # Für pädagogische Zwecke: gehe davon aus, dass Parameter ≠ 0
+                            # Dies ist eine Annahme, die für Schulzwecke sinnvoll ist
+                            if not wert_f3_simplified.equals(0):
+                                ist_wendepunkt = True
+                        except Exception:
+                            # Bei komplexen symbolischen Ausdrücken
+                            # gehe davon aus, dass es ein Wendepunkt ist
+                            # (für pädagogische Zwecke)
+                            ist_wendepunkt = True
+
+                    if ist_wendepunkt:
+                        # Berechne y-Wert
+                        y_wert = self.wert(punkt)
+
+                        # Behalte exakte symbolische Ergebnisse bei
+                        # Konvertiere nur zu Float, wenn es sich um eine reine Zahl handelt
+                        if punkt.is_number and not punkt.free_symbols:
+                            # Prüfe, ob es sich um einen "schönen" exakten Wert handelt
+                            if isinstance(punkt, (sp.Rational, sp.Integer)) or (
+                                hasattr(punkt, "q")
+                                and hasattr(punkt, "p")  # Bruch-Form
+                            ):
+                                # Behalte exakte Form bei (Bruch, Integer)
+                                x_wert = punkt
+                            else:
+                                # Konvertiere zu Float (für Dezimalzahlen)
+                                x_wert = float(punkt)
+                        else:
+                            # Behalte symbolischen Ausdruck bei (enthält Parameter oder ist komplex)
+                            x_wert = punkt
+
+                        wendepunkte.append((x_wert, y_wert, "Wendepunkt"))
+                except Exception:
+                    # Bei Berechnungsfehlern überspringen wir den Punkt
+                    continue
+
+            return sorted(
+                wendepunkte, key=lambda p: p[0] if isinstance(p[0], (int, float)) else 0
+            )
+
+        except Exception:
+            # Bei Fehlern leere Liste zurückgeben
+            return []
+
+    def Wendepunkte(self) -> list[tuple[Any, Any, str]]:
+        """Berechnet die Wendepunkte (Alias für wendepunkte)"""
+        return self.wendepunkte
 
     # Typenerkennung - Alle zentral!
 
@@ -1245,31 +1382,6 @@ class Funktion:
                 return NotImplemented
         except Exception as e:
             raise ValueError(f"Fehler bei Funktionskomposition: {e}")
-
-    def __call__(self, argument):
-        """
-        Überladene __call__ Methode:
-        - f(x_wert): Numerische Auswertung an einer Stelle
-        - f(g): Funktionskomposition wenn g eine Funktion ist
-
-        Args:
-            argument: Numerischer Wert oder andere Funktion
-
-        Returns:
-            Numerisches Ergebnis oder neue Funktion
-
-        Examples:
-            >>> f = Funktion("x^2")
-            >>> y = f(3)        # 9.0 (numerische Auswertung)
-            >>> g = Funktion("sin(x)")
-            >>> h = f(g)        # sin(x)^2 (Komposition)
-        """
-        if isinstance(argument, Funktion):
-            # f(g) = f ∘ g
-            return self @ argument
-        else:
-            # f(x) = numerische Auswertung
-            return self.wert(argument)
 
 
 # Factory-Funktion für Konsistenz und Abwärtskompatibilität

@@ -10,6 +10,7 @@ import sympy as sp
 from sympy import diff
 
 from .funktion import Funktion
+from .sympy_types import VALIDATION_EXACT, validate_function_result
 
 
 class ExponentialFunktion(Funktion):
@@ -57,6 +58,8 @@ class ExponentialFunktion(Funktion):
 
         # Für exp(f(x)) ist die Ableitung exp(f(x)) * f'(x)
         ableitung = diff(self.term_sympy, self._variable_symbol, ordnung)
+        # Validiere das Ergebnis für exakte Berechnungen
+        validate_function_result(ableitung, VALIDATION_EXACT)
         return ableitung
 
     def nullstellen(self) -> list:

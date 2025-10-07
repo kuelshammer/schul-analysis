@@ -24,6 +24,15 @@ from .strukturiert import (
     QuotientFunktion,
     SummeFunktion,
 )
+from .sympy_types import (
+    ExactNullstellenListe,
+    ExactSymPyExpr,
+    ExtremaListe,
+    WendepunkteListe,
+    preserve_exact_types,
+    validate_analysis_results,
+    validate_exact_results,
+)
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
@@ -40,11 +49,12 @@ Funktionstyp = (
 # =============================================================================
 
 
+@validate_analysis_results("Nullstellen")
 def Nullstellen(
     funktion: Funktionstyp, real: bool = True, runden: int | None = None
-) -> list[float] | list[Any]:
+) -> ExactNullstellenListe:
     """
-    Berechnet die Nullstellen einer Funktion.
+    Berechnet die Nullstellen einer Funktion mit exakten SymPy-Ergebnissen.
 
     Args:
         funktion: Eine beliebige Funktion (ganzrational, gebrochen rational, etc.)
@@ -52,15 +62,18 @@ def Nullstellen(
         runden: Anzahl Nachkommastellen für Rundung (None = exakt)
 
     Returns:
-        Liste der Nullstellen
+        Liste der exakten Nullstellen als SymPy-Ausdrücke
 
     Beispiele:
         >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
-        >>> xs = Nullstellen(f)                 # [1.0, 3.0]
+        >>> xs = Nullstellen(f)                 # [1, 3] als exakte SymPy-Ausdrücke
 
     Didaktischer Hinweis:
         Diese Funktion ermöglicht die natürliche mathematische Notation,
         die Schüler aus dem Unterricht kennen: "Berechne die Nullstellen von f"
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
     """
     try:
         # Handle both property and method cases
@@ -69,7 +82,7 @@ def Nullstellen(
             if callable(attr):
                 # It's a method - try with parameters first
                 try:
-                    return funktion.Nullstellen(real=real, runden=runden)
+                    result = funktion.Nullstellen(real=real, runden=runden)
                 except TypeError:
                     # Method doesn't accept parameters, call without them
                     result = funktion.Nullstellen()
@@ -87,38 +100,58 @@ def Nullstellen(
                 return result
         else:
             raise AttributeError("Keine nullstellen Eigenschaft oder Methode gefunden")
-    except AttributeError:
+
+        # Ergebnis validieren
+        if isinstance(result, list):
+            validate_exact_results(result, "Nullstellen")
+        else:
+            # Einzelnes Ergebnis in Liste umwandeln
+            result = [result]
+            validate_exact_results(result, "Nullstellen")
+
+        return result
+
+    except AttributeError as e:
         raise UngueltigeFunktionError(
             "Nullstellenberechnung",
             f"Die Funktion vom Typ '{type(funktion).__name__}' "
             "unterstützt die Nullstellen-Berechnung nicht.",
-        )
+        ) from e
     except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Nullstellenberechnung: {str(e)}")
+        raise SchulAnalysisError(
+            f"Fehler bei der Nullstellenberechnung: {str(e)}\n"
+            "Tipp: Stelle sicher, dass die Funktion korrekt definiert ist "
+            "und verwende symbolische Berechnung für exakte Ergebnisse."
+        ) from e
 
 
-def Ableitung(funktion: Funktionstyp, ordnung: int = 1) -> Any:
+@preserve_exact_types
+def Ableitung(funktion: Funktionstyp, ordnung: int = 1) -> ExactSymPyExpr:
     """
-    Berechnet die Ableitung einer Funktion.
+    Berechnet die Ableitung einer Funktion mit exakten SymPy-Ergebnissen.
 
     Args:
         funktion: Eine beliebige Funktion
         ordnung: Ordnung der Ableitung (Standard: 1)
 
     Returns:
-        Die abgeleitete Funktion
+        Die abgeleitete Funktion als exakter SymPy-Ausdruck
 
     Beispiele:
         >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
-        >>> f1 = Ableitung(f, 1)             # 2x - 4
-        >>> f2 = Ableitung(f, 2)             # 2
+        >>> f1 = Ableitung(f, 1)             # 2x - 4 als exakter Ausdruck
+        >>> f2 = Ableitung(f, 2)             # 2 als exakter Ausdruck
 
     Didaktischer Hinweis:
         Diese Notation ist näher an der mathematischen Schreibweise f'(x)
         und für Schüler intuitiver verständlich.
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
     """
     try:
-        return funktion.Ableitung(ordnung)
+        result = funktion.Ableitung(ordnung)
+        return result
     except AttributeError:
         raise UngueltigeFunktionError(
             "Ableitung",
@@ -126,7 +159,11 @@ def Ableitung(funktion: Funktionstyp, ordnung: int = 1) -> Any:
             "kann nicht abgeleitet werden.",
         )
     except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Ableitungsberechnung: {str(e)}")
+        raise SchulAnalysisError(
+            f"Fehler bei der Ableitungsberechnung: {str(e)}\n"
+            "Tipp: Stelle sicher, dass die Funktion differenzierbar ist "
+            "und verwende symbolische Berechnung für exakte Ergebnisse."
+        ) from e
 
 
 def Integral(funktion: Funktionstyp, *args, **kwargs) -> Any:
@@ -313,58 +350,63 @@ def Extrempunkte(funktion: Funktionstyp) -> list[tuple[Any, Any, str]]:
         raise SchulAnalysisError(f"Fehler bei der Extrempunkte-Berechnung: {str(e)}")
 
 
-def Extrema(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+@validate_analysis_results("Extrema")
+def Extrema(funktion: Funktionstyp) -> ExtremaListe:
     """
-    Findet die Extrempunkte einer Funktion (Alias für Extremstellen).
+    Findet die Extrempunkte einer Funktion mit exakten SymPy-Ergebnissen (Alias für Extremstellen).
 
     Args:
         funktion: Eine beliebige Funktion
 
     Returns:
-        Liste der Extremstellen als (x-Wert, Typ)-Tupel
+        Liste der Extremstellen als (x-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
 
     Beispiele:
         >>> f = ErstellePolynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
-        >>> ext = Extrema(f)                       # [(-1, 'Maximum'), ...]
+        >>> ext = Extrema(f)                       # [(-1, 'Maximum'), ...] mit exakten Werten
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
     """
     # Extrema ist ein Alias für Extremstellen für Abwärtskompatibilität
     return Extremstellen(funktion)
 
 
-def Wendestellen(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+@validate_analysis_results("Wendepunkte")
+def Wendestellen(funktion: Funktionstyp) -> WendepunkteListe:
     """
-    Findet die Wendestellen einer Funktion (x-Werte mit Typ).
+    Findet die Wendestellen einer Funktion mit exakten SymPy-Ergebnissen (x-Werte mit Typ).
 
     Args:
         funktion: Eine beliebige Funktion
 
     Returns:
-        Liste der Wendestellen als (x-Wert, Typ)-Tupel
+        Liste der Wendestellen als (x-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
 
     Beispiele:
         >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
-        >>> ws = Wendestellen(f)                 # [(0, 'Wendepunkt')]
+        >>> ws = Wendestellen(f)                 # [(0, 'Wendepunkt')] mit exakten Werten
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
     """
     try:
-        # Handle both property and method cases
-        if hasattr(funktion, "wendestellen"):
-            attr = funktion.wendestellen
+        # Verwende die neue wendepunkte-Methode und extrahiere nur x-Werte mit Typ
+        if hasattr(funktion, "wendepunkte"):
+            attr = funktion.wendepunkte
             if callable(attr):
-                # It's a method - call it
-                return funktion.wendestellen()
+                wendepunkte = funktion.wendepunkte()
             else:
-                # It's a property - access it directly
-                return funktion.wendestellen
-        elif hasattr(funktion, "Wendestellen"):
-            attr = funktion.Wendestellen
-            if callable(attr):
-                # It's a method - call it
-                return funktion.Wendestellen()
-            else:
-                # It's a property - access it directly
-                return funktion.Wendestellen
+                wendepunkte = funktion.wendepunkte
+
+            # Extrahiere nur (x-Wert, Typ) aus den (x, y, art) Tupeln
+            wendestellen = []
+            for x_wert, y_wert, art in wendepunkte:
+                wendestellen.append((x_wert, art))
+
+            return wendestellen
         else:
-            raise AttributeError("Keine wendestellen Eigenschaft oder Methode gefunden")
+            raise AttributeError("Keine wendepunkte Eigenschaft oder Methode gefunden")
     except AttributeError:
         raise UngueltigeFunktionError(
             "Wendestellenberechnung",

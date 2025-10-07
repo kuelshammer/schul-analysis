@@ -9,7 +9,6 @@ import re
 from typing import Any, Union
 
 import sympy as sp
-from sympy import Rational, fraction
 
 from .errors import (
     DivisionDurchNullError,
@@ -18,6 +17,7 @@ from .errors import (
 )
 from .funktion import Funktion
 from .ganzrationale import GanzrationaleFunktion
+from .sympy_types import VALIDATION_EXACT, validate_function_result
 
 
 def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
@@ -574,6 +574,12 @@ class GebrochenRationaleFunktion(Funktion):
             zaehler_ableitung = u_strich * v - u * v_strich
             nenner_ableitung = v**2
 
+            # Validiere die Ergebnisse für exakte Berechnungen
+            validate_function_result(u_strich, VALIDATION_EXACT)
+            validate_function_result(v_strich, VALIDATION_EXACT)
+            validate_function_result(zaehler_ableitung, VALIDATION_EXACT)
+            validate_function_result(nenner_ableitung, VALIDATION_EXACT)
+
             return GebrochenRationaleFunktion(zaehler_ableitung, nenner_ableitung)
         else:
             # Höhere Ableitungen durch rekursive Anwendung
@@ -958,6 +964,9 @@ class ExponentialRationaleFunktion(Funktion):
         # 🔥 FIX: Direkte Ableitung mit SymPy statt Transformation 🔥
         # Verwende die eingebaute SymPy-Ableitungsfunktion
         abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
+
+        # Validiere das Ergebnis für exakte Berechnungen
+        validate_function_result(abgeleiteter_term, VALIDATION_EXACT)
 
         # Erstelle neue ExponentialRationaleFunktion aus dem abgeleiteten Term
         return ExponentialRationaleFunktion(abgeleiteter_term, exponent_param=self.a)

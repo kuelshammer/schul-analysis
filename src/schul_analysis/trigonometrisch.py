@@ -10,6 +10,7 @@ import sympy as sp
 from sympy import diff, latex, solve
 
 from .funktion import Funktion
+from .sympy_types import VALIDATION_EXACT, validate_function_result
 
 
 class TrigonometrischeFunktion(Funktion):
@@ -106,6 +107,8 @@ class TrigonometrischeFunktion(Funktion):
         """
         # 🔥 UNIFIED ARCHITECTURE: Verwende Basis-Klassen-Properties 🔥
         abgeleitet = diff(self.term_sympy, self._variable_symbol, ordnung)
+        # Validiere das Ergebnis für exakte Berechnungen
+        validate_function_result(abgeleitet, VALIDATION_EXACT)
         return TrigonometrischeFunktion(abgeleitet)
 
     def term(self) -> str:
