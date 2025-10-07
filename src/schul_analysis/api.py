@@ -489,33 +489,33 @@ def Term(funktion: Funktionstyp) -> Any:
 
 def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
     """
-    Multipliziert eine Funktion aus und gibt die expandierte Form zurück.
+    Multipliziert eine Funktion aus (modifiziert das Original).
 
     Diese Funktion ist nützlich für pädagogische Zwecke, wenn Schüler die ausmultiplizierte
     Form einer Funktion sehen müssen, anstatt der faktorisierten Darstellung.
+    Die Funktion wird direkt verändert (in-place).
 
     Args:
         funktion: Eine beliebige Funktion aus dem Schul-Analysis Framework
 
     Returns:
-        Die Funktion mit ausmultipliziertem Term
+        Dieselbe Funktion mit ausmultipliziertem Term (für Method Chaining)
 
     Examples:
         >>> f = Funktion("(x+1)(x-2)")
-        >>> print(f.term())  # (x + 1)*(x - 2)
-        >>> f_expanded = Ausmultiplizieren(f)
-        >>> print(f_expanded.term())  # x^2 - x - 2
-        # Beachte: f_expanded ist eine NEUE Funktion, f bleibt unverändert
+        >>> print(f.term)  # (x + 1)*(x - 2)
+        >>> Ausmultiplizieren(f)  # Modifiziert f direkt
+        >>> print(f.term)  # x^2 - x - 2 (f ist jetzt verändert)
 
+        # Method Chaining möglich:
         >>> g = Funktion("(x+1)^3")
-        >>> print(g.term())  # (x + 1)^3
-        >>> g_expanded = Ausmultiplizieren(g)
-        >>> print(g_expanded.term())  # x^3 + 3*x^2 + 3*x + 1
+        >>> ableitung = Ausmultiplizieren(g).ableitung()
+        >>> print(ableitung.term)  # 3*x^2 + 6*x + 3
 
-        # In-place Änderung:
+        # Alternative Syntax:
         >>> h = Funktion("(x-1)(x+2)(x-3)")
         >>> h.ausmultiplizieren()  # Methode direkt am Objekt
-        >>> print(h.term())  # x^3 - 2*x^2 - 5*x + 6
+        >>> print(h.term)  # x^3 - 2*x^2 - 5*x + 6
 
     Didaktischer Hinweis:
         Das Ausmultiplizieren hilft bei der Umwandlung von Produktform in die
@@ -523,16 +523,11 @@ def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
         Manchmal ist die faktorisierte Form besser für die Analyse (z.B. Nullstellen),
         manchmal die expandierte Form besser für weitere Berechnungen.
     """
-    # Erstelle eine Kopie der Funktion, um das Original nicht zu verändern
-    from . import Funktion
+    # Wende Ausmultiplizieren direkt auf die Funktion an (in-place)
+    funktion.ausmultiplizieren()
 
-    # Erstelle neue Funktion mit dem gleichen Term
-    neue_funktion = Funktion(funktion.term_sympy)
-
-    # Wende Ausmultiplizieren auf die neue Funktion an
-    neue_funktion.ausmultiplizieren()
-
-    return neue_funktion
+    # Gib dieselbe Funktion zurück für Method Chaining
+    return funktion
 
 
 def Zeichne(

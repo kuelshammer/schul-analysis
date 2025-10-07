@@ -17,18 +17,25 @@ def _():
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-    from schul_analysis import Funktion, Term
+    from schul_analysis import Funktion, Term, Ausmultiplizieren
 
     # Zwei einfache Funktionen für erste Experimente
     f = Funktion("x^2 -4x+3")
     g = Funktion("3x + 5")
-    return Term, f, g
+    return Ausmultiplizieren, Term, f, g
 
 
 @app.cell
 def _(f, g):
-    h = f/g
+    h = f*g
     return (h,)
+
+
+@app.cell
+def _(Ausmultiplizieren, h):
+    Ausmultiplizieren(h)
+
+    return
 
 
 @app.cell
