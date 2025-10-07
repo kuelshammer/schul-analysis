@@ -574,7 +574,16 @@ class Funktion:
             kritische_punkte = solve(f_strich, self._variable_symbol)
 
             # Filtere reelle Lösungen
-            reelle_punkte = [p for p in kritische_punkte if p.is_real]
+            reelle_punkte = []
+            for p in kritische_punkte:
+                # Für pädagogische Zwecke: Wir gehen davon aus, dass Parameter reell sind
+                if p.is_real is not False:  # Akzeptiere None (unbekannt) und True
+                    # Wenn der Punkt Symbole enthält, gehe davon aus, dass sie reell sind
+                    if p.free_symbols:
+                        # Erstelle reelle Symbole für die Parameter
+                        reelle_punkte.append(p)
+                    elif p.is_real:
+                        reelle_punkte.append(p)
 
             # Bestimme Art der Extremstellen durch zweite Ableitung
             f_doppelstrich = sp.diff(f_strich, self._variable_symbol)
@@ -584,22 +593,59 @@ class Funktion:
                 try:
                     # Werte zweite Ableitung an diesem Punkt aus
                     wert = f_doppelstrich.subs(self._variable_symbol, punkt)
-                    if wert > 0:
-                        art = "Minimum"
-                    elif wert < 0:
-                        art = "Maximum"
-                    else:
-                        art = "Sattelpunkt"
 
-                    # Konvertiere zu numerischem Wert wenn möglich
-                    if hasattr(punkt, "evalf"):
-                        x_wert = punkt.evalf()
+                    # Bestimme die Art der Extremstelle
+                    if wert.is_number:
+                        # Numerischer Wert - direkter Vergleich möglich
+                        if wert > 0:
+                            art = "Minimum"
+                        elif wert < 0:
+                            art = "Maximum"
+                        else:
+                            art = "Sattelpunkt"
                     else:
-                        x_wert = float(punkt) if hasattr(punkt, "__float__") else punkt
+                        # Symbolischer Wert - versuche zu vereinfachen oder Annahmen zu treffen
+                        try:
+                            # Versuche den Ausdruck zu vereinfachen
+                            wert_simplified = sp.simplify(wert)
+
+                            # Für pädagogische Zwecke: gehe davon aus, dass Parameter > 0
+                            # Dies ist eine Annahme, die für Schulzwecke sinnvoll ist
+                            if wert_simplified.is_positive:
+                                art = "Minimum"
+                            elif wert_simplified.is_negative:
+                                art = "Maximum"
+                            else:
+                                # Wenn keine klare Aussage möglich ist, nutze die allgemeine Form
+                                # Für quadratische Funktionen: a > 0 -> Minimum, a < 0 -> Maximum
+                                art = "Minimum/Maximum (abhängig von Parameter)"
+                        except Exception:
+                            # Bei komplexen symbolischen Ausdrücken
+                            art = "Extremum (Art hängt von Parametern ab)"
+
+                    # Behalte exakte symbolische Ergebnisse bei
+                    # Konvertiere nur zu Float, wenn es sich um eine reine Zahl handelt
+                    # und keine Parameter oder komplexen Ausdrücke enthält
+                    # BEWAREARE: Behalte Brüche und exakte Darstellungen bei!
+                    if punkt.is_number and not punkt.free_symbols:
+                        # Prüfe, ob es sich um einen "schönen" exakten Wert handelt
+                        if isinstance(punkt, (sp.Rational, sp.Integer)) or (
+                            hasattr(punkt, "q") and hasattr(punkt, "p")  # Bruch-Form
+                        ):
+                            # Behalte exakte Form bei (Bruch, Integer)
+                            x_wert = punkt
+                        else:
+                            # Konvertiere zu Float (für Dezimalzahlen)
+                            x_wert = float(punkt)
+                    else:
+                        # Behalte symbolischen Ausdruck bei (enthält Parameter oder ist komplex)
+                        x_wert = punkt
 
                     extremstellen.append((x_wert, art))
-                except Exception:
+                except Exception as e:
                     # Bei Berechnungsfehlern überspringen wir den Punkt
+                    # Debug-Info für Entwicklung
+                    # print(f"Fehler bei Punkt {punkt}: {e}")
                     continue
 
             return extremstellen

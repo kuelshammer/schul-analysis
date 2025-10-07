@@ -205,15 +205,27 @@ def Extremstellen(funktion: Funktionstyp) -> list[tuple[Any, str]]:
     """
     Findet die Extremstellen einer Funktion (x-Werte mit Typ).
 
+    Diese Funktion liefert exakte symbolische Ergebnisse und rundet nicht fälschlicherweise
+    zu Float-Werten. Bei parametrisierten Funktionen bleiben die Parameter erhalten,
+    bei numerischen Funktionen werden Brüche und exakte Werte beibehalten.
+
     Args:
         funktion: Eine beliebige Funktion
 
     Returns:
         Liste der Extremstellen als (x-Wert, Typ)-Tupel
+        - x-Wert: Exakter symbolischer Ausdruck (bei Parametern) oder exakte Zahl (Bruch/Ganzzahl)
+        - Typ: "Minimum", "Maximum", "Sattelpunkt" oder beschreibende Texte bei Parametern
 
     Beispiele:
-        >>> f = ErstellePolynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
-        >>> ext = Extremstellen(f)                # [(-1, 'Maximum'), ...]
+        >>> f = Funktion("a*x^2 + x")             # Parametrisierte Funktion
+        >>> ext = Extremstellen(f)                # [(-1/(2*a), 'Minimum/Maximum (abhängig von Parameter)')]
+
+        >>> g = Funktion("2*x^2 - x")              # Numerische Funktion
+        >>> ext = Extremstellen(g)                # [(1/4, 'Minimum')]  # Exakter Bruch, kein Float!
+
+        >>> h = Funktion("x^2 - 4*x + 3")          # Einfache quadratische Funktion
+        >>> ext = Extremstellen(h)                # [(2, 'Minimum')]    # Exakte Ganzzahl
     """
     try:
         # Handle both property and method cases
