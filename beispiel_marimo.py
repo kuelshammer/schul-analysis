@@ -20,8 +20,14 @@ def _():
     from schul_analysis import Funktion
 
     # Zwei einfache Funktionen für erste Experimente
-    f = Funktion("x^2")
+    f = Funktion("x^2 -4x+3")
     g = Funktion("3x + 5")
+    return (f,)
+
+
+@app.cell
+def _(f):
+    f
     return
 
 

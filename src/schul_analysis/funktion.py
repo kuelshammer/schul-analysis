@@ -736,6 +736,21 @@ class Funktion:
         """
         return self.term_latex()
 
+    def latex_display(self) -> str:
+        """
+        Gibt die Funktion als formatierten LaTeX-String zurück.
+
+        Speziell für die Darstellung in Marimo mit mo.md() optimiert.
+
+        Returns:
+            str: LaTeX-String der Funktion
+
+        Examples:
+            >>> f = Funktion("x^2 + 2*x + 1")
+            >>> f.latex_display()  # "$x^{2} + 2 x + 1$"
+        """
+        return f"${self.term_latex()}$"
+
     def __eq__(self, other):
         if not isinstance(other, Funktion):
             return False

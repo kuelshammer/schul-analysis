@@ -450,6 +450,43 @@ def Symmetrie(funktion: Funktionstyp) -> str:
 # =============================================================================
 
 
+def Term(funktion: Funktionstyp) -> Any:
+    """
+    Wrapper für die LaTeX-Darstellung einer Funktion in Marimo.
+
+    Gibt ein Marimo-Markdown-Objekt zurück, das die Funktion
+    in schöner LaTeX-Darstellung anzeigt.
+
+    Args:
+        funktion: Eine beliebige Funktion aus dem Schul-Analysis Framework
+
+    Returns:
+        Marimo-Markdown-Objekt mit LaTeX-Darstellung
+
+    Examples:
+        >>> f = Funktion("x^2 + 2*x + 1")
+        >>> Term(f)  # Zeigt schöne LaTeX-Darstellung in Marimo
+
+    Didaktischer Hinweis:
+        Diese Funktion ermöglicht es, Funktionen in Marimo-Notebooks
+        in schöner mathematischer Notation darzustellen, während die
+        Funktionen selbst weiterhin SymPy-Ausdrücke zurückgeben,
+        damit arithmetische Operationen wie f+g oder f/g funktionieren.
+    """
+    try:
+        import marimo as mo
+
+        return mo.md(funktion.latex_display())
+    except ImportError:
+        # Fallback, wenn Marimo nicht verfügbar ist
+        return f"${funktion.term_latex()}$"
+    except AttributeError:
+        # Fallback, wenn latex_display() nicht verfügbar ist
+        return f"${funktion.term_latex()}$"
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der LaTeX-Darstellung: {str(e)}")
+
+
 def Zeichne(
     funktion: Any,
     x_bereich: tuple[float, float] | None = None,
@@ -796,6 +833,7 @@ __all__ = [
     "Wendepunkte",
     "Symmetrie",
     # Visualisierung
+    "Term",
     "Zeichne",
     # Werteberechnung
     "Auswerten",
