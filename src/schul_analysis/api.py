@@ -1032,6 +1032,8 @@ __all__ = [
     "Extrempunkte",
     "Wendestellen",
     "Wendepunkte",
+    "StationaereStellen",
+    "Sattelpunkte",
     "Symmetrie",
     # Visualisierung
     "Term",

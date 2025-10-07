@@ -26,8 +26,8 @@ def _():
     )
 
     # Zwei einfache Funktionen für erste Experimente
-    f = Funktion("(x+1)^2")
-    g = Funktion("(x-a)")
+    f = Funktion("(x+a)^2")
+    g = Funktion("(x-b)^2")
     return Ableitung, Ausmultiplizieren, Term, Wendepunkte, f, g
 
 

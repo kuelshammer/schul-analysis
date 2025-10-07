@@ -842,76 +842,107 @@ class Funktion:
             stationaere_punkte = self.stationaere_stellen
 
             sattelpunkte = []
+            fehlerhafte_punkte = []  # Für Debugging-Informationen
 
             for x_wert, _art in stationaere_punkte:
-                try:
-                    # Prüfe, ob es sich um einen Sattelpunkt handelt
-                    # Für einen Sattelpunkt muss die zweite Ableitung an diesem Punkt null sein
-                    f2 = self.ableitung(2)
-                    f2_wert = f2.wert(x_wert)
+                # Verwende die sichere Prüfmethode
+                ist_sattelpunkt, status = self._ist_sattelpunkt_sicher(x_wert)
 
-                    # Wenn f''(x) = 0, könnte es ein Sattelpunkt sein
-                    if f2_wert.equals(0) or f2_wert == 0:
-                        # Prüfe mit dritter Ableitung, ob es ein echter Wendepunkt ist
-                        f3 = self.ableitung(3)
-                        f3_wert = f3.wert(x_wert)
+                if ist_sattelpunkt:
+                    try:
+                        # Berechne y-Wert mit spezifischer Fehlerbehandlung
+                        y_wert = self.wert(x_wert)
 
-                        # Wenn f'''(x) ≠ 0, dann ist es ein echter Sattelpunkt
-                        ist_sattelpunkt = False
-
-                        if f3_wert.is_number:
-                            # Numerischer Wert - direkter Vergleich möglich
-                            if f3_wert != 0:
-                                ist_sattelpunkt = True
-                        else:
-                            # Symbolischer Wert - versuche zu vereinfachen
-                            try:
-                                f3_wert_simplified = sp.simplify(f3_wert)
-                                # Für pädagogische Zwecke: gehe davon aus, dass Parameter ≠ 0
-                                if not f3_wert_simplified.equals(0):
-                                    ist_sattelpunkt = True
-                            except Exception:
-                                # Bei komplexen symbolischen Ausdrücken
-                                # gehe davon aus, dass es ein Sattelpunkt ist
-                                ist_sattelpunkt = True
-
-                        if ist_sattelpunkt:
-                            # Berechne y-Wert
-                            y_wert = self.wert(x_wert)
-
-                            # Behalte exakte symbolische Ergebnisse bei
-                            if x_wert.is_number and not x_wert.free_symbols:
-                                # Prüfe, ob es sich um einen "schönen" exakten Wert handelt
-                                if isinstance(x_wert, (sp.Rational, sp.Integer)) or (
-                                    hasattr(x_wert, "q")
-                                    and hasattr(x_wert, "p")  # Bruch-Form
-                                ):
-                                    # Behalte exakte Form bei (Bruch, Integer)
-                                    x_final = x_wert
-                                else:
-                                    # Konvertiere zu Float (für Dezimalzahlen)
-                                    x_final = float(x_wert)
-                            else:
-                                # Behalte symbolischen Ausdruck bei
+                        # Behalte exakte symbolische Ergebnisse bei
+                        if x_wert.is_number and not x_wert.free_symbols:
+                            # Prüfe, ob es sich um einen "schönen" exakten Wert handelt
+                            if isinstance(x_wert, (sp.Rational, sp.Integer)) or (
+                                hasattr(x_wert, "q")
+                                and hasattr(x_wert, "p")  # Bruch-Form
+                            ):
+                                # Behalte exakte Form bei (Bruch, Integer)
                                 x_final = x_wert
+                            else:
+                                # Konvertiere zu Float (für Dezimalzahlen)
+                                x_final = float(x_wert)
+                        else:
+                            # Behalte symbolischen Ausdruck bei
+                            x_final = x_wert
 
-                            sattelpunkte.append((x_final, y_wert, "Sattelpunkt"))
-                except Exception:
-                    # Bei Berechnungsfehlern überspringen wir den Punkt
-                    continue
+                        sattelpunkte.append((x_final, y_wert, "Sattelpunkt"))
+                    except (ValueError, TypeError, ZeroDivisionError) as e:
+                        # Spezifische Fehler bei y-Wert-Berechnung
+                        fehlerhafte_punkte.append(
+                            (x_wert, f"y-Wert Fehler: {type(e).__name__}")
+                        )
+                        continue
+                else:
+                    # Für Debugging: Punkte die keine Sattelpunkte sind
+                    fehlerhafte_punkte.append((x_wert, status))
 
             return sorted(
                 sattelpunkte,
                 key=lambda p: p[0] if isinstance(p[0], (int, float)) else 0,
             )
 
+        except (ValueError, TypeError, AttributeError, sp.SympifyError):
+            # Spezifische Fehler abfangen
+            return []
         except Exception:
-            # Bei Fehlern leere Liste zurückgeben
+            # Nur für wirklich unerwartete Fehler
             return []
 
     def Sattelpunkte(self) -> list[tuple[Any, Any, str]]:
         """Berechnet die Sattelpunkte (Alias für sattelpunkte)"""
         return self.sattelpunkte
+
+    def _ist_sattelpunkt_sicher(self, x_wert: Any) -> tuple[bool, str]:
+        """
+        Sichere Prüfung auf Sattelpunkt mit Status-Rückgabe.
+
+        Mathematische Kriterien:
+        - f'(x) = 0 (bereits durch stationaere_stellen erfüllt)
+        - f''(x) = 0
+        - f'''(x) ≠ 0
+
+        Args:
+            x_wert: Der zu prüfende x-Wert
+
+        Returns:
+            (ist_sattelpunkt, status_beschreibung)
+        """
+        try:
+            # Zweite Ableitung muss null sein
+            f2 = self.ableitung(2)
+            f2_wert = f2.wert(x_wert)
+            f2_simplified = sp.simplify(f2_wert)
+
+            if not f2_simplified.equals(0):
+                return False, "f''(x) ≠ 0"
+
+            # Dritte Ableitung muss ungleich null sein
+            f3 = self.ableitung(3)
+            f3_wert = f3.wert(x_wert)
+            f3_simplified = sp.simplify(f3_wert)
+
+            if f3_simplified.is_number:
+                # Numerisch prüfbar
+                if f3_simplified != 0:
+                    return True, "f'''(x) ≠ 0 (numerisch)"
+                else:
+                    return False, "f'''(x) = 0 (kein Sattelpunkt)"
+            else:
+                # Symbolisch prüfen
+                if f3_simplified.equals(0):
+                    return False, "f'''(x) = 0 (symbolisch, kein Sattelpunkt)"
+                else:
+                    # Nur als Sattelpunkt zählen wenn eindeutig ≠ 0
+                    return True, "f'''(x) ≠ 0 (symbolisch)"
+
+        except (ValueError, TypeError, ZeroDivisionError, sp.SympifyError) as e:
+            return False, f"Berechnungsfehler: {type(e).__name__}"
+        except Exception as e:
+            return False, f"Unerwarteter Fehler: {type(e).__name__}"
 
     # Typenerkennung - Alle zentral!
 
