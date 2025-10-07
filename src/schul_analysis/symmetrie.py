@@ -42,12 +42,12 @@ def Achsensymmetrie(
                 a = f.get_oeffnungsfaktor()
                 # Extrahiere b-Koeffizienten (zweiter von rechts)
                 b = f.koeffizienten[-2] if len(f.koeffizienten) >= 2 else sp.Integer(0)
-                x_s = -b / (2 * a)
+                x_s = -b / (2 * a)  # type: ignore
                 return x_s
             else:
                 # Für allgemeine quadratische Funktionen: Extrahiere Koeffizienten aus Term
                 x = f._variable_symbol
-                poly = f.term_sympy.as_poly(x)
+                poly = f.term_sympy.as_poly(x)  # type: ignore
                 if poly and poly.degree() == 2:
                     coeffs = poly.all_coeffs()
                     # coeffs sind [a, b, c] für ax² + bx + c
@@ -61,7 +61,7 @@ def Achsensymmetrie(
     try:
         x = f._variable_symbol
         f_neg_x = f.term_sympy.subs(x, -x)
-        if f_neg_x.equals(f.term_sympy):
+        if f_neg_x.equals(f.term_sympy):  # type: ignore
             return 0  # Symmetrie zur y-Achse
     except Exception:
         pass
@@ -124,7 +124,7 @@ def Punktsymmetrie(
             f_strich_strich = f_strich.ableitung(1)
 
             # Löse f''(x) = 0
-            wendepunkte = f_strich_strich.nullstellen()
+            wendepunkte = f_strich_strich.nullstellen()  # type: ignore
             if wendepunkte:
                 x_w = wendepunkte[0]
                 y_w = f.wert(x_w)
@@ -136,7 +136,7 @@ def Punktsymmetrie(
     try:
         x = f._variable_symbol
         f_neg_x = f.term_sympy.subs(x, -x)
-        if f_neg_x.equals(-f.term_sympy):
+        if f_neg_x.equals(-f.term_sympy):  # type: ignore
             return (0, 0)  # Symmetrie zum Ursprung
     except Exception:
         pass
@@ -149,7 +149,7 @@ def Punktsymmetrie(
         # Gleichung aufstellen: f(a + h) + f(a - h) = 2b
         f_plus_h = f.term_sympy.subs(x, a + h)
         f_minus_h = f.term_sympy.subs(x, a - h)
-        gleichung = sp.Eq(f_plus_h + f_minus_h, 2 * b)
+        gleichung = sp.Eq(f_plus_h + f_minus_h, 2 * b)  # type: ignore
 
         # Vereinfache und löse
         vereinfacht = sp.simplify(gleichung)

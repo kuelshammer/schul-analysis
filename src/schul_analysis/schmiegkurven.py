@@ -158,12 +158,12 @@ class Schmiegkurve:
 
         # Punktbedingungen: f(x_i) = y_i
         for x_i, y_i in self.punkte:
-            gleichung = polynom.subs(x, x_i) - y_i
+            gleichung = polynom.subs(x, x_i) - y_i  # type: ignore
             gleichungen.append(gleichung)
 
         # Tangentenbedingungen: f'(x_i) = t_i
         if self.tangenten:
-            ableitung = polynom.diff(x)
+            ableitung = polynom.diff(x)  # type: ignore
             for i, (x_i, _) in enumerate(self.punkte):
                 if self.tangenten[i] is not None:
                     gleichung = ableitung.subs(x, x_i) - self.tangenten[i]
@@ -171,7 +171,7 @@ class Schmiegkurve:
 
         # Normalenbedingungen: f'(x_i) = -1/n_i (da n * t = -1)
         if self.normalen:
-            ableitung = polynom.diff(x)
+            ableitung = polynom.diff(x)  # type: ignore
             for i, (x_i, _) in enumerate(self.punkte):
                 if self.normalen[i] is not None:
                     if self.normalen[i] == 0:
@@ -192,7 +192,7 @@ class Schmiegkurve:
                 )
 
             # Setze die Lösung in das Polynom ein
-            geloestes_polynom = polynom.subs(loesung[0])
+            geloestes_polynom = polynom.subs(loesung[0])  # type: ignore
 
             # Konvertiere zu ganzrationaler Funktion
             return GanzrationaleFunktion(geloestes_polynom)
@@ -428,7 +428,7 @@ class Schmiegkurve:
 
     def zeige_schmiegkurve_plotly(
         self,
-        x_range: tuple[float, float] = None,
+        x_range: tuple[float, float] | None = None,
         punkte: int = 200,
         zeige_tangenten: bool = True,
         zeige_punkte: bool = True,
@@ -544,7 +544,7 @@ class Schmiegkurve:
             return fig
 
     def zeige_konstruktion_plotly(
-        self, x_range: tuple[float, float] = None, **kwargs
+        self, x_range: tuple[float, float] | None = None, **kwargs
     ) -> Any:
         """
         Zeigt detaillierte Konstruktionsinformationen mit Gleichungssystem.

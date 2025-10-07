@@ -125,7 +125,7 @@ def test_schmiegkurve_mit_normalen():
 
     # Prüfe Normalen (Tangenten sollten senkrecht sein)
     ableitung = kurve.ableitung()
-    for i, (x, y) in enumerate(punkte):
+    for i, (x, _y) in enumerate(punkte):
         tangente = ableitung.wert(x)
         normale = normalen[i]
         produkt = tangente * normale

@@ -64,7 +64,7 @@ class StrukturierteFunktion(Funktion):
 
         return komponenten
 
-    def _erzeuge_typisierte_komponente(self, term: str, typ: str) -> Funktion:
+    def _erzeuge_typisierte_komponente(self, term: str, typ: str) -> Funktion | None:
         """
         Erzeugt eine einzelne typisierte Komponente mit intelligenten Stop-Bedingungen.
 
@@ -86,7 +86,7 @@ class StrukturierteFunktion(Funktion):
                 import sympy as sp
 
                 try:
-                    expr = sp.sympify(term, rational=True)
+                    expr = sp.sympify(term, rational=True)  # type: ignore
                     grad = expr.as_poly(sp.symbols("x")).degree()
 
                     from .lineare import LineareFunktion
@@ -131,7 +131,7 @@ class StrukturierteFunktion(Funktion):
 
         # Prüfe, ob es sich um einen "einfachen" Ausdruck handelt
         try:
-            expr = sp.sympify(term, rational=True)
+            expr = sp.sympify(term, rational=True)  # type: ignore
 
             # Konstanten prüfen
             if hasattr(expr, "is_constant") and expr.is_constant():
@@ -174,12 +174,12 @@ class ProduktFunktion(StrukturierteFunktion):
         return self._faktoren
 
     @property
-    def faktor1(self) -> Funktion:
+    def faktor1(self) -> Funktion | None:
         """Gibt den ersten Faktor zurück."""
         return self._faktoren[0] if len(self._faktoren) > 0 else None
 
     @property
-    def faktor2(self) -> Funktion:
+    def faktor2(self) -> Funktion | None:
         """Gibt den zweiten Faktor zurück."""
         return self._faktoren[1] if len(self._faktoren) > 1 else None
 
@@ -202,12 +202,12 @@ class SummeFunktion(StrukturierteFunktion):
         return self._summanden
 
     @property
-    def summand1(self) -> Funktion:
+    def summand1(self) -> Funktion | None:
         """Gibt den ersten Summanden zurück."""
         return self._summanden[0] if len(self._summanden) > 0 else None
 
     @property
-    def summand2(self) -> Funktion:
+    def summand2(self) -> Funktion | None:
         """Gibt den zweiten Summanden zurück."""
         return self._summanden[1] if len(self._summanden) > 1 else None
 
@@ -269,7 +269,7 @@ class QuotientFunktion(StrukturierteFunktion):
 
             # Wenn der Nenner bereits eine Funktion ist, rufe nullstellen() auf
             if hasattr(self.nenner, "nullstellen") and callable(
-                getattr(self.nenner, "nullstellen")
+                self.nenner.nullstellen
             ):
                 self._cache["polstellen"] = self.nenner.nullstellen()
             else:

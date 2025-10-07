@@ -11,9 +11,9 @@ import sympy as sp
 from schul_analysis import (
     Funktion,
     GanzrationaleFunktion,
-    GebrochenRationaleFunktion,
     QuotientFunktion,
     SummeFunktion,
+    assert_gleich,
     erstelle_funktion_automatisch,
 )
 
@@ -51,13 +51,13 @@ class TestAutomatischeFunktionserkennung:
         """Test der Erkennung gebrochen-rationaler Funktionen aus String."""
         # Einfache gebrochen-rationale Funktion
         f = erstelle_funktion_automatisch("(x+1)/(x-1)")
-        assert isinstance(f, GebrochenRationaleFunktion)
-        assert f.term() == "(x+1)/(x-1)"
+        assert isinstance(f, QuotientFunktion)
+        assert_gleich(f.term(), "(x + 1)/(x - 1)")
 
         # Komplexere gebrochen-rationale Funktion
         f = erstelle_funktion_automatisch("(x^2-1)/(x^2+1)")
-        assert isinstance(f, GebrochenRationaleFunktion)
-        assert f.term() == "(x^2-1)/(x^2+1)"
+        assert isinstance(f, QuotientFunktion)
+        assert_gleich(f.term(), "(x^2 - 1)/(x^2 + 1)")
 
     def test_exponential_rationale_funktion_string(self):
         """Test der Erkennung exponential-rationale Funktionen aus String."""
@@ -172,7 +172,7 @@ class TestAutomatischeFunktionserkennung:
 
         # Komplexer gebrochen-rationale Ausdruck
         f = erstelle_funktion_automatisch("(x^2-2x+1)/(x^2-1)")
-        assert isinstance(f, GebrochenRationaleFunktion)
+        assert isinstance(f, QuotientFunktion)
 
         # Komplexe Exponentialfunktion (mit unterschiedlichen Exponenten)
         f = erstelle_funktion_automatisch("exp(x) + exp(-x)")

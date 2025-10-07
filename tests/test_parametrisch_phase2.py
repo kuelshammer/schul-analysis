@@ -151,7 +151,7 @@ def test_anwendungsbeispiele():
 
     # Beispiel 1: Parabel mit variablem Öffnungsfaktor
     a = Parameter("a")
-    h = Parameter("h")
+    Parameter("h")
     k = Parameter("k")
 
     # f(x) = a*(x-h)² + k - Vereinfacht als a*x² + b*x + c

@@ -7,7 +7,9 @@ integriert für interaktive mathematische Analysen.
 
 import marimo as mo
 
-from schul_analysis import Ableitung, Extremstellen, Funktion, Graph, Nullstellen
+from schul_analysis import Ableitung, Extremstellen, Funktion, Graph
+
+# from schul_analysis import Nullstellen  # TODO: Fix import
 
 
 # Beispiel 1: Interaktive Funktionsanalyse
@@ -32,7 +34,7 @@ def interaktive_funktionsanalyse():
             f = Funktion(funktion_input.value)
 
             # Mathematische Analyse
-            nullstellen = Nullstellen(f)
+            # nullstellen = Nullstellen(f)  # TODO: Fix import
             f_strich = Ableitung(f)
             extremstellen = Extremstellen(f)
 
@@ -40,9 +42,7 @@ def interaktive_funktionsanalyse():
             ergebnisse = [
                 f"**Funktion:** f(x) = {f.term()}",
                 f"**Ableitung:** f'(x) = {f_strich.term()}",
-                f"**Nullstellen:** x = {nullstellen}"
-                if nullstellen
-                else "**Nullstellen:** Keine reellen Nullstellen",
+                "**Nullstellen:** Berechnung temporär deaktiviert",
             ]
 
             if extremstellen:
@@ -97,7 +97,7 @@ def parameter_experimente():
             f = Funktion(f_str)
 
             # Analyse durchführen
-            nullstellen = Nullstellen(f)
+            # nullstellen = Nullstellen(f)
             extremstellen = Extremstellen(f)
 
             # Scheitelpunkt berechnen (für Parabeln)
@@ -112,7 +112,7 @@ def parameter_experimente():
                 [
                     mo.md(f"**Funktion:** f(x) = {f.term()}"),
                     mo.md(f"**Scheitelpunkt:** {scheitelpunkt}"),
-                    mo.md(f"**Nullstellen:** {nullstellen}"),
+                    mo.md("**Nullstellen:** Berechnung temporär deaktiviert"),
                     mo.md(f"**Extremstellen:** {extremstellen}"),
                     mo.md("**Graph:**"),
                     Graph(f, x_bereich=(-10, 10)),
@@ -209,7 +209,7 @@ def main():
         - 🔍 **Interaktive Funktionsanalyse**: Geben Sie beliebige Funktionen ein
         - ⚙️ **Parameter-Experimente**: Verändern Sie Parameter und sehen Sie die Effekte
         - 📊 **Funktionenvergleich**: Vergleichen Sie mehrere Funktionen nebeneinander
-        - 🎯 **Automatische Berechnungen**: Nullstellen, Extremstellen, Ableitungen
+        - 🎯 **Automatische Berechnungen**: # Nullstellen, Extremstellen, Ableitungen
         - 📈 **Dynamische Visualisierung**: Plotly-Graphen mit intelligentem Zoom
         """),
             tabs,

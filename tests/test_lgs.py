@@ -223,8 +223,8 @@ def test_lgs_mehrere_variable():
 
     try:
         # Erstelle Parameter für Funktion f(x,y) = ax + by + c
-        a, b, c = Parameter("a"), Parameter("b"), Parameter("c")
-        x, y = Variable("x"), Variable("y")
+        Parameter("a"), Parameter("b"), Parameter("c")
+        Variable("x"), Variable("y")
 
         # Mehrere Variablen sind in der aktuellen Implementation noch nicht unterstützt
         print(

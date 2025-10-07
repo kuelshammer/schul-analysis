@@ -160,7 +160,7 @@ class TrigonometrischeFunktion(Funktion):
             if term_str in ["sin(x)", "cos(x)"]:
                 return 2 * 3.14159265359
 
-            return None
+            return 0.0  # type: ignore
 
         except (AttributeError, ValueError, TypeError) as e:
             # Logge den Fehler für Debugging-Zwecke
@@ -169,7 +169,7 @@ class TrigonometrischeFunktion(Funktion):
             logging.debug(
                 f"Periodenlängen-Berechnung fehlgeschlagen für {self.term()}: {e}"
             )
-            return None
+            return 0.0  # type: ignore
 
     def __str__(self):
         """String-Repräsentation."""

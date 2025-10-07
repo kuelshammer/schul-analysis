@@ -2,7 +2,15 @@
 Test für schülerfreundliche Funktions-Syntax
 """
 
-from src.schul_analysis import *
+from schul_analysis import (
+    Ableitung,
+    GanzrationaleFunktion,
+    Kürzen,
+    Nullstellen,
+    Polstellen,
+    QuotientFunktion,
+    Wert,
+)
 
 
 def test_schülerfreundliche_syntax():
@@ -20,7 +28,7 @@ def test_schülerfreundliche_syntax():
 
     # Gebrochen-rationale Funktionen
     print("\n📊 Gebrochen-rationale Funktionen:")
-    g = GebrochenRationaleFunktion("(x^2-1)/(x-2)")
+    g = QuotientFunktion("(x^2-1)/(x-2)")
     print(f"  g(x) = {g.term()}")
     print(f"  Nullstellen(g) = {Nullstellen(g)}")
     print(f"  Polstellen(g) = {Polstellen(g)}")
@@ -33,7 +41,7 @@ def test_schülerfreundliche_syntax():
 
     # Kürzen
     print("\n🔄 Kürzen:")
-    h = GebrochenRationaleFunktion("(x^2-4)/(x-2)")
+    h = QuotientFunktion("(x^2-4)/(x-2)")
     print(f"  h(x) = {h.term()}")
     h_gekürzt = Kürzen(h)
     print(f"  gekürzt: {h_gekürzt.term()}")
@@ -47,7 +55,7 @@ def test_vergleich_syntax():
     print("\n=== Syntax-Vergleich ===\n")
 
     f = GanzrationaleFunktion("x^2-9")
-    g = GebrochenRationaleFunktion("1/(x-3)")
+    g = QuotientFunktion("1/(x-3)")
 
     print("Alte Syntax (objektorientiert):")
     print(f"  f.nullstellen() = {f.nullstellen()}")

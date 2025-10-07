@@ -11,6 +11,7 @@ Starten:
     marimo edit marimo_examples.py
 """
 
+import marimo
 
 __generated_with = "0.16.5"
 app = marimo.App()
@@ -77,7 +78,7 @@ def _(f, mo):
 
 
 @app.cell
-def _(f, mo):
+def _(f, mo, nullstellen, extrema):
     """Automatische Analyse"""
     mo.md("### 🔍 Automatische Analyse:")
 

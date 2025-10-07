@@ -133,7 +133,7 @@ def test_fehlerbehandlung():
     f = ParametrischeFunktion([a, 1, 0], [x])  # Eine Variable
     try:
         # Sollte fehlschlagen - zu viele Argumente
-        ergebnis = f(2, 3)
+        f(2, 3)
         print("FEHLER: Exception wurde nicht geworfen!")
     except ValueError as e:
         print(f"Erwarteter Fehler: {e}")
@@ -146,7 +146,7 @@ def test_fehlerbehandlung():
 
         # Falsche Anzahl
         try:
-            ergebnis = g(2)
+            g(2)
             print("FEHLER: Exception wurde nicht geworfen!")
         except ValueError as e:
             print(f"Erwarteter Fehler: {e}")

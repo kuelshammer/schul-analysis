@@ -89,9 +89,8 @@ class TestWrapperFunktionen:
         f = Funktion("x^2 - 4x + 3")
 
         # extrema() wirft Fehler weil extremstellen() nicht existiert
-        with pytest.raises(Exception):
-            ext = extrema(f)
-        assert ext[0][1] == "Minimum"  # Art des Extremums
+        with pytest.raises(AttributeError):
+            extrema(f)
 
 
 class TestFunktionsaufrufe:

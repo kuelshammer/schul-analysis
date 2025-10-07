@@ -120,9 +120,9 @@ class TestGemischteAusdrücke:
         """Test dass unterschiedliche Exponent-Koeffizienten Fehler erzeugen"""
         # Dieser Ausdruck hat exp(x) und exp(2x) - sollte fehlschlagen
         with pytest.raises(ValueError, match="Unterschiedliche Exponent-Koeffizienten"):
-            f = Funktion("exp(x) + exp(2x)")
+            Funktion("exp(x) + exp(2x)")
 
     def test_fehler_ohne_exponential(self):
         """Test dass Ausdrücke ohne exp() Fehler erzeugen"""
         with pytest.raises(ValueError, match="Keine exp\\(\\) Funktion"):
-            f = Funktion("x^2+1")
+            Funktion("x^2+1")

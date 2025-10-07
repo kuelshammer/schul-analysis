@@ -87,6 +87,12 @@ from .taylor import (
     tangente,
     taylorpolynom,
 )
+
+# 🧪 TEST-UTILS (optional, nur für Tests)
+from .test_utils import (
+    assert_gleich,
+    assert_wert_gleich,
+)
 from .visualisierung import Graph
 
 # Vordefinierte Variablen und Parameter für schnellen Zugriff
@@ -179,4 +185,7 @@ __all__ = [
     "LineareGleichung",
     "interpolationspolynom",
     "plotte_loesung",
+    # 🧪 TEST-UTILS (optional, nur für Tests)
+    "assert_gleich",
+    "assert_wert_gleich",
 ]

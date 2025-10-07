@@ -40,16 +40,19 @@ def _klassifiziere_einfache_funktion(
     """Klassifiziert eine einfache Funktion ohne komplexe Struktur."""
     # Konstante prüfen (inkl. Zahlen)
     try:
-        if hasattr(expr, "is_constant") and expr.is_constant():
-            return FunktionsTyp.KONSTANTE
+        # Typ-Annotation für SymPy-Objekte
+        if hasattr(expr, "is_constant") and callable(expr.is_constant):
+            if expr.is_constant():  # type: ignore
+                return FunktionsTyp.KONSTANTE
     except Exception:
         # Falls is_constant fehlschlägt, prüfe auf Zahl
         if isinstance(expr, (sp.Integer, sp.Float, sp.Rational, int)):
             return FunktionsTyp.KONSTANTE
 
     # Polynom prüfen (ganzrational)
-    if hasattr(expr, "is_polynomial") and expr.is_polynomial(variable):
-        return FunktionsTyp.GANZRATIONAL
+    if hasattr(expr, "is_polynomial") and callable(expr.is_polynomial):
+        if expr.is_polynomial(variable):  # type: ignore
+            return FunktionsTyp.GANZRATIONAL
 
     # Trigonometrische Funktionen
     if hasattr(expr, "func") and expr.func in (sp.sin, sp.cos, sp.tan, sp.cot):
@@ -188,7 +191,7 @@ def _erkenne_quotientenstruktur(expr: sp.Basic) -> tuple[bool, sp.Basic, sp.Basi
                 base, exp = arg.args
                 if hasattr(exp, "is_negative") and exp.is_negative:
                     # Negativer Exponent -> in den Nenner
-                    nenner_faktoren.append(sp.Pow(base, -exp))
+                    nenner_faktoren.append(sp.Pow(base, -exp))  # type: ignore
                 else:
                     zaehler_faktoren.append(arg)
             else:
@@ -245,10 +248,18 @@ def analysiere_funktionsstruktur(
         komponenten = []
 
         # Schritt 1: Prüfe zuerst, ob es ein Polynom ist (wichtig für pädagogische Analyse)
-        if hasattr(expr, "is_polynomial") and expr.is_polynomial(variable):
+        if (
+            hasattr(expr, "is_polynomial")
+            and callable(expr.is_polynomial)
+            and expr.is_polynomial(variable)
+        ):  # type: ignore
             # Unterscheide zwischen echten Polynomen und Konstanten
             try:
-                if hasattr(expr, "is_constant") and expr.is_constant():
+                if (
+                    hasattr(expr, "is_constant")
+                    and callable(expr.is_constant)
+                    and expr.is_constant()
+                ):  # type: ignore
                     haupt_typ = FunktionsTyp.KONSTANTE
                     komponenten = [expr]
                 elif isinstance(expr, (sp.Integer, sp.Float, sp.Rational)):
@@ -257,7 +268,7 @@ def analysiere_funktionsstruktur(
                 else:
                     haupt_typ = FunktionsTyp.GANZRATIONAL
                     # Für Polynome: Behalte die expandierte Form für bessere Analyse
-                    expr_analyse = expr.expand()
+                    expr_analyse = expr.expand()  # type: ignore
                     if expr_analyse.func == sp.Add:
                         komponenten = list(expr_analyse.args)
                     else:
@@ -265,7 +276,7 @@ def analysiere_funktionsstruktur(
             except Exception:
                 # Fallback auf ganzrational bei Fehlern
                 haupt_typ = FunktionsTyp.GANZRATIONAL
-                expr_analyse = expr.expand()
+                expr_analyse = expr.expand()  # type: ignore
                 if expr_analyse.func == sp.Add:
                     komponenten = list(expr_analyse.args)
                 else:
@@ -288,7 +299,8 @@ def analysiere_funktionsstruktur(
                     # Pythagoreische Identität erkannt und vereinfacht
                     if (
                         hasattr(vereinfacht, "is_constant")
-                        and vereinfacht.is_constant()
+                        and callable(vereinfacht.is_constant)
+                        and vereinfacht.is_constant()  # type: ignore
                     ):
                         haupt_typ = FunktionsTyp.KONSTANTE
                         komponenten = [vereinfacht]

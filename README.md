@@ -18,7 +18,7 @@ Automatische Erkennung des Funktionstyps - eine API für alle mathematischen Fun
 # Automatische Typ-Erkennung
 f = Funktion("x^2 + 1")                # → QuadratischeFunktion
 g = Funktion("2x + 3")                 # → LineareFunktion
-h = Funktion("(x^2 + 1)/(x - 1)")      # → GebrochenRationaleFunktion
+h = Funktion("(x^2 + 1)/(x - 1)")      # → QuotientFunktion
 e = Funktion("e^x")                    # → ExponentialFunktion
 ```
 
@@ -53,21 +53,11 @@ Das Framework unterstützt jetzt die natürliche mathematische Notation `f(x)`:
 # Ganzrationale Funktionen
 f = GanzrationaleFunktion("x^2 + 2x - 3")
 print(f(2))     # 5.0 (statt f.wert(2))
-
-# Parametrische Funktionen
-x = Variable("x")
-a = Parameter("a")
-f_param = ParametrischeFunktion([a, 1, 0], [x])  # a*x² + x
-print(f_param(2))    # 4a + 2 (symbolisches Ergebnis)
-
-# Mit konkreten Werten
-f_konkret = f_param.mit_wert(a=3)
-print(f_konkret(2))  # 14.0
 ```
 
-### 🔥 Neue Prime-Notation für Ableitungen
+### 🔥 Prime-Notation für Ableitungen
 
-Das Framework unterstützt jetzt die intuitive mathematische Notation für Ableitungen:
+Das Framework unterstützt die intuitive mathematische Notation für Ableitungen:
 
 ```python
 # Mathematisch: f'(x) = 2x + 3, f'(2) = 7
@@ -79,12 +69,6 @@ print(f_strich(2))            # 7.0
 f_zwei_strich = Ableitung(f_strich)  # f''(x) = 2
 print(f_zwei_strich(5))       # 2.0
 
-# Funktioniert auch mit parametrischen Funktionen
-t = Variable("t")
-g = ParametrischeFunktion("t^2 + 2*t", t)
-g_strich = Ableitung(g)        # g'(t) = 2t + 2
-print(g_strich(3))            # 8.0
-
 # Kombination mit __call__ Syntax
 f = GanzrationaleFunktion("x^3 - 2x^2 + 5x - 1")
 f_strich = Ableitung(f)       # f'(x) = 3x² - 4x + 5
@@ -92,18 +76,7 @@ print(f_strich(1))            # 4.0
 
 f_zwei_strich = Ableitung(f_strich)  # f''(x) = 6x - 4
 print(f_zwei_strich(1))       # 2.0
-
-f_drei_strich = Ableitung(f_zwei_strich)  # f'''(x) = 6
-print(f_drei_strich(1))       # 6.0
 ```
-
-**Vorteile:**
-
-- **Extrem intuitive Notation**: `f_strich = Ableitung(f)` entspricht mathematisch `f' = df/dx`
-- **Konsistente Syntax**: Funktioniert für alle Funktionstypen gleich
-- **Natürliche Aufrufe**: `f_strich(2)` entspricht `f'(2)`
-- **Kombinierbar**: Höhere Ableitungen durch Kaskadierung möglich
-- **Abwärtskompatibel**: Bestehende `f.ableitung()` Methode bleibt erhalten
 
 ### 📋 Gleichungssyntax (Vorbereitung für LGS)
 

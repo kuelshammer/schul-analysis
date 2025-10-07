@@ -13,16 +13,17 @@ from typing import Any
 import numpy as np
 
 from .errors import SchulAnalysisError, UngueltigeFunktionError
+from .funktion import Funktion
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
+from .lineare_gleichungssysteme import LGS
 from .strukturiert import (
     KompositionFunktion,
     ProduktFunktion,
     QuotientFunktion,
     SummeFunktion,
 )
-from .lineare_gleichungssysteme import LGS
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
@@ -41,7 +42,7 @@ Funktionstyp = (
 
 def nullstellen(
     funktion: Funktionstyp, real: bool = True, runden: int | None = None
-) -> list[Any]:
+) -> list[float] | list[Any]:
     """
     Berechnet die Nullstellen einer Funktion.
 
@@ -330,7 +331,7 @@ def auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
 # =============================================================================
 
 
-def erstelle_polynom(koeffizienten: list[float | int]) -> "GanzrationaleFunktion":
+def erstelle_polynom(koeffizienten: list[float | int]) -> Funktion:
     """
     Erstellt ein Polynom aus Koeffizienten.
 
@@ -354,7 +355,6 @@ def erstelle_polynom(koeffizienten: list[float | int]) -> "GanzrationaleFunktion
         Alternativ kann jetzt auch Funktion("x^2 - 4x + 3") verwendet werden,
         was automatisch die richtige Funktionstyp zurückgibt.
     """
-    from .funktion import Funktion
 
     # Erstelle String aus Koeffizienten und verwende Magic Factory
     if not koeffizienten:
@@ -387,7 +387,7 @@ def erstelle_polynom(koeffizienten: list[float | int]) -> "GanzrationaleFunktion
     else:
         term = " + ".join(termbestandteile).replace("+ -", "- ")
 
-    return Funktion(term)
+    return GanzrationaleFunktion(term)
 
 
 def erstelle_funktion(term: str) -> Any:
@@ -420,7 +420,7 @@ def erstelle_funktion(term: str) -> Any:
 
 def erstelle_lineares_gleichungssystem(
     koeffizienten: list[list[float | int]], ergebnisse: list[float | int]
-) -> LGS:
+) -> Any:
     """
     Erstellt ein lineares Gleichungssystem.
 
