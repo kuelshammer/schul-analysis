@@ -202,187 +202,6 @@ class GebrochenRationaleFunktion(Funktion):
             return False
         return self.zaehler == other.zaehler and self.nenner == other.nenner
 
-    def _create_from_operation(
-        self, sympy_expr: sp.Basic
-    ) -> "GebrochenRationaleFunktion":
-        """
-        Factory-Methode zur Erstellung einer neuen Funktion aus einem SymPy-Ausdruck.
-        """
-        # Extrahiere Zähler und Nenner aus dem SymPy-Ausdruck
-        zaehler_sympy, nenner_sympy = fraction(sympy_expr)
-
-        # Erstelle neue GanzrationaleFunktionen für Zähler und Nenner
-        zaehler = GanzrationaleFunktion(zaehler_sympy)
-        nenner = GanzrationaleFunktion(nenner_sympy)
-
-        return GebrochenRationaleFunktion(zaehler, nenner)
-
-    def __add__(self, other) -> "GebrochenRationaleFunktion":
-        """Addition: f + g"""
-        if isinstance(other, GebrochenRationaleFunktion):
-            # (a/b) + (c/d) = (ad + bc) / (bd)
-            zaehler_neu = (self.zaehler * other.nenner) + (other.zaehler * self.nenner)
-            nenner_neu = self.nenner * other.nenner
-        elif isinstance(other, GanzrationaleFunktion):
-            # (a/b) + c = (a + bc) / b
-            zaehler_neu = self.zaehler + (other * self.nenner)
-            nenner_neu = self.nenner
-        elif isinstance(other, (int, float, Rational)):
-            # (a/b) + k = (a + kb) / b
-            zaehler_neu = self.zaehler + (other * self.nenner)
-            nenner_neu = self.nenner
-        else:
-            return NotImplemented
-
-        return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-
-    def __radd__(self, other) -> "GebrochenRationaleFunktion":
-        """Rechtsseitige Addition: k + f"""
-        if isinstance(other, (int, float, Rational)):
-            return self.__add__(other)
-        return NotImplemented
-
-    def __sub__(self, other) -> "GebrochenRationaleFunktion":
-        """Subtraktion: f - g"""
-        if isinstance(other, GebrochenRationaleFunktion):
-            # (a/b) - (c/d) = (ad - bc) / (bd)
-            zaehler_neu = (self.zaehler * other.nenner) - (other.zaehler * self.nenner)
-            nenner_neu = self.nenner * other.nenner
-        elif isinstance(other, GanzrationaleFunktion):
-            # (a/b) - c = (a - bc) / b
-            zaehler_neu = self.zaehler - (other * self.nenner)
-            nenner_neu = self.nenner
-        elif isinstance(other, (int, float, Rational)):
-            # (a/b) - k = (a - kb) / b
-            zaehler_neu = self.zaehler - (other * self.nenner)
-            nenner_neu = self.nenner
-        else:
-            return NotImplemented
-
-        return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-
-    def __rsub__(self, other) -> "GebrochenRationaleFunktion":
-        """Rechtsseitige Subtraktion: k - f"""
-        if isinstance(other, (int, float, Rational)):
-            # k - (a/b) = (kb - a) / b
-            zaehler_neu = (other * self.nenner) - self.zaehler
-            nenner_neu = self.nenner
-            return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-        return NotImplemented
-
-    def __mul__(self, other) -> "GebrochenRationaleFunktion":
-        """Multiplikation: f * g"""
-        if isinstance(other, GebrochenRationaleFunktion):
-            # (a/b) * (c/d) = (ac) / (bd)
-            zaehler_neu = self.zaehler * other.zaehler
-            nenner_neu = self.nenner * other.nenner
-        elif isinstance(other, GanzrationaleFunktion):
-            # (a/b) * c = (ac) / b
-            zaehler_neu = self.zaehler * other
-            nenner_neu = self.nenner
-        elif isinstance(other, (int, float, Rational)):
-            # (a/b) * k = (ak) / b
-            zaehler_neu = self.zaehler * other
-            nenner_neu = self.nenner
-        else:
-            return NotImplemented
-
-        return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-
-    def __rmul__(self, other) -> "GebrochenRationaleFunktion":
-        """Rechtsseitige Multiplikation: k * f"""
-        if isinstance(other, (int, float, Rational)):
-            return self.__mul__(other)
-        return NotImplemented
-
-    def __truediv__(self, other) -> "GebrochenRationaleFunktion":
-        """Division: f / g"""
-        if isinstance(other, GebrochenRationaleFunktion):
-            # (a/b) / (c/d) = (ad) / (bc)
-            zaehler_neu = self.zaehler * other.nenner
-            nenner_neu = self.nenner * other.zaehler
-        elif isinstance(other, GanzrationaleFunktion):
-            # (a/b) / c = a / (bc)
-            zaehler_neu = self.zaehler
-            nenner_neu = self.nenner * other
-        elif isinstance(other, (int, float, Rational)):
-            # (a/b) / k = a / (bk)
-            zaehler_neu = self.zaehler
-            nenner_neu = self.nenner * other
-        else:
-            return NotImplemented
-
-        return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-
-    def __rtruediv__(self, other) -> "GebrochenRationaleFunktion":
-        """Rechtsseitige Division: k / f"""
-        if isinstance(other, GanzrationaleFunktion):
-            # c / (a/b) = (cb) / a
-            zaehler_neu = other * self.nenner
-            nenner_neu = self.zaehler
-            return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-        elif isinstance(other, (int, float, Rational)):
-            # k / (a/b) = (kb) / a
-            zaehler_neu = other * self.nenner
-            nenner_neu = self.zaehler
-            return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-        return NotImplemented
-
-    def __pow__(self, other) -> "GebrochenRationaleFunktion":
-        """Potenzierung: f ** n"""
-        if isinstance(other, int) and other >= 0:
-            # (a/b)^n = a^n / b^n
-            zaehler_neu = self.zaehler**other
-            nenner_neu = self.nenner**other
-            return GebrochenRationaleFunktion(zaehler_neu, nenner_neu)
-        else:
-            return NotImplemented
-
-    # --- In-place Operationen ---
-
-    def __iadd__(self, other) -> "GebrochenRationaleFunktion":
-        """In-place Addition: f += g"""
-        result = self + other
-        self.zaehler = result.zaehler
-        self.nenner = result.nenner
-        self.term_sympy = result.term_sympy
-        return self
-
-    def __isub__(self, other) -> "GebrochenRationaleFunktion":
-        """In-place Subtraktion: f -= g"""
-        result = self - other
-        self.zaehler = result.zaehler
-        self.nenner = result.nenner
-        self.term_sympy = result.term_sympy
-        return self
-
-    def __imul__(self, other) -> "GebrochenRationaleFunktion":
-        """In-place Multiplikation: f *= g"""
-        result = self * other
-        self.zaehler = result.zaehler
-        self.nenner = result.nenner
-        self.term_sympy = result.term_sympy
-        return self
-
-    def __itruediv__(self, other) -> "GebrochenRationaleFunktion":
-        """In-place Division: f /= g"""
-        result = self / other
-        self.zaehler = result.zaehler
-        self.nenner = result.nenner
-        self.term_sympy = result.term_sympy
-        return self
-
-    # --- Unäre Operationen ---
-
-    def __neg__(self) -> "GebrochenRationaleFunktion":
-        """Negation: -f"""
-        zaehler_neu = -self.zaehler
-        return GebrochenRationaleFunktion(zaehler_neu, self.nenner)
-
-    def __pos__(self) -> "GebrochenRationaleFunktion":
-        """Positiv: +f"""
-        return self
-
     def graph(self, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs) -> Any:
         """Einheitliche Methode zur Darstellung der Funktion mit Plotly
 
@@ -560,7 +379,6 @@ class GebrochenRationaleFunktion(Funktion):
         # Berechne Zerlegung nur einmal und verwende Cache
         self._berechne_zerlegung()
         return self._cache["_stoerfunktion"]
-
 
     def spezialisiere_parameter(self, **werte) -> "GebrochenRationaleFunktion":
         """
@@ -1027,7 +845,6 @@ class ExponentialRationaleFunktion(Funktion):
         """
         self._berechne_exponential_zerlegung()
         return self._cache["stoerfunktion"]
-
 
     def spezialisiere_parameter(self, **werte) -> "ExponentialRationaleFunktion":
         """

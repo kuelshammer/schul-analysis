@@ -36,7 +36,7 @@ def test_exact_arithmetic():
         [sp.Rational(1, 3), 0, sp.Rational(-1, 3)]
     )  # (1/3)x² - 1/3
     print(f"f4(x) = {f4.term()}")
-    nullstellen = f4.nullstellen()
+    nullstellen = f4.nullstellen
     print(f"Nullstellen: {nullstellen}")
 
     # Test 5: Ableitungen mit exakten Koeffizienten

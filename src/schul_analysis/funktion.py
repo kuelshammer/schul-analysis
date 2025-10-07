@@ -816,6 +816,372 @@ class Funktion:
         """Visualisiert die Funktion mit Plotly (einheitliche Methode)."""
         return self.graph(x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
 
+    # =============================================================================
+    # ARITHMETISCHE OPERATIONEN - SymPy-basierte Funktionsoperationen
+    # =============================================================================
+
+    def __add__(self, other):
+        """
+        Addition: f + g
+
+        Args:
+            other: Andere Funktion, Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Addition
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> g = Funktion("3x + 4")
+            >>> h = f + g  # x^2 + 3x + 4
+        """
+        try:
+            if isinstance(other, Funktion):
+                # Funktion + Funktion
+                result_expr = self.term_sympy + other.term_sympy
+                return Funktion(result_expr)
+            elif isinstance(other, (int, float)):
+                # Funktion + Zahl
+                result_expr = self.term_sympy + other
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # Funktion + SymPy-Ausdruck
+                result_expr = self.term_sympy + other
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei Addition: {e}")
+
+    def __radd__(self, other):
+        """
+        Rechtsseitige Addition: other + f
+
+        Args:
+            other: Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Addition
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> h = 5 + f  # 5 + x^2
+        """
+        try:
+            if isinstance(other, (int, float)):
+                # Zahl + Funktion
+                result_expr = other + self.term_sympy
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # SymPy-Ausdruck + Funktion
+                result_expr = other + self.term_sympy
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei rechtsseitiger Addition: {e}")
+
+    def __sub__(self, other):
+        """
+        Subtraktion: f - g
+
+        Args:
+            other: Andere Funktion, Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Subtraktion
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> g = Funktion("3x + 4")
+            >>> h = f - g  # x^2 - 3x - 4
+        """
+        try:
+            if isinstance(other, Funktion):
+                # Funktion - Funktion
+                result_expr = self.term_sympy - other.term_sympy
+                return Funktion(result_expr)
+            elif isinstance(other, (int, float)):
+                # Funktion - Zahl
+                result_expr = self.term_sympy - other
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # Funktion - SymPy-Ausdruck
+                result_expr = self.term_sympy - other
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei Subtraktion: {e}")
+
+    def __rsub__(self, other):
+        """
+        Rechtsseitige Subtraktion: other - f
+
+        Args:
+            other: Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Subtraktion
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> h = 10 - f  # 10 - x^2
+        """
+        try:
+            if isinstance(other, (int, float)):
+                # Zahl - Funktion
+                result_expr = other - self.term_sympy
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # SymPy-Ausdruck - Funktion
+                result_expr = other - self.term_sympy
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei rechtsseitiger Subtraktion: {e}")
+
+    def __mul__(self, other):
+        """
+        Multiplikation: f * g
+
+        Args:
+            other: Andere Funktion, Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Multiplikation
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> g = Funktion("3x + 4")
+            >>> h = f * g  # x^2 * (3x + 4)
+        """
+        try:
+            if isinstance(other, Funktion):
+                # Funktion * Funktion
+                result_expr = self.term_sympy * other.term_sympy
+                return Funktion(result_expr)
+            elif isinstance(other, (int, float)):
+                # Funktion * Zahl
+                result_expr = self.term_sympy * other
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # Funktion * SymPy-Ausdruck
+                result_expr = self.term_sympy * other
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei Multiplikation: {e}")
+
+    def __rmul__(self, other):
+        """
+        Rechtsseitige Multiplikation: other * f
+
+        Args:
+            other: Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Multiplikation
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> h = 5 * f  # 5 * x^2
+        """
+        try:
+            if isinstance(other, (int, float)):
+                # Zahl * Funktion
+                result_expr = other * self.term_sympy
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # SymPy-Ausdruck * Funktion
+                result_expr = other * self.term_sympy
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei rechtsseitiger Multiplikation: {e}")
+
+    def __truediv__(self, other):
+        """
+        Division: f / g
+
+        Args:
+            other: Andere Funktion, Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Division
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> g = Funktion("3x + 4")
+            >>> h = f / g  # x^2 / (3x + 4)
+        """
+        try:
+            if isinstance(other, Funktion):
+                # Funktion / Funktion
+                result_expr = self.term_sympy / other.term_sympy
+                return Funktion(result_expr)
+            elif isinstance(other, (int, float)):
+                if other == 0:
+                    raise ZeroDivisionError("Division durch Null")
+                # Funktion / Zahl
+                result_expr = self.term_sympy / other
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # Funktion / SymPy-Ausdruck
+                result_expr = self.term_sympy / other
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except ZeroDivisionError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Fehler bei Division: {e}")
+
+    def __rtruediv__(self, other):
+        """
+        Rechtsseitige Division: other / f
+
+        Args:
+            other: Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Division
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> h = 10 / f  # 10 / x^2
+        """
+        try:
+            if isinstance(other, (int, float)):
+                # Zahl / Funktion
+                if self.term_sympy.is_zero:
+                    raise ZeroDivisionError("Division durch Null")
+                result_expr = other / self.term_sympy
+                return Funktion(result_expr)
+            elif hasattr(other, "_sympy_") or isinstance(other, sp.Basic):
+                # SymPy-Ausdruck / Funktion
+                if self.term_sympy.is_zero:
+                    raise ZeroDivisionError("Division durch Null")
+                result_expr = other / self.term_sympy
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except ZeroDivisionError:
+            raise
+        except Exception as e:
+            raise ValueError(f"Fehler bei rechtsseitiger Division: {e}")
+
+    def __pow__(self, exponent):
+        """
+        Potenzierung: f ** exponent
+
+        Args:
+            exponent: Zahl (int, float)
+
+        Returns:
+            Neue Funktion mit Ergebnis der Potenzierung
+
+        Examples:
+            >>> f = Funktion("sin(x)")
+            >>> h = f ** 2  # sin(x)^2
+        """
+        try:
+            if isinstance(exponent, (int, float)):
+                # Funktion ** Zahl
+                result_expr = self.term_sympy**exponent
+                return Funktion(result_expr)
+            elif hasattr(exponent, "_sympy_") or isinstance(exponent, sp.Basic):
+                # Funktion ** SymPy-Ausdruck
+                result_expr = self.term_sympy**exponent
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei Potenzierung: {e}")
+
+    def __rpow__(self, base):
+        """
+        Rechtsseitige Potenzierung: base ** f
+
+        Args:
+            base: Zahl oder SymPy-Ausdruck
+
+        Returns:
+            Neue Funktion mit Ergebnis der Potenzierung
+
+        Examples:
+            >>> f = Funktion("x")
+            >>> h = 2 ** f  # 2^x
+        """
+        try:
+            if isinstance(base, (int, float)):
+                # Zahl ** Funktion
+                result_expr = base**self.term_sympy
+                return Funktion(result_expr)
+            elif hasattr(base, "_sympy_") or isinstance(base, sp.Basic):
+                # SymPy-Ausdruck ** Funktion
+                result_expr = base**self.term_sympy
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei rechtsseitiger Potenzierung: {e}")
+
+    def __matmul__(self, other):
+        """
+        Funktionskomposition: f @ g (f ∘ g)
+
+        Args:
+            other: Andere Funktion
+
+        Returns:
+            Neue Funktion mit Ergebnis der Komposition
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> g = Funktion("sin(x)")
+            >>> h = f @ g  # sin(x)^2
+        """
+        try:
+            if isinstance(other, Funktion):
+                # f ∘ g = f(g(x))
+                result_expr = self.term_sympy.subs(
+                    self._variable_symbol, other.term_sympy
+                )
+                return Funktion(result_expr)
+            else:
+                return NotImplemented
+        except Exception as e:
+            raise ValueError(f"Fehler bei Funktionskomposition: {e}")
+
+    def __call__(self, argument):
+        """
+        Überladene __call__ Methode:
+        - f(x_wert): Numerische Auswertung an einer Stelle
+        - f(g): Funktionskomposition wenn g eine Funktion ist
+
+        Args:
+            argument: Numerischer Wert oder andere Funktion
+
+        Returns:
+            Numerisches Ergebnis oder neue Funktion
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> y = f(3)        # 9.0 (numerische Auswertung)
+            >>> g = Funktion("sin(x)")
+            >>> h = f(g)        # sin(x)^2 (Komposition)
+        """
+        if isinstance(argument, Funktion):
+            # f(g) = f ∘ g
+            return self @ argument
+        else:
+            # f(x) = numerische Auswertung
+            return self.wert(argument)
+
 
 # Factory-Funktion für Konsistenz und Abwärtskompatibilität
 

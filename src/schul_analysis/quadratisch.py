@@ -92,17 +92,34 @@ class QuadratischeFunktion(GanzrationaleFunktion):
         """Gibt den Öffnungsfaktor a zurück"""
         if self._a is not None:
             return self._a
-        return self.get_oeffnungsfaktor()
+        # Extrahiere x²-Koeffizient aus den Koeffizienten
+        if len(self.koeffizienten) >= 3:
+            return self.koeffizienten[-1]  # x²-Koeffizient
+        else:
+            return 0
 
     @property
     def scheitelpunkt(self) -> tuple[float | sp.Basic, float | sp.Basic]:
         """Gibt den Scheitelpunkt (x_s, y_s) zurück"""
-        return self.get_scheitelpunkt()
+        # Für quadratische Funktion: x_s = -b/(2a), y_s = f(x_s)
+        a = self.oeffnungsfaktor
+        if a == 0:
+            raise ValueError("Eine konstante Funktion hat keinen Scheitelpunkt")
+
+        # Extrahiere b-Koeffizient
+        b_koeff = 0
+        if len(self.koeffizienten) >= 2:
+            b_koeff = self.koeffizienten[-2]
+
+        x_s = -b_koeff / (2 * a)
+        y_s = self.wert(x_s)
+        return (x_s, y_s)
 
     @property
     def nullstellen(self) -> list[float | sp.Basic]:
         """Gibt die Nullstellen zurück"""
-        return self.get_nullstellen_pq_formel()
+        # Verwende die Basis-Implementierung aus der Elternklasse
+        return super().nullstellen
 
     def ist_offen_nach_oben(self) -> bool:
         """Prüft, ob die Parabel nach oben geöffnet ist"""

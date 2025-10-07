@@ -71,19 +71,39 @@ class LineareFunktion(GanzrationaleFunktion):
         """Gibt die Steigung m zurück"""
         if self._m is not None:
             return self._m
-        return self.get_steigung()
+        # Extrahiere Steigung aus Koeffizienten
+        if len(self.koeffizienten) >= 2:
+            return self.koeffizienten[-2]  # x-Koeffizient
+        elif len(self.koeffizienten) == 1:
+            return 0  # Konstante Funktion
+        else:
+            return 0
 
     @property
     def y_achsenabschnitt(self) -> float | sp.Basic:
         """Gibt den y-Achsenabschnitt b zurück"""
         if self._b is not None:
             return self._b
-        return self.get_y_achsenabschnitt()
+        # Extrahiere y-Achsenabschnitt aus Koeffizienten
+        if len(self.koeffizienten) >= 1:
+            return self.koeffizienten[0]  # Konstanter Term
+        else:
+            return 0
 
     @property
     def nullstelle(self) -> float | sp.Basic:
         """Gibt die Nullstelle zurück"""
-        return self.get_nullstelle()
+        # Für lineare Funktion: mx + b = 0 => x = -b/m
+        m = self.steigung
+        b = self.y_achsenabschnitt
+        if m == 0:
+            if b == 0:
+                raise ValueError("Die Nullfunktion hat unendlich viele Nullstellen")
+            else:
+                raise ValueError(
+                    "Eine konstante Funktion ohne Null hat keine Nullstellen"
+                )
+        return -b / m
 
     def ist_steigend(self) -> bool:
         """Prüft, ob die Funktion steigend ist"""
