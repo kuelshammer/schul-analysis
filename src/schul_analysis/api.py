@@ -16,19 +16,21 @@ from .errors import SchulAnalysisError, UngueltigeFunktionError
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
-from .gebrochen_rationale import (
-    ExponentialRationaleFunktion,
-    GebrochenRationaleFunktion,
+from .strukturiert import (
+    KompositionFunktion,
+    ProduktFunktion,
+    QuotientFunktion,
+    SummeFunktion,
 )
-from .gemischte import GemischteFunktion
 from .lineare_gleichungssysteme import LGS
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
     GanzrationaleFunktion
-    | GebrochenRationaleFunktion
-    | ExponentialRationaleFunktion
-    | GemischteFunktion
+    | QuotientFunktion
+    | ProduktFunktion
+    | SummeFunktion
+    | KompositionFunktion
 )
 
 
@@ -286,9 +288,9 @@ def zeichne(
 
         # Fallback für beliebige callable Objekte
         elif callable(funktion):
-            from .visualisierung import zeige_funktion_plotly
+            from .visualisierung import zeige_funktion
 
-            return zeige_funktion_plotly(funktion, x_bereich, **kwargs)
+            return zeige_funktion(funktion, x_bereich, **kwargs)
         else:
             raise TypeError("Das übergebene Objekt ist keine zeichnenbare Funktion.")
 
@@ -443,7 +445,7 @@ def erstelle_exponential_rationale_funktion(
     zaehler: GanzrationaleFunktion | str,
     nenner: GanzrationaleFunktion | str,
     exponent_param: float = 1.0,
-) -> ExponentialRationaleFunktion:
+) -> Funktion:
     """
     Erstellt eine exponential-rationale Funktion f(x) = P(e^{ax})/Q(e^{ax}).
 
@@ -485,7 +487,7 @@ def erstelle_exponential_rationale_funktion(
     else:
         voller_term = f"({zaehler_expr})/({nenner_expr})"
 
-    return ExponentialRationaleFunktion(voller_term, exponent_param)
+    return Funktion(voller_term)
 
 
 # =============================================================================
@@ -597,7 +599,10 @@ __all__ = [
     "zeige_analyse",
     # Funktionstypen (für direkten Zugriff)
     "GanzrationaleFunktion",
-    "GebrochenRationaleFunktion",
+    "QuotientFunktion",
+    "ProduktFunktion",
+    "SummeFunktion",
+    "KompositionFunktion",
     "LGS",
     # Type-Hints
     "Funktionstyp",

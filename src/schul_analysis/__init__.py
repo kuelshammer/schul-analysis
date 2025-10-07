@@ -53,7 +53,6 @@ from .api import (
 from .exponential import ExponentialFunktion
 from .funktion import Funktion, erstelle_funktion_automatisch
 from .ganzrationale import GanzrationaleFunktion
-from .gebrochen_rationale import GebrochenRationaleFunktion
 
 # =============================================================================
 # SPEZIALKOMPONENTEN
@@ -134,7 +133,6 @@ __all__ = [
     # 🏗️ FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
-    "GebrochenRationaleFunktion",
     "ExponentialFunktion",
     "StrukturierteFunktion",
     "ProduktFunktion",

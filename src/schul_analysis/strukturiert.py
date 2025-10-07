@@ -216,7 +216,18 @@ class SummeFunktion(StrukturierteFunktion):
 
 
 class QuotientFunktion(StrukturierteFunktion):
-    """Repräsentiert einen Quotienten von Funktionen mit typisiertem Zähler und Nenner."""
+    """
+    Repräsentiert einen Quotienten von Funktionen mit typisiertem Zähler und Nenner.
+
+    Dies ist die unified Klasse für alle Quotientenfunktionen - von gebrochen-rationalen
+    bis hin zu komplexen Quotienten wie exp(x)/sin(x). Sie bietet alle notwendigen
+    Methoden für die Arbeit mit Quotienten im Schulunterricht.
+
+    Beispiele:
+        - (x^2+1)/(x-1) → Quotient von ganzrationalen Funktionen
+        - exp(x)/sin(x) → Quotient von Exponential- und trigonometrischen Funktionen
+        - Alle haben polstellen(), definitionsluecken(), etc.
+    """
 
     def __init__(self, eingabe, struktur_info=None):
         super().__init__(eingabe, struktur_info)
@@ -224,6 +235,12 @@ class QuotientFunktion(StrukturierteFunktion):
         # Spezifische Eigenschaften für Quotienten
         self._zaehler = self._komponenten[0] if len(self._komponenten) > 0 else None
         self._nenner = self._komponenten[1] if len(self._komponenten) > 1 else None
+
+        # 🔥 PÄDAGOGISCHES CACHING FÜR QUOTIENTEN 🔥
+        self._cache = {
+            "polstellen": None,
+            "definitionsluecken": None,
+        }
 
     @property
     def zaehler(self) -> Funktion:
@@ -235,7 +252,51 @@ class QuotientFunktion(StrukturierteFunktion):
         """Gibt den typisierten Nenner zurück."""
         return self._nenner
 
+    def polstellen(self) -> list[float]:
+        """
+        Berechnet die Polstellen der Funktion (Nenner-Nullstellen).
+
+        Dies ist eine universelle Methode für alle Quotientenfunktionen:
+        - Gebrochen-rationale: Polstellen des Nennerpolynoms
+        - Andere Quotienten: Nullstellen der Nennerfunktion
+
+        Returns:
+            Liste der x-Werte, an denen der Nenner null wird
+        """
+        if self._cache["polstellen"] is None:
+            if self.nenner is None:
+                raise ValueError("QuotientFunktion hat keinen gültigen Nenner")
+
+            # Wenn der Nenner bereits eine Funktion ist, rufe nullstellen() auf
+            if hasattr(self.nenner, "nullstellen") and callable(
+                getattr(self.nenner, "nullstellen")
+            ):
+                self._cache["polstellen"] = self.nenner.nullstellen()
+            else:
+                # Wenn der Nenner eine Liste von Nullstellen ist (bei einfacher Struktur)
+                try:
+                    self._cache["polstellen"] = list(self.nenner) if self.nenner else []
+                except (TypeError, ValueError):
+                    # Fallback: Leere Liste wenn keine Nullstellen ermittelbar
+                    self._cache["polstellen"] = []
+        return self._cache["polstellen"]
+
+    def definitionsluecken(self) -> list[float]:
+        """
+        Gibt die Definitionslücken der Funktion zurück.
+
+        Bei Quotientenfunktionen sind dies genau die Polstellen, da an diesen
+        Stellen der Nenner null wird und die Funktion nicht definiert ist.
+
+        Returns:
+            Liste der x-Werte, an denen die Funktion nicht definiert ist
+        """
+        if self._cache["definitionsluecken"] is None:
+            self._cache["definitionsluecken"] = self.polstellen()
+        return self._cache["definitionsluecken"]
+
     def __str__(self):
+        """String-Repräsentation für Schüler und Lehrer."""
         return f"Quotient({self.zaehler}, {self.nenner})"
 
 
