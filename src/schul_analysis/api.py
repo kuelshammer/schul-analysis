@@ -487,7 +487,7 @@ def Term(funktion: Funktionstyp) -> Any:
         raise SchulAnalysisError(f"Fehler bei der LaTeX-Darstellung: {str(e)}")
 
 
-def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
+def Ausmultiplizieren(funktion: Funktionstyp) -> None:
     """
     Multipliziert eine Funktion aus (modifiziert das Original).
 
@@ -499,7 +499,7 @@ def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
         funktion: Eine beliebige Funktion aus dem Schul-Analysis Framework
 
     Returns:
-        Dieselbe Funktion mit ausmultipliziertem Term (für Method Chaining)
+        None (die Funktion wird direkt verändert)
 
     Examples:
         >>> f = Funktion("(x+1)(x-2)")
@@ -507,9 +507,9 @@ def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
         >>> Ausmultiplizieren(f)  # Modifiziert f direkt
         >>> print(f.term)  # x^2 - x - 2 (f ist jetzt verändert)
 
-        # Method Chaining möglich:
+        # Für Method Chaining die Methode direkt verwenden:
         >>> g = Funktion("(x+1)^3")
-        >>> ableitung = Ausmultiplizieren(g).ableitung()
+        >>> ableitung = g.ausmultiplizieren().ableitung()
         >>> print(ableitung.term)  # 3*x^2 + 6*x + 3
 
         # Alternative Syntax:
@@ -525,9 +525,6 @@ def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
     """
     # Wende Ausmultiplizieren direkt auf die Funktion an (in-place)
     funktion.ausmultiplizieren()
-
-    # Gib dieselbe Funktion zurück für Method Chaining
-    return funktion
 
 
 def Zeichne(
