@@ -17,17 +17,23 @@ def _():
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-    from schul_analysis import Funktion, Term, Ausmultiplizieren, Nullstellen, Extremstellen, Ableitung
+    from schul_analysis import (
+        Ableitung,
+        Ausmultiplizieren,
+        Funktion,
+        Term,
+        Wendepunkte,
+    )
 
     # Zwei einfache Funktionen für erste Experimente
     f = Funktion("(x+1)^2")
     g = Funktion("(x-a)")
-    return Ableitung, Ausmultiplizieren, Extremstellen, Term, f, g
+    return Ableitung, Ausmultiplizieren, Term, Wendepunkte, f, g
 
 
 @app.cell
 def _(f, g):
-    h = f*g
+    h = f * g
     return (h,)
 
 
@@ -44,8 +50,8 @@ def _(Term, h):
 
 
 @app.cell
-def _(Extremstellen, h):
-    Extremstellen(h)
+def _(Wendepunkte, h):
+    Wendepunkte(h)
     return
 
 

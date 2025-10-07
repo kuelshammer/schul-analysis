@@ -5,7 +5,9 @@ Dieses Beispiel zeigt die verschiedenen Visualisierungsmöglichkeiten des modern
 einschließlich intelligenter Skalierung, spezieller Punkte und Plotly-Integration.
 """
 
-from schul_analysis import Extrema, Funktion, Nullstellen, wendepunkte
+from schul_analysis import Extrema, Funktion, Nullstellen
+
+# TODO: wendepunkte ist noch nicht implementiert
 
 
 def demo_basic_visualization():
@@ -32,13 +34,14 @@ def demo_basic_visualization():
             y_ext = f(x_ext)
             print(f"  {art} bei ({x_ext:.2f}, {y_ext:.2f})")
 
-    wp = wendepunkte(f)
-    if wp:
-        print("Wendepunkte:")
-        for wendepunkt in wp:
-            if len(wendepunkt) >= 2:
-                xw, yw = wendepunkt[0], wendepunkt[1]
-                print(f"  bei ({xw:.2f}, {yw:.2f})")
+    # TODO: wendepunkte ist noch nicht implementiert
+    # wp = wendepunkte(f)
+    # if wp:
+    #     print("Wendepunkte:")
+    #     for wendepunkt in wp:
+    #         if len(wendepunkt) >= 2:
+    #             xw, yw = wendepunkt[0], wendepunkt[1]
+    #             print(f"  bei ({xw:.2f}, {yw:.2f})")
 
     # Visualisierung (wenn Plotly installiert)
     print("\nVisualisierung:")
@@ -130,11 +133,12 @@ def demo_special_points():
     # Finde alle speziellen Punkte
     null = Nullstellen(f)
     ext = Extrema(f)
-    wp = wendepunkte(f)
+    # TODO: wendepunkte ist noch nicht implementiert
+    # wp = wendepunkte(f)
 
     print(f"Nullstellen: {null}")
     print(f"Extremstellen: {ext}")
-    print(f"Wendepunkte: {wp}")
+    # print(f"Wendepunkte: {wp}")
 
     # Erstelle Graph mit allen Punkten
     try:

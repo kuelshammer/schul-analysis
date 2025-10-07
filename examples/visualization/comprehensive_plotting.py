@@ -32,7 +32,7 @@ def example_perfect_parabola():
         f = Funktion(term)
 
         # Berechne Eigenschaften
-        Nullstellen = Nullstellen(f)
+        nullstellen = Nullstellen(f)
         extremstellen = Extremstellen(f)
 
         print(f"Nullstellen: {nullstellen}")
@@ -93,11 +93,11 @@ def example_rational_functions():
         f = Funktion(term)
 
         try:
-            # Berechne Polstellen
-            from schul_analysis import Polstellen
-
-            polstellen = Polstellen(f)
-            print(f"Polstellen: {polstellen}")
+            # TODO: Polstellen ist noch nicht implementiert
+            # from schul_analysis import Polstellen
+            # polstellen = Polstellen(f)
+            # print(f"Polstellen: {polstellen}")
+            pass
 
             # Erstelle Graph mit angepasstem Bereich
             if "1/(x^2 + 1)" in term:
@@ -131,7 +131,7 @@ def example_derivatives_analysis():
     print(f"f'''(x) = {f_strich_strich_strich.term()}")
 
     # Analyse
-    Nullstellen = Nullstellen(f)
+    nullstellen = Nullstellen(f)
     extremstellen = Extremstellen(f)
     wendepunkte = Wendepunkte(f)
 
@@ -174,15 +174,15 @@ def example_asymptotic_behavior():
         f = Funktion(term)
 
         try:
-            # Berechne Asymptoten
-            from schul_analysis import AsymptotischesVerhalten
-
-            asymptoten = AsymptotischesVerhalten(f)
-
-            if asymptoten:
-                print("Asymptoten:")
-                for asymp in asymptoten:
-                    print(f"  - {asymp}")
+            # TODO: AsymptotischesVerhalten ist noch nicht implementiert
+            # from schul_analysis import AsymptotischesVerhalten
+            # asymptoten = AsymptotischesVerhalten(f)
+            #
+            # if asymptoten:
+            #     print("Asymptoten:")
+            #     for asymp in asymptoten:
+            #         print(f"  - {asymp}")
+            pass
 
             # Erstelle Graph
             if "Hyperbel" in beschreibung:

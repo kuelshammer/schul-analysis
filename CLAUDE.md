@@ -66,6 +66,43 @@ Zeichne(f, x_bereich=(-5, 5))        # statt f.zeige_funktion()
 - Vor jedem Commit ausführen!
 - Typos statt mypy verwenden
 
+### **Type System Best Practices**
+
+**Typ-Sicherheit für mathematische Exaktheit:**
+
+- **Verwende `@preserve_exact_types`** für alle mathematischen Funktionen
+- **Implementiere Type Guards** für Runtime-Validierung der Präzision
+- **Nutze Datenklassen** für strukturierte mathematische Ergebnisse
+- **Verwende Enums** statt magic strings für mathematische Konzepte
+
+**Beispiel für korrekte Typ-Verwendung:**
+
+```python
+from .sympy_types import (
+    ExtremumTyp,
+    Nullstelle,
+    Extremum,
+    preserve_exact_types,
+    is_exact_sympy_expr,
+)
+
+@preserve_exact_types
+def ableitung(self, ordnung: int = 1) -> "Funktion":
+    """Berechnet die Ableitung unter Garantie der Exaktheit."""
+    # Implementierung mit Validierung
+
+def extrema(self) -> list[Extremum]:
+    """Gibt Extremstellen als typisierte Datenklassen zurück."""
+    # Strukturierte Ergebnisse mit Semantik
+```
+
+**Validation-Richtlinien:**
+
+- **Immer `validate_function_result()`** nach symbolischen Berechnungen
+- **Prüfe auf `is_exact_sympy_expr()`** vor Rückgabe von Ergebnissen
+- **Verwende deutsche Fehlermeldungen** in Validierungs-Decorators
+- **Abitur-Konsistenz prüfen** - Ergebnisse müssen deutschen Anforderungen entsprechen
+
 ### **Testing: pytest**
 
 - **Tests ausführen**: `uv run pytest`
@@ -144,6 +181,100 @@ uv run ty check && uv run ruff check && uv run ruff format && uv run pytest
 
 - `sphinx>=7.0.0` - Dokumentations-Generator
 - `sphinx-rtd-theme>=1.3.0` - Theme
+
+## 🔬 Typ-System-Architektur
+
+### **Philosophie: Mathematische Exaktheit vor Bequemlichkeit**
+
+Das Schul-Analysis Framework verwendet ein revolutionäres Typ-System, das pädagogische Exaktheit durch strenge Typisierung gewährleistet. Die Architektur stellt sicher, dass alle Berechnungen symbolisch exakt bleiben und den Anforderungen des deutschen Mathematikunterrichts entsprechen.
+
+### **Kernkomponenten**
+
+#### **1. Type Variables mit Mathematischen Bounds**
+
+```python
+# Core mathematical type variables with proper bounds
+T_Expr = TypeVar("T_Expr", bound=sp.Expr)  # Generischer SymPy-Ausdruck
+T_Num = TypeVar("T_Num", bound=sp.Number)  # Numerische SymPy-Werte
+T_Ganzrat = TypeVar("T_Ganzrat", bound=sp.Poly)  # Ganzrationale Funktionen
+```
+
+#### **2. Enums für Mathematische Konzepte**
+
+Eliminierung von magic strings durch typsichere Enums:
+
+```python
+class ExtremumTyp(Enum):
+    """Typen von Extremstellen für präzise Typisierung."""
+    MINIMUM = "Minimum"
+    MAXIMUM = "Maximum"
+    SATTELPUNKT = "Sattelpunkt"
+
+class NullstellenTyp(Enum):
+    """Typen von Nullstellen mit pädagogischer Klarheit."""
+    REELL = "reell"
+    KOMPLEX = "komplex"
+    DOPPEL = "doppelte"
+```
+
+#### **3. Strukturierte Datenklassen mit Pädagogischer Semantik**
+
+```python
+@dataclass(frozen=True)
+class Nullstelle:
+    """Präzise Typisierung für Nullstellen mit zusätzlichen Informationen."""
+    x: T_Expr
+    multiplicitaet: int = 1
+    exakt: bool = True
+
+@dataclass(frozen=True)
+class Extremum:
+    """Strukturierte Darstellung von Extremstellen mit Typisierung."""
+    x: T_Expr
+    y: T_Expr
+    typ: ExtremumTyp
+    exakt: bool = True
+```
+
+#### **4. Validation Decorators für Pädagogische Korrektheit**
+
+```python
+@preserve_exact_types
+def ableitung(self, ordnung: int = 1) -> "Funktion":
+    """Berechnet die Ableitung unter Garantie der Exaktheit."""
+    abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
+    validate_function_result(abgeleiteter_term, "exact")
+    return Funktion(abgeleiteter_term)
+```
+
+#### **5. Type Guards für Runtime-Präzision**
+
+```python
+def is_exact_sympy_expr(expr: Any) -> TypeGuard[T_Expr]:
+    """Stellt sicher, dass kein Ausdruck numerisch approximiert wurde."""
+    if not isinstance(expr, sp.Expr):
+        return False
+    # Kritisch: Verhindert Float-Approximation
+    return not any(isinstance(atom, sp.Float) for atom in expr.atoms(sp.Number))
+```
+
+### **Pädagogische Fehlermeldungen**
+
+Das Typ-System erzeugt deutsche Fehlermeldungen, die als Lernmomente dienen:
+
+```python
+validate_function_result(approx_result, "expected_exact")
+# Erzeugt: "Erwarteter Typ: exact, aber es wurde ein numerisches Ergebnis gefunden: 0.333..."
+# Lehrt: "Verwende 1/3 statt 0.333 für mathematische Exaktheit"
+```
+
+### **Abitur-Konsistenz gewährleistet**
+
+Alle Ergebnisse entsprechen genau den Anforderungen deutscher Mathematikprüfungen:
+
+- **Exakte Brüche**: `1/4` statt `0.25`
+- **Symbolische Parameter**: `a*x² + b*x + c` bleibt parametrisiert
+- **Wurzel-Ausdrücke**: `√2` bleibt exakt, wird nicht numerisch angenähert
 
 ## 🏗️ Projektstruktur
 
@@ -352,9 +483,20 @@ uv publish
 
 ### **Mathematische Korrektheit**
 
-- Immer SymPy für exakte Berechnungen verwenden
-- Keine numerischen Approximationen ohne Warnung
-- Aspect Ratio Control bei Plotly Visualisierungen
+- **Typ-System nutzen**: Immer `@preserve_exact_types` für mathematische Funktionen
+- **SymPy-Integration**: Garantierte symbolische Präzision in allen Berechnungen
+- **Keine numerischen Approximationen**: `1/3` bleibt als `sp.Rational(1, 3)` erhalten
+- **Runtime-Validierung**: Automatische Prüfung der mathematischen Korrektheit
+- **Abitur-Konsistenz**: Ergebnisse entsprechen deutschen Prüfungsanforderungen
+- **Aspect Ratio Control** bei Plotly Visualisierungen
+
+### **Type Safety und Validierung**
+
+- **Strenge Typisierung**: Verwende präzise mathematische Typen statt `Any`
+- **Datenklassen mit Semantik**: `Nullstelle`, `Extremum`, `Wendepunkt` für strukturierte Ergebnisse
+- **Enum-basierte Klassifikation**: `ExtremumTyp.MINIMUM` statt magic strings
+- **Type Guards implementieren**: `is_exact_sympy_expr()` zur Präzisionssicherung
+- **Deutsche Fehlermeldungen**: Pädagogische Validierung als Lernmomente
 
 ### **Performance**
 

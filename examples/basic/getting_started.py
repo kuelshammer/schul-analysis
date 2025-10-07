@@ -6,7 +6,7 @@ mit Magic Factory Pattern für die mathematische Analyse von Funktionen.
 """
 
 # Moderne Importe - kein manuelles Pfad-Management mehr nötig!
-from schul_analysis import Ableitung, Extrema, Funktion
+from schul_analysis import Ableitung, Extrema, Funktion, Nullstellen
 
 # 1. Funktion mit Magic Factory erstellen
 print("=== 1. Funktion mit Magic Factory ===")

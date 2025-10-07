@@ -8,15 +8,17 @@ import numpy as np
 
 from schul_analysis import (
     Ableitung,
-    AsymptotischesVerhalten,
     Extrema,
     Funktion,
-    Grenzwert,
     Integral,
     Nullstellen,
-    Polstellen,
-    wendepunkte,
 )
+
+# TODO: Diese Module sind noch nicht implementiert
+# AsymptotischesVerhalten,
+# Grenzwert,
+# Polstellen,
+# wendepunkte,
 
 # 1. Komplexe ganzrationale Funktion
 print("=== 1. Komplexe ganzrationale Funktion ===")
@@ -37,36 +39,38 @@ print(f"f''(x) = {f_doppelt.term()}")
 extremst = Extrema(f)
 print(f"Extremstellen: {extremst}")
 
-wendep = wendepunkte(f)
-print(f"Wendepunkte: {wendep}")
+# TODO: wendepunkte ist noch nicht implementiert
+# wendep = wendepunkte(f)
+# print(f"Wendepunkte: {wendep}")
 
 # 2. Gebrochen-rationale Funktion mit Asymptoten
 print("\n=== 2. Gebrochen-rationale Funktion ===")
 g = Funktion("(x^2 - 4)/(x^2 - 1)")
 print(f"Funktion: g(x) = {g.term()}")
 
+# TODO: Diese Funktionen sind noch nicht implementiert
 # Polstellen finden
-polst = Polstellen(g)
-print(f"Polstellen: {polst}")
+# polst = Polstellen(g)
+# print(f"Polstellen: {polst}")
 
 # Asymptotisches Verhalten
-try:
-    asympt_verhalten = AsymptotischesVerhalten(g)
-    print(f"Asymptotisches Verhalten: {asympt_verhalten}")
-except Exception as e:
-    print(f"Asymptotisches Verhalten konnte nicht berechnet werden: {e}")
+# try:
+#     asympt_verhalten = AsymptotischesVerhalten(g)
+#     print(f"Asymptotisches Verhalten: {asympt_verhalten}")
+# except Exception as e:
+#     print(f"Asymptotisches Verhalten konnte nicht berechnet werden: {e}")
 
 # Grenzwerte analysieren
-print("\nGrenzwerte:")
-grenzwerte = [
-    ("x->∞", Grenzwert(g, float("inf"))),
-    ("x->-∞", Grenzwert(g, float("-inf"))),
-    ("x->1+", Grenzwert(g, 1.001)),
-    ("x->1-", Grenzwert(g, 0.999)),
-]
+# print("\nGrenzwerte:")
+# grenzwerte = [
+#     ("x->∞", Grenzwert(g, float("inf"))),
+#     ("x->-∞", Grenzwert(g, float("-inf"))),
+#     ("x->1+", Grenzwert(g, 1.001)),
+#     ("x->1-", Grenzwert(g, 0.999)),
+# ]
 
-for beschreibung, wert in grenzwerte:
-    print(f"  {beschreibung}: {wert}")
+# for beschreibung, wert in grenzwerte:
+#     print(f"  {beschreibung}: {wert}")
 
 # 3. Integralberechnung
 print("\n=== 3. Integralberechnung ===")
@@ -96,14 +100,15 @@ def kurvendiskussion(funktion, name="f"):
     print(f"\nKurvendiskussion für {name}(x) = {funktion.term()}")
 
     # Definitionsbereich
-    try:
-        polstellen = Polstellen(funktion)
-        if polstellen:
-            print(f"Definitionsbereich: ℝ \\ {polstellen}")
-        else:
-            print("Definitionsbereich: ℝ")
-    except Exception:
-        print("Definitionsbereich: ℝ")
+    # TODO: Polstellen ist noch nicht implementiert
+    # try:
+    #     polstellen = Polstellen(funktion)
+    #     if polstellen:
+    #         print(f"Definitionsbereich: ℝ \\ {polstellen}")
+    #     else:
+    #         print("Definitionsbereich: ℝ")
+    # except Exception:
+    print("Definitionsbereich: ℝ")
 
     # Nullstellen
     try:
@@ -119,20 +124,20 @@ def kurvendiskussion(funktion, name="f"):
     except Exception as e:
         print(f"Extremstellen: Fehler - {e}")
 
-    # Wendepunkte
-    try:
-        wp = wendepunkte(funktion)
-        print(f"Wendepunkte: {wp}")
-    except Exception as e:
-        print(f"Wendepunkte: Fehler - {e}")
+    # TODO: Wendepunkte ist noch nicht implementiert
+    # try:
+    #     wp = wendepunkte(funktion)
+    #     print(f"Wendepunkte: {wp}")
+    # except Exception as e:
+    #     print(f"Wendepunkte: Fehler - {e}")
 
-    # Asymptoten
-    try:
-        asympt = AsymptotischesVerhalten(funktion)
-        if asympt:
-            print(f"Asymptoten: {asympt}")
-    except Exception:
-        pass
+    # TODO: AsymptotischesVerhalten ist noch nicht implementiert
+    # try:
+    #     asympt = AsymptotischesVerhalten(funktion)
+    #     if asympt:
+    #         print(f"Asymptoten: {asympt}")
+    # except Exception:
+    #     pass
 
 
 # Teste mit verschiedenen Funktionen

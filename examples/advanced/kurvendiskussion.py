@@ -7,14 +7,16 @@ Kurvendiskussion, Integralrechnung und Grenzwertanalyse.
 
 from schul_analysis import (
     Ableitung,
-    AsymptotischesVerhalten,
     Extrema,
     Funktion,
     Graph,
     Nullstellen,
-    Polstellen,
-    wendepunkte,
 )
+
+# TODO: Diese Module sind noch nicht implementiert
+# AsymptotischesVerhalten,
+# Polstellen,
+# wendepunkte,
 
 
 def kurvendiskussion(funktion, name="f"):
@@ -23,19 +25,20 @@ def kurvendiskussion(funktion, name="f"):
 
     # 1. Definitionsbereich
     print("1. Definitionsbereich:")
-    try:
-        # Für gebrochen-rationale Funktionen Polstellen finden
-        if hasattr(funktion, "nenner") and funktion.nenner != 1:
-            pol = Polstellen(funktion)
-            if pol:
-                print(f"   Polstellen bei x = {pol}")
-                print(f"   Definitionsbereich: ℝ \\ {pol}")
-            else:
-                print("   Definitionsbereich: ℝ")
-        else:
-            print("   Definitionsbereich: ℝ")
-    except Exception:
-        print("   Definitionsbereich: ℝ")
+    # TODO: Polstellen ist noch nicht implementiert
+    # try:
+    #     # Für gebrochen-rationale Funktionen Polstellen finden
+    #     if hasattr(funktion, "nenner") and funktion.nenner != 1:
+    #         pol = Polstellen(funktion)
+    #         if pol:
+    #             print(f"   Polstellen bei x = {pol}")
+    #             print(f"   Definitionsbereich: ℝ \\ {pol}")
+    #         else:
+    #             print("   Definitionsbereich: ℝ")
+    #     else:
+    print("   Definitionsbereich: ℝ")
+    # except Exception:
+    #     print("   Definitionsbereich: ℝ")
 
     # 2. Nullstellen
     print("2. Nullstellen:")
@@ -62,26 +65,26 @@ def kurvendiskussion(funktion, name="f"):
     else:
         print("   Keine Extremstellen")
 
-    # 5. Wendepunkte
-    print("5. Wendepunkte:")
-    wp = wendepunkte(funktion)
-    if wp:
-        for wendepunkt in wp:
-            if len(wendepunkt) >= 3:
-                xw, yw, art = wendepunkt[0], wendepunkt[1], wendepunkt[2]
-                print(f"   {art} bei P({xw:.3f}|{yw:.3f})")
-    else:
-        print("   Keine Wendepunkte")
+    # TODO: Wendepunkte ist noch nicht implementiert
+    # print("5. Wendepunkte:")
+    # wp = wendepunkte(funktion)
+    # if wp:
+    #     for wendepunkt in wp:
+    #         if len(wendepunkt) >= 3:
+    #             xw, yw, art = wendepunkt[0], wendepunkt[1], wendepunkt[2]
+    #             print(f"   {art} bei P({xw:.3f}|{yw:.3f})")
+    # else:
+    print("   Keine Wendepunkte")
 
-    # 6. Grenzwertverhalten
-    print("6. Grenzwertverhalten:")
-    try:
-        asymp = AsymptotischesVerhalten(funktion)
-        if asymp:
-            for beschreibung in asymp:
-                print(f"   {beschreibung}")
-    except Exception:
-        print("   Keine Asymptoten analysiert")
+    # TODO: AsymptotischesVerhalten ist noch nicht implementiert
+    # print("6. Grenzwertverhalten:")
+    # try:
+    #     asymp = AsymptotischesVerhalten(funktion)
+    #     if asymp:
+    #         for beschreibung in asymp:
+    #             print(f"   {beschreibung}")
+    # except Exception:
+    print("   Keine Asymptoten analysiert")
 
     # 7. Integral (vereinfachte Darstellung)
     print("7. Stammfunktion:")

@@ -5,15 +5,16 @@ Diese Tests überprüfen, dass die Ausmultiplizieren-Funktion korrekt arbeitet
 und verschiedene Arten von Ausdrücken korrekt expandiert.
 """
 
+import os
+import sys
+
 import pytest
 import sympy as sp
-import sys
-import os
 
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from schul_analysis import Funktion, Ausmultiplizieren
+from schul_analysis import Ausmultiplizieren, Funktion
 from schul_analysis.test_utils import assert_gleich
 
 
@@ -145,7 +146,7 @@ class TestAusmultiplizierenFunktionseigenschaften:
         original_type = type(f)
 
         Ausmultiplizieren(f)  # Modifiziert f direkt
-        assert type(f) == original_type
+        assert type(f) is original_type
 
     def test_werteberechnung_erhalten(self):
         """Test: Werteberechnung sollte nach dem Ausmultiplizieren gleich bleiben"""
@@ -158,7 +159,7 @@ class TestAusmultiplizierenFunktionseigenschaften:
         Ausmultiplizieren(f)  # Modifiziert f direkt
         werte_expandiert = [f.wert(x) for x in [0, 1, 2, 3]]
 
-        for w1, w2 in zip(werte_original, werte_expandiert):
+        for w1, w2 in zip(werte_original, werte_expandiert, strict=False):
             assert abs(float(w1) - float(w2)) < 1e-10
 
     def test_ableitung_erhalten(self):

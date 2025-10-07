@@ -7,6 +7,7 @@ korrekt funktionieren und die Magic Factory die optimalen Funktionstypen wählt.
 """
 
 import sys
+
 import pytest
 import sympy as sp
 
@@ -125,7 +126,7 @@ class TestArithmetischeOperationen:
         f = Funktion("x^2")
 
         with pytest.raises(ZeroDivisionError):
-            h = f / 0
+            f / 0
 
     def test_potenzierung_funktion_mit_exponent(self):
         """Teste f ** exponent"""
@@ -247,7 +248,7 @@ class TestFehlerbehandlung:
         f = Funktion("x^2")
 
         with pytest.raises((ValueError, TypeError)):  # TypeError wird auch akzeptiert
-            h = f + "string"
+            f + "string"
 
     def test_unsupported_operation(self):
         """Teste NotImplemented bei nicht unterstützten Operationen"""

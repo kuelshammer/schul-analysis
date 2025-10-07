@@ -6,14 +6,15 @@ Dieser Test überprüft, dass Extremstellen() exakte symbolische Ergebnisse lief
 und nicht fälschlicherweise zu Floats rundet.
 """
 
-import sys
 import os
+import sys
 
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import sympy as sp
-from schul_analysis import Funktion, Extremstellen
+
+from schul_analysis import Extremstellen, Funktion
 
 
 def test_extremstellen_parametrisiert():
@@ -40,11 +41,11 @@ def test_extremstellen_parametrisiert():
     assert not isinstance(x_wert, float), (
         f"x_wert sollte kein Float sein, got {type(x_wert)}"
     )
-    assert hasattr(x_wert, "free_symbols"), f"x_wert sollte SymPy-Ausdruck sein"
+    assert hasattr(x_wert, "free_symbols"), "x_wert sollte SymPy-Ausdruck sein"
 
     # Überprüfe, dass der Parameter a enthalten ist
     assert sp.Symbol("a") in x_wert.free_symbols, (
-        f"Parameter a sollte im Ergebnis enthalten sein"
+        "Parameter a sollte im Ergebnis enthalten sein"
     )
 
     print("✅ Parametrisierte Extremstellen bleiben exakt\n")
@@ -159,12 +160,12 @@ def test_extremstellen_mehrere_parameter():
     assert not isinstance(x_wert, float), (
         f"x_wert sollte kein Float sein, got {type(x_wert)}"
     )
-    assert hasattr(x_wert, "free_symbols"), f"x_wert sollte SymPy-Ausdruck sein"
+    assert hasattr(x_wert, "free_symbols"), "x_wert sollte SymPy-Ausdruck sein"
 
     # Überprüfe, dass die Parameter a und b enthalten sind
     symbols = x_wert.free_symbols
-    assert sp.Symbol("a") in symbols, f"Parameter a sollte im Ergebnis enthalten sein"
-    assert sp.Symbol("b") in symbols, f"Parameter b sollte im Ergebnis enthalten sein"
+    assert sp.Symbol("a") in symbols, "Parameter a sollte im Ergebnis enthalten sein"
+    assert sp.Symbol("b") in symbols, "Parameter b sollte im Ergebnis enthalten sein"
 
     print("✅ Mehrere Parameter werden korrekt behandelt\n")
 

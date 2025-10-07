@@ -22,6 +22,8 @@ def _():
     # Zwei einfache Funktionen für erste Experimente
     f = Funktion("x^2")
     g = Funktion("3x + 5")
+    print(f"Funktion f: {f.term()}")
+    print(f"Funktion g: {g.term()}")
     return
 
 

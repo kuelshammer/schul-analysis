@@ -20,9 +20,9 @@ app = marimo.App()
 @app.cell
 def _():
     """Setup und Importe"""
-    from schul_analysis import Ableitung, Funktion
+    from schul_analysis import Ableitung, Extrema, Funktion, Nullstellen
 
-    return Funktion, Nullstellen, Ableitung, extrema
+    return Funktion, Nullstellen, Ableitung, Extrema
 
 
 @app.cell
@@ -78,7 +78,7 @@ def _(f, mo):
 
 
 @app.cell
-def _(f, mo, Nullstellen, extrema):
+def _(f, mo, Nullstellen, Extrema):
     """Automatische Analyse"""
     mo.md("### 🔍 Automatische Analyse:")
 

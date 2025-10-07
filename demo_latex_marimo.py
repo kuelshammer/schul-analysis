@@ -10,7 +10,7 @@ import sys
 
 sys.path.insert(0, "/Users/max/Python/Schul-Analysis/src")
 
-from schul_analysis import Funktion, Term, Nullstellen, Ableitung
+from schul_analysis import Ableitung, Funktion, Nullstellen
 
 # Beispiel 1: Einfache quadratische Funktion
 print("=== Beispiel 1: Quadratische Funktion ===")

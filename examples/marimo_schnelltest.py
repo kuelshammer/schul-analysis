@@ -41,13 +41,13 @@ g_Nullstellen = Nullstellen(g)
 mo.md("## 🎯 Schul-Analysis Framework - Schnelltest")
 mo.md(f"**Funktion f:** f(x) = {f.term()}")
 mo.md(f"**Ableitung f':** f'(x) = {f_strich.term()}")
-mo.md(f"**Nullstellen f:** x = {f_nullstellen}")
+mo.md(f"**Nullstellen f:** x = {f_Nullstellen}")
 
 mo.md("---")
 
 mo.md(f"**Funktion g:** g(x) = {g.term()}")
 mo.md(f"**Ableitung g':** g'(x) = {g_strich.term()}")
-mo.md(f"**Nullstellen g:** x = {g_nullstellen}")
+mo.md(f"**Nullstellen g:** x = {g_Nullstellen}")
 
 # =============================================================================
 # 🧪 EINFACHE TESTS
