@@ -20,9 +20,9 @@ app = marimo.App()
 @app.cell
 def _():
     """Setup und Importe"""
-    from schul_analysis import Funktion, ableitung, extrema, nullstellen
+    from schul_analysis import Ableitung, Funktion
 
-    return Funktion, nullstellen, ableitung, extrema
+    return Funktion, Nullstellen, Ableitung, extrema
 
 
 @app.cell
@@ -78,14 +78,14 @@ def _(f, mo):
 
 
 @app.cell
-def _(f, mo, nullstellen, extrema):
+def _(f, mo, Nullstellen, extrema):
     """Automatische Analyse"""
     mo.md("### 🔍 Automatische Analyse:")
 
     analyse_resultate = [
         f"**Funktionstyp:** {f.funktionstyp}",
-        f"**Nullstellen:** {nullstellen(f)}",
-        f"**Extrema:** {extrema(f)}",
+        f"**Nullstellen:** {Nullstellen(f)}",
+        f"**Extrema:** {Extrema(f)}",
     ]
 
     for resultat in analyse_resultate:
@@ -95,12 +95,12 @@ def _(f, mo, nullstellen, extrema):
 
 
 @app.cell
-def _(f, ableitung, mo):
+def _(f, Ableitung, mo):
     """Ableitungen mit automatischer Namensgebung"""
     mo.md("### 📈 Ableitungen:")
 
-    f1 = ableitung(f)  # f'
-    f2 = ableitung(f1)  # f''
+    f1 = Ableitung(f)  # f'
+    f2 = Ableitung(f1)  # f''
 
     mo.md(f"- **f'(x) = {f1.term()}** (Name: {f1.name})")
     mo.md(f"- **f''(x) = {f2.term()}** (Name: {f2.name})")
@@ -223,7 +223,7 @@ def _(mo):
     - **🎯 Magic Factory**: `Funktion("term")` - einfache Erstellung
     - **📝 LaTeX-Darstellung**: Automatische Anzeige von f(x) = term
     - **🏷️ Intelligente Namen**: Ableitungen bekommen automatisch Namen (f', f'')
-    - **🔍 Deutsche API**: `nullstellen()`, `ableitung()`, `extrema()`
+    - **🔍 Deutsche API**: `Nullstellen()`, `Ableitung()`, `Extrema()`
     - **📊 Interaktiv**: Perfekt für Marimo-Notebooks
     - **🎓 Pädagogisch**: Optimiert für den Mathematikunterricht
 

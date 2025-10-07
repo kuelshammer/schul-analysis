@@ -32,7 +32,7 @@ def example_perfect_parabola():
         f = Funktion(term)
 
         # Berechne Eigenschaften
-        nullstellen = Nullstellen(f)
+        Nullstellen = Nullstellen(f)
         extremstellen = Extremstellen(f)
 
         print(f"Nullstellen: {nullstellen}")
@@ -131,7 +131,7 @@ def example_derivatives_analysis():
     print(f"f'''(x) = {f_strich_strich_strich.term()}")
 
     # Analyse
-    nullstellen = Nullstellen(f)
+    Nullstellen = Nullstellen(f)
     extremstellen = Extremstellen(f)
     wendepunkte = Wendepunkte(f)
 

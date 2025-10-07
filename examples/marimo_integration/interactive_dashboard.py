@@ -34,7 +34,7 @@ def interaktive_funktionsanalyse():
             f = Funktion(funktion_input.value)
 
             # Mathematische Analyse
-            # nullstellen = Nullstellen(f)  # TODO: Fix import
+            # Nullstellen = Nullstellen(f)  # TODO: Fix import
             f_strich = Ableitung(f)
             extremstellen = Extremstellen(f)
 
@@ -97,7 +97,7 @@ def parameter_experimente():
             f = Funktion(f_str)
 
             # Analyse durchführen
-            # nullstellen = Nullstellen(f)
+            # Nullstellen = Nullstellen(f)
             extremstellen = Extremstellen(f)
 
             # Scheitelpunkt berechnen (für Parabeln)

@@ -266,7 +266,45 @@ def test_nullstellen():
 - **Natürliche Parameter**: Parameter-Namen wie `ordnung`, `bereich`, `punkt`
 - **Verständliche Fehler**: Fehlermeldungen erklären das Problem in einfachem Deutsch
 
-### **Namenskonventionen für Schul-Mathematik**
+### **🔥 KONSISTENTE NAMENSKONVENTION (NEU)**
+
+#### **Wrapper-Funktionen (großgeschrieben wie deutsche Substantive)**
+
+```python
+# ✅ KORREKT - Natürliche mathematische Notation
+xs = Nullstellen(f)           # Groß wie deutsche Substantive
+f1 = Ableitung(f)             # Groß wie deutsche Substantive
+ext = Extrema(f)              # Groß wie deutsche Substantive
+wp = Wendepunkte(f)           # Groß wie deutsche Substantive
+```
+
+#### **Klassenmethoden (kleingeschrieben)**
+
+```python
+# ✅ KORREKT - Methoden der Funktionsobjekte
+f1 = f.ableitung()            # Kleingeschrieben
+xs = f.nullstellen            # Kleingeschrieben (Property)
+y = f.wert(2)                 # Kleingeschrieben
+```
+
+#### **Klassen und Typen (PascalCase)**
+
+- **Funktionstypen**: `GanzrationaleFunktion`, `ExponentialFunktion`
+- **Spezialklassen**: `LineareGleichung`, `Schmiegparabel`
+
+#### **Variablen und Parameter (snake_case)**
+
+- ** interne Namen**: `koeffizienten`, `nullstellen_liste`, `x_bereich`
+- **Parameter**: `real`, `runden`, `ordnung`
+
+#### **Warum diese Konvention?**
+
+1. **Mathematische Nähe**: `Nullstellen(f)` entspricht der mathematischen Notation "Nullstellen von f"
+2. **Klare Unterscheidung**: `Nullstellen(f)` vs `f.nullstellen` ist sofort erkennbar
+3. **Deutsche Grammatik**: Substantive werden großgeschrieben, Verben/Methoden klein
+4. **Schülerfreundlichkeit**: Intuitive, an den Unterricht angelehnte Syntax
+
+### **Namenskonventionen für Schul-Mathematik (Legacy)**
 
 - **Wrapper-Funktionen**: `PascalCase` wie `Nullstellen`, `Ableitung`, `Extrema`
 - **Klassen**: `PascalCase` mit deutschen Namen wie `GanzrationaleFunktion`

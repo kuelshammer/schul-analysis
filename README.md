@@ -30,7 +30,8 @@ e = Funktion("e^x")                    # → ExponentialFunktion
 
 ### 🎓 **Pädagogische Perfektion**
 
-- **Deutsche API**: Alle Methoden auf Deutsch (`Nullstellen(f)`, `Ableitung(f)`)
+- **Deutsche API**: Alle Wrapper-Funktionen auf Deutsch (`Nullstellen(f)`, `Ableitung(f)`)
+- **Konsistente Namenskonvention**: Wrapper großgeschrieben (wie deutsche Substantive), Methoden kleingeschrieben
 - **Natürliche Syntax**: `f(2)` statt `f.wert(2)`, `f' = Ableitung(f)`
 - **Lösungswege**: Schritt-für-Schritt-Erklärungen mit LaTeX
 - **Schülerfreundliche Fehlermeldungen**
@@ -53,6 +54,34 @@ Das Framework unterstützt jetzt die natürliche mathematische Notation `f(x)`:
 # Ganzrationale Funktionen
 f = GanzrationaleFunktion("x^2 + 2x - 3")
 print(f(2))     # 5.0 (statt f.wert(2))
+```
+
+### 🔥 Konsistente Namenskonvention
+
+**Wrapper-Funktionen (großgeschrieben wie deutsche Substantive):**
+
+```python
+# Natürliche mathematische Notation für Schüler
+f = Funktion("x^2 - 4x + 3")
+xs = Nullstellen(f)           # [1.0, 3.0]
+ext_st = Extremstellen(f)     # [(-1, 'Maximum')]
+ext_pt = Extrempunkte(f)      # [(-1, 14.0, 'Maximum')]
+wend_st = Wendestellen(f)    # [(0, 'Wendepunkt')]
+wend_pt = Wendepunkte(f)     # [(0, 0.0, 'Wendepunkt')]
+f1 = Ableitung(f)             # 2x - 4
+F_unbest = Integral(f)       # (1/3)x³
+F_best = Integral(f, 0, 1)   # 1/3
+graph = Graph(f)             # Automatische Skalierung
+```
+
+**Klassenmethoden (kleingeschrieben):**
+
+```python
+# Methoden der Funktionsobjekte
+f = Funktion("x^2 - 4x + 3")
+f1 = f.ableitung()            # 2x - 4
+xs = f.nullstellen            # [1.0, 3.0] (Property)
+y = f.wert(2)                 # -1.0
 ```
 
 ### 🔥 Prime-Notation für Ableitungen

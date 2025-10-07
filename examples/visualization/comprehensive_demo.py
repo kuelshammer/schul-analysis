@@ -5,7 +5,7 @@ Dieses Beispiel zeigt die verschiedenen Visualisierungsmöglichkeiten des modern
 einschließlich intelligenter Skalierung, spezieller Punkte und Plotly-Integration.
 """
 
-from schul_analysis import Funktion, extrema, nullstellen, wendepunkte
+from schul_analysis import Extrema, Funktion, Nullstellen, wendepunkte
 
 
 def demo_basic_visualization():
@@ -23,9 +23,9 @@ def demo_basic_visualization():
 
     # Mathematische Analyse
     print("\nMathematische Analyse:")
-    print(f"Nullstellen: {nullstellen(f)}")
+    print(f"Nullstellen: {Nullstellen(f)}")
 
-    ext = extrema(f)
+    ext = Extrema(f)
     if ext:
         print("Extremstellen:")
         for x_ext, art in ext:
@@ -75,8 +75,8 @@ def demo_quadratic_functions():
         f = Funktion(term)
 
         # Analyse
-        null = nullstellen(f)
-        ext = extrema(f)
+        null = Nullstellen(f)
+        ext = Extrema(f)
 
         print(f"  Nullstellen: {null}")
         if ext:
@@ -100,8 +100,8 @@ def demo_comparison():
     print("Funktion und ihre Ableitungen:")
 
     f = Funktion("x^3 - 3x^2 - 4x + 2")
-    f1 = f.ableitung(1)  # f'
-    f2 = f.ableitung(2)  # f''
+    f1 = f.Ableitung(1)  # f'
+    f2 = f.Ableitung(2)  # f''
 
     print(f"Original:   f(x)  = {f.term()}")
     print(f"1. Ableitung: f'(x) = {f1.term()}")
@@ -128,8 +128,8 @@ def demo_special_points():
     print(f"Funktion: f(x) = {f.term()}")
 
     # Finde alle speziellen Punkte
-    null = nullstellen(f)
-    ext = extrema(f)
+    null = Nullstellen(f)
+    ext = Extrema(f)
     wp = wendepunkte(f)
 
     print(f"Nullstellen: {null}")

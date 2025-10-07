@@ -5,7 +5,7 @@ Dieses Beispiel zeigt alle Funktionen der neuen API mit automatischer Funktionse
 und wie sie im Unterricht eingesetzt werden können.
 """
 
-from schul_analysis import Funktion, ableitung, extrema, nullstellen, symmetrie
+from schul_analysis import Ableitung, Extrema, Funktion, Nullstellen, Symmetrie
 
 # =============================================================================
 # 1. BEISPIEL: Quadratische Funktion (Magic Factory)
@@ -20,11 +20,11 @@ print(f"f(x) = {f.term()}")
 print(f"Funktionstyp: {f.funktionstyp}")
 
 # Analysiere die Funktion mit der neuen Syntax
-print(f"Nullstellen: {nullstellen(f)}")
-print(f"1. Ableitung: {ableitung(f).term()}")
-print(f"2. Ableitung: {ableitung(f, 2).term()}")
-print(f"Extrema: {extrema(f)}")
-print(f"Symmetrie: {symmetrie(f)}")
+print(f"Nullstellen: {Nullstellen(f)}")
+print(f"1. Ableitung: {Ableitung(f).term()}")
+print(f"2. Ableitung: {Ableitung(f, 2).term()}")
+print(f"Extrema: {Extrema(f)}")
+print(f"Symmetrie: {Symmetrie(f)}")
 
 # Werteberechnung mit natürlicher Syntax
 print(f"f(0) = {f(0)}")
@@ -43,12 +43,12 @@ print(f"g(x) = {g.term()}")
 print(f"Funktionstyp: {g.funktionstyp}")
 
 # Analyse der kubischen Funktion
-print(f"Nullstellen: {nullstellen(g)}")
-print(f"1. Ableitung: {ableitung(g).term()}")
-print(f"2. Ableitung: {ableitung(ableitung(g)).term()}")
+print(f"Nullstellen: {Nullstellen(g)}")
+print(f"1. Ableitung: {Ableitung(g).term()}")
+print(f"2. Ableitung: {Ableitung(Ableitung(g)).term()}")
 
 # Extremstellen analysieren
-ext = extrema(g)
+ext = Extrema(g)
 if ext:
     print("Extremstellen:")
     for x_ext, art in ext:
@@ -71,7 +71,7 @@ print(f"f2(x) = {f2.term()}")
 
 # Schnittpunkt berechnen (Nullstellen der Differenz)
 differenz = Funktion("(2x + 3) - (-x + 5)")  # 3x - 2
-schnittpunkt = nullstellen(differenz)
+schnittpunkt = Nullstellen(differenz)
 print(f"Schnittpunkt bei x = {schnittpunkt}")
 
 if schnittpunkt:
@@ -98,7 +98,7 @@ try:
 except AttributeError:
     print("Polstellen: Nicht verfügbar für diesen Funktionstyp")
 
-print(f"Nullstellen: {nullstellen(h)}")
+print(f"Nullstellen: {Nullstellen(h)}")
 
 # =============================================================================
 # 5. BEISPIEL: Wertetabelle erstellen
@@ -161,9 +161,9 @@ original = Funktion("x^4 - 2x^3 + x^2 - 4x + 1")
 print(f"Original: f(x) = {original.term()}")
 
 # Ableitungen mit automatischer Namensgebung
-f1 = ableitung(original)  # f'
-f2 = ableitung(f1)  # f''
-f3 = ableitung(f2)  # f'''
+f1 = Ableitung(original)  # f'
+f2 = Ableitung(f1)  # f''
+f3 = Ableitung(f2)  # f'''
 
 print(f"f'(x) = {f1.term()} (Name: {f1.name})")
 print(f"f''(x) = {f2.term()} (Name: {f2.name})")
@@ -181,18 +181,18 @@ h = Funktion("-5t^2 + 20t")
 print(f"Höhe: h(t) = {h.term()} m")
 
 # Wann erreicht der Ball die maximale Höhe?
-max_zeit = extrema(h)[0][0] if extrema(h) else None
+max_zeit = Extrema(h)[0][0] if Extrema(h) else None
 if max_zeit is not None:
     max_hoehe = h(max_zeit)
     print(f"  Maximale Höhe von {max_hoehe} m nach {max_zeit} s")
 
 # Wann landet der Ball wieder?
-landezeiten = nullstellen(h)
+landezeiten = Nullstellen(h)
 if len(landezeiten) > 1:
     print(f"  Landung nach {landezeiten[1]} s")
 
 # Geschwindigkeit als 1. Ableitung
-v = ableitung(h)
+v = Ableitung(h)
 print(f"  Geschwindigkeit: v(t) = {v.term()} m/s")
 
 # =============================================================================
@@ -208,7 +208,7 @@ print("• 🎯 Magic Factory: Funktion('term') - automatische Typenerkennung")
 print("• 📝 LaTeX-Darstellung: f zeigt automatisch f(x) = term an")
 print("• 🏷️  Automatische Namensgebung: f → f' → f''")
 print("• 🧮 Natürliche Syntax: f(2) statt auswerten(f, 2)")
-print("• 🔍 Kleingeschriebene Funktionen: nullstellen(), ableitung(), extrema()")
+print("• 🔍 Kleingeschriebene Funktionen: Nullstellen(), Ableitung(), Extrema()")
 print("• 📊 Plotly-Integration: mathematisch korrekte Graphen")
 
 print("\n🎓 PÄDAGOGISCHE VORTEILE:")

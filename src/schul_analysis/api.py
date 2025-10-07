@@ -2,7 +2,7 @@
 Schülerfreundliche API für das Schul-Analysis Framework
 
 Diese Datei stellt Wrapper-Funktionen bereit, die eine intuitive,
-unterrichtsnahe Syntax ermöglichen: Nullstellen(f) statt f.nullstellen()
+unterrichtsnahe Syntax ermöglichen: Nullstellen(f) statt f.Nullstellen()
 
 Alle Funktionen unterstützen Duck-Typing und funktionieren mit allen
 verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
@@ -40,7 +40,7 @@ Funktionstyp = (
 # =============================================================================
 
 
-def nullstellen(
+def Nullstellen(
     funktion: Funktionstyp, real: bool = True, runden: int | None = None
 ) -> list[float] | list[Any]:
     """
@@ -55,8 +55,8 @@ def nullstellen(
         Liste der Nullstellen
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -4, 3])  # x² - 4x + 3
-        >>> xs = nullstellen(f)                 # [1.0, 3.0]
+        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
+        >>> xs = Nullstellen(f)                 # [1.0, 3.0]
 
     Didaktischer Hinweis:
         Diese Funktion ermöglicht die natürliche mathematische Notation,
@@ -64,15 +64,15 @@ def nullstellen(
     """
     try:
         # Handle both property and method cases
-        if hasattr(funktion, "nullstellen"):
+        if hasattr(funktion, "Nullstellen"):
             attr = funktion.nullstellen
             if callable(attr):
                 # It's a method - try with parameters first
                 try:
-                    return funktion.nullstellen(real=real, runden=runden)
+                    return funktion.Nullstellen(real=real, runden=runden)
                 except TypeError:
                     # Method doesn't accept parameters, call without them
-                    result = funktion.nullstellen()
+                    result = funktion.Nullstellen()
             else:
                 # It's a property - access it directly
                 result = funktion.nullstellen
@@ -97,7 +97,7 @@ def nullstellen(
         raise SchulAnalysisError(f"Fehler bei der Nullstellenberechnung: {str(e)}")
 
 
-def ableitung(funktion: Funktionstyp, ordnung: int = 1) -> Any:
+def Ableitung(funktion: Funktionstyp, ordnung: int = 1) -> Any:
     """
     Berechnet die Ableitung einer Funktion.
 
@@ -109,16 +109,16 @@ def ableitung(funktion: Funktionstyp, ordnung: int = 1) -> Any:
         Die abgeleitete Funktion
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -4, 3])  # x² - 4x + 3
-        >>> f1 = ableitung(f, 1)             # 2x - 4
-        >>> f2 = ableitung(f, 2)             # 2
+        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
+        >>> f1 = Ableitung(f, 1)             # 2x - 4
+        >>> f2 = Ableitung(f, 2)             # 2
 
     Didaktischer Hinweis:
         Diese Notation ist näher an der mathematischen Schreibweise f'(x)
         und für Schüler intuitiver verständlich.
     """
     try:
-        return funktion.ableitung(ordnung)
+        return funktion.Ableitung(ordnung)
     except AttributeError:
         raise UngueltigeFunktionError(
             "Ableitung",
@@ -129,23 +129,68 @@ def ableitung(funktion: Funktionstyp, ordnung: int = 1) -> Any:
         raise SchulAnalysisError(f"Fehler bei der Ableitungsberechnung: {str(e)}")
 
 
-def integral(funktion: Funktionstyp, ordnung: int = 1) -> Any:
+def Integral(funktion: Funktionstyp, *args, **kwargs) -> Any:
     """
-    Berechnet das Integral einer Funktion.
+    Berechnet das bestimmte oder unbestimmte Integral einer Funktion.
 
     Args:
         funktion: Eine beliebige Funktion
-        ordnung: Ordnung des Integrals (Standard: 1)
+        *args: Entweder (ordnung) für unbestimmtes Integral oder (a, b) für bestimmtes Integral
+        **kwargs:
+            - ordnung: Ordnung des Integrals (Standard: 1) für unbestimmtes Integral
+            - a, b: Integrationsgrenzen für bestimmtes Integral
 
     Returns:
-        Die integrierte Funktion
+        Bei unbestimmtem Integral: Die integrierte Funktion
+        Bei bestimmtem Integral: Der numerische Wert des Integrals
 
     Beispiele:
-        >>> f = erstelle_polynom([1, 0, 0])  # x²
-        >>> F = integral(f, 1)              # (1/3)x³
+        # Unbestimmtes Integral
+        >>> f = ErstellePolynom([1, 0, 0])  # x²
+        >>> F = Integral(f)                  # (1/3)x³
+        >>> F = Integral(f, ordnung=1)       # (1/3)x³
+
+        # Bestimmtes Integral
+        >>> f = ErstellePolynom([1, 0, 0])  # x²
+        >>> wert = Integral(f, 0, 1)         # 1/3 (Fläche von 0 bis 1)
+        >>> wert = Integral(f, 0, 1, ordnung=1)  # 1/3 (Fläche von 0 bis 1)
     """
     try:
-        return funktion.integral(ordnung)
+        # Prüfe, ob bestimmtes Integral berechnet werden soll
+        if len(args) == 2:
+            a, b = args
+            ordnung = kwargs.get("ordnung", 1)
+
+            # Berechne unbestimmtes Integral
+            integrierte_funktion = funktion.Integral(ordnung)
+
+            # Werte die integrierte Funktion von a bis b aus
+            try:
+                F_b = integrierte_funktion(b)
+                F_a = integrierte_funktion(a)
+                return F_b - F_a
+            except (ValueError, TypeError, ZeroDivisionError) as e:
+                raise SchulAnalysisError(
+                    f"Fehler bei der Auswertung des bestimmten Integrals von {a} bis {b}: {str(e)}"
+                )
+
+        elif len(args) == 1:
+            # Nur ordnung angegeben
+            ordnung = args[0]
+            return funktion.Integral(ordnung)
+
+        elif len(args) == 0:
+            # Unbestimmtes Integral
+            ordnung = kwargs.get("ordnung", 1)
+            return funktion.Integral(ordnung)
+
+        else:
+            raise ValueError(
+                "Integral: Ungültige Anzahl an Argumenten. "
+                "Verwende Integral(f) für unbestimmtes Integral oder "
+                "Integral(f, a, b) für bestimmtes Integral."
+            )
+
     except AttributeError:
         raise UngueltigeFunktionError(
             "Integration",
@@ -156,48 +201,209 @@ def integral(funktion: Funktionstyp, ordnung: int = 1) -> Any:
         raise SchulAnalysisError(f"Fehler bei der Integrationsberechnung: {str(e)}")
 
 
-def extrema(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+def Extremstellen(funktion: Funktionstyp) -> list[tuple[Any, str]]:
     """
-    Findet die Extrempunkte einer Funktion.
+    Findet die Extremstellen einer Funktion (x-Werte mit Typ).
 
     Args:
         funktion: Eine beliebige Funktion
 
     Returns:
-        Liste der Extrempunkte als (x-Wert, Typ)-Tupel
+        Liste der Extremstellen als (x-Wert, Typ)-Tupel
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
-        >>> ext = extrema(f)                       # [(-1, 'Maximum'), ...]
+        >>> f = ErstellePolynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
+        >>> ext = Extremstellen(f)                # [(-1, 'Maximum'), ...]
     """
     try:
-        return funktion.extremstellen()
+        # Handle both property and method cases
+        if hasattr(funktion, "extremstellen"):
+            attr = funktion.extremstellen
+            if callable(attr):
+                # It's a method - call it
+                return funktion.extremstellen()
+            else:
+                # It's a property - access it directly
+                return funktion.extremstellen
+        elif hasattr(funktion, "Extremstellen"):
+            attr = funktion.Extremstellen
+            if callable(attr):
+                # It's a method - call it
+                return funktion.Extremstellen()
+            else:
+                # It's a property - access it directly
+                return funktion.Extremstellen
+        else:
+            raise AttributeError(
+                "Keine extremstellen Eigenschaft oder Methode gefunden"
+            )
     except AttributeError:
         raise UngueltigeFunktionError(
-            "Extremwertberechnung",
+            "Extremstellenberechnung",
             f"Die Funktion vom Typ '{type(funktion).__name__}' "
-            "unterstützt keine Extrema-Berechnung.",
+            "unterstützt keine Extremstellen-Berechnung.",
         )
     except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Extrema-Berechnung: {str(e)}")
+        raise SchulAnalysisError(f"Fehler bei der Extremstellen-Berechnung: {str(e)}")
 
 
-def wendepunkte(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+def Extrempunkte(funktion: Funktionstyp) -> list[tuple[Any, Any, str]]:
     """
-    Findet die Wendepunkte einer Funktion.
+    Findet die Extrempunkte einer Funktion (x, y-Koordinaten mit Typ).
 
     Args:
         funktion: Eine beliebige Funktion
 
     Returns:
-        Liste der Wendepunkte als (x-Wert, Typ)-Tupel
+        Liste der Extrempunkte als (x-Wert, y-Wert, Typ)-Tupel
 
     Beispiele:
-        >>> f = erstelle_polynom([1, 0, 0, 0])  # x³
-        >>> wp = wendepunkte(f)                 # [(0, 'Wendepunkt')]
+        >>> f = ErstellePolynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
+        >>> ext = Extrempunkte(f)                 # [(-1, 14.0, 'Maximum'), ...]
     """
     try:
-        return funktion.wendepunkte()
+        # Versuche zuerst die extrempunkte() Methode
+        if hasattr(funktion, "extrempunkte"):
+            attr = funktion.extrempunkte
+            if callable(attr):
+                return funktion.extrempunkte()
+            else:
+                return funktion.extrempunkte
+        elif hasattr(funktion, "Extrapunkte"):
+            attr = funktion.Extrempunkte
+            if callable(attr):
+                return funktion.Extrempunkte()
+            else:
+                return funktion.Extrempunkte
+
+        # Fallback: Berechne aus extremstellen und werte die Funktion aus
+        extremstellen = Extremstellen(funktion)
+        if not extremstellen:
+            return []
+
+        extrempunkte = []
+        for x_wert, typ in extremstellen:
+            try:
+                y_wert = funktion(x_wert)
+                extrempunkte.append((x_wert, y_wert, typ))
+            except (ValueError, TypeError, ZeroDivisionError):
+                # Falls die Funktion an diesem Punkt nicht ausgewertet werden kann
+                extrempunkte.append((x_wert, None, typ))
+
+        return extrempunkte
+    except AttributeError:
+        raise UngueltigeFunktionError(
+            "Extrempunkteberechnung",
+            f"Die Funktion vom Typ '{type(funktion).__name__}' "
+            "unterstützt keine Extrempunkte-Berechnung.",
+        )
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Extrempunkte-Berechnung: {str(e)}")
+
+
+def Extrema(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+    """
+    Findet die Extrempunkte einer Funktion (Alias für Extremstellen).
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        Liste der Extremstellen als (x-Wert, Typ)-Tupel
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
+        >>> ext = Extrema(f)                       # [(-1, 'Maximum'), ...]
+    """
+    # Extrema ist ein Alias für Extremstellen für Abwärtskompatibilität
+    return Extremstellen(funktion)
+
+
+def Wendestellen(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+    """
+    Findet die Wendestellen einer Funktion (x-Werte mit Typ).
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        Liste der Wendestellen als (x-Wert, Typ)-Tupel
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
+        >>> ws = Wendestellen(f)                 # [(0, 'Wendepunkt')]
+    """
+    try:
+        # Handle both property and method cases
+        if hasattr(funktion, "wendestellen"):
+            attr = funktion.wendestellen
+            if callable(attr):
+                # It's a method - call it
+                return funktion.wendestellen()
+            else:
+                # It's a property - access it directly
+                return funktion.wendestellen
+        elif hasattr(funktion, "Wendestellen"):
+            attr = funktion.Wendestellen
+            if callable(attr):
+                # It's a method - call it
+                return funktion.Wendestellen()
+            else:
+                # It's a property - access it directly
+                return funktion.Wendestellen
+        else:
+            raise AttributeError("Keine wendestellen Eigenschaft oder Methode gefunden")
+    except AttributeError:
+        raise UngueltigeFunktionError(
+            "Wendestellenberechnung",
+            f"Die Funktion vom Typ '{type(funktion).__name__}' "
+            "unterstützt keine Wendestellen-Berechnung.",
+        )
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Wendestellen-Berechnung: {str(e)}")
+
+
+def Wendepunkte(funktion: Funktionstyp) -> list[tuple[Any, Any, str]]:
+    """
+    Findet die Wendepunkte einer Funktion (x, y-Koordinaten mit Typ).
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        Liste der Wendepunkte als (x-Wert, y-Wert, Typ)-Tupel
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
+        >>> wp = Wendepunkte(f)                 # [(0, 0.0, 'Wendepunkt')]
+    """
+    try:
+        # Versuche zuerst die wendepunkte() Methode (falls sie (x,y,Typ) zurückgibt)
+        if hasattr(funktion, "wendepunkte"):
+            attr = funktion.wendepunkte
+            if callable(attr):
+                result = funktion.wendepunkte()
+            else:
+                result = funktion.wendepunkte
+            # Prüfe, ob das Ergebnis schon im richtigen Format ist
+            if result and len(result[0]) == 3:
+                return result
+
+        # Fallback: Berechne aus wendestellen und werte die Funktion aus
+        wendestellen = Wendestellen(funktion)
+        if not wendestellen:
+            return []
+
+        wendepunkte = []
+        for x_wert, typ in wendestellen:
+            try:
+                y_wert = funktion(x_wert)
+                wendepunkte.append((x_wert, y_wert, typ))
+            except (ValueError, TypeError, ZeroDivisionError):
+                # Falls die Funktion an diesem Punkt nicht ausgewertet werden kann
+                wendepunkte.append((x_wert, None, typ))
+
+        return wendepunkte
     except AttributeError:
         raise UngueltigeFunktionError(
             "Wendepunkteberechnung",
@@ -208,7 +414,7 @@ def wendepunkte(funktion: Funktionstyp) -> list[tuple[Any, str]]:
         raise SchulAnalysisError(f"Fehler bei der Wendepunkte-Berechnung: {str(e)}")
 
 
-def symmetrie(funktion: Funktionstyp) -> str:
+def Symmetrie(funktion: Funktionstyp) -> str:
     """
     Bestimmt die Symmetrie einer Funktion.
 
@@ -219,12 +425,12 @@ def symmetrie(funktion: Funktionstyp) -> str:
         Beschreibung der Symmetrie
 
     Beispiele:
-        >>> f = erstelle_polynom([1, 0, 0])      # x²
-        >>> sym = symmetrie(f)                   # "Achsensymmetrisch zur y-Achse"
+        >>> f = ErstellePolynom([1, 0, 0])      # x²
+        >>> sym = Symmetrie(f)                   # "Achsensymmetrisch zur y-Achse"
     """
     try:
-        # Versuche zuerst die symmetrie() Methode
-        return funktion.symmetrie()
+        # Versuche zuerst die Symmetrie() Methode
+        return funktion.Symmetrie()
     except AttributeError:
         # Fallback: Prüfe auf alte syme property
         try:
@@ -244,7 +450,7 @@ def symmetrie(funktion: Funktionstyp) -> str:
 # =============================================================================
 
 
-def zeichne(
+def Zeichne(
     funktion: Any,
     x_bereich: tuple[float, float] | None = None,
     y_bereich: tuple[float, float] | None = None,
@@ -263,11 +469,11 @@ def zeichne(
         Interaktiver Plotly-Graph
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -4, 3])  # x² - 4x + 3
-        >>> zeichne(f, (-2, 6))               # Zeichnet Funktion von x=-2 bis x=6
+        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
+        >>> Zeichne(f, (-2, 6))               # Zeichnet Funktion von x=-2 bis x=6
 
         # Auch mit normalen Python-Funktionen möglich:
-        >>> zeichne(lambda x: x**2, (-5, 5))
+        >>> Zeichne(lambda x: x**2, (-5, 5))
     """
     try:
         # Versuche zuerst die graph() Methode (neue API)
@@ -304,7 +510,7 @@ def zeichne(
 # =============================================================================
 
 
-def auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
+def Auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
     """
     Wertet eine Funktion an einem Punkt oder Array aus.
 
@@ -316,9 +522,9 @@ def auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
         Der y-Wert oder Array von y-Werten
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -4, 3])  # x² - 4x + 3
-        >>> y = auswerten(f, 2)               # f(2) = -1
-        >>> y_array = auswerten(f, [1, 2, 3]) # [f(1), f(2), f(3)] = [0, -1, 0]
+        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
+        >>> y = Auswerten(f, 2)               # f(2) = -1
+        >>> y_array = Auswerten(f, [1, 2, 3]) # [f(1), f(2), f(3)] = [0, -1, 0]
     """
     try:
         return funktion(x_wert)
@@ -331,7 +537,7 @@ def auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
 # =============================================================================
 
 
-def erstelle_polynom(koeffizienten: list[float | int]) -> Funktion:
+def ErstellePolynom(koeffizienten: list[float | int]) -> Funktion:
     """
     Erstellt ein Polynom aus Koeffizienten.
 
@@ -343,9 +549,9 @@ def erstelle_polynom(koeffizienten: list[float | int]) -> Funktion:
         Eine ganzrationale Funktion
 
     Beispiele:
-        >>> f = erstelle_polynom([3, -4, 1])     # 3 - 4x + x²
-        >>> g = erstelle_polynom([0, 1])        # x
-        >>> h = erstelle_polynom([5])           # 5 (konstant)
+        >>> f = ErstellePolynom([3, -4, 1])     # 3 - 4x + x²
+        >>> g = ErstellePolynom([0, 1])        # x
+        >>> h = ErstellePolynom([5])           # 5 (konstant)
 
     Didaktischer Hinweis:
         Diese Funktion ist besonders für Anfänger geeignet,
@@ -390,7 +596,7 @@ def erstelle_polynom(koeffizienten: list[float | int]) -> Funktion:
     return GanzrationaleFunktion(term)
 
 
-def erstelle_funktion(term: str) -> Any:
+def Erstelle_Funktion(term: str) -> Any:
     """
     Erstellt eine Funktion aus einem Term-String.
 
@@ -401,10 +607,10 @@ def erstelle_funktion(term: str) -> Any:
         Eine Funktion (automatisch typisiert durch Magic Factory)
 
     Beispiele:
-        >>> f = erstelle_funktion("x^2 - 4x + 3")    # x² - 4x + 3
-        >>> g = erstelle_funktion("2*x + 5")          # 2x + 5
-        >>> h = erstelle_funktion("(x-2)*(x+1)")     # (x-2)(x+1) = x² - x - 2
-        >>> i = erstelle_funktion("x^2/(x+1)")      # QuotientFunktion!
+        >>> f = Erstelle_Funktion("x^2 - 4x + 3")    # x² - 4x + 3
+        >>> g = Erstelle_Funktion("2*x + 5")          # 2x + 5
+        >>> h = Erstelle_Funktion("(x-2)*(x+1)")     # (x-2)(x+1) = x² - x - 2
+        >>> i = Erstelle_Funktion("x^2/(x+1)")      # QuotientFunktion!
 
     Didaktischer Hinweis:
         Unterstützt verschiedene Schreibweisen, die Schüler aus dem Unterricht kennen.
@@ -418,7 +624,7 @@ def erstelle_funktion(term: str) -> Any:
     return Funktion(term)
 
 
-def erstelle_lineares_gleichungssystem(
+def Erstelle_Lineares_Gleichungssystem(
     koeffizienten: list[list[float | int]], ergebnisse: list[float | int]
 ) -> Any:
     """
@@ -432,7 +638,7 @@ def erstelle_lineares_gleichungssystem(
         Ein lineares Gleichungssystem
 
     Beispiele:
-        >>> lgs = erstelle_lineares_gleichungssystem(
+        >>> lgs = Erstelle_Lineares_Gleichungssystem(
         ...     [[2, 3], [1, -2]],    # 2x + 3y = 8, x - 2y = -3
         ...     [8, -3]
         ... )
@@ -441,7 +647,7 @@ def erstelle_lineares_gleichungssystem(
     return LGS(koeffizienten, ergebnisse)
 
 
-def erstelle_exponential_rationale_funktion(
+def Erstelle_Exponential_Rationale_Funktion(
     zaehler: GanzrationaleFunktion | str,
     nenner: GanzrationaleFunktion | str,
     exponent_param: float = 1.0,
@@ -458,7 +664,7 @@ def erstelle_exponential_rationale_funktion(
         ExponentialRationaleFunktion
 
     Beispiele:
-        >>> f = erstelle_exponential_rationale_funktion("x+1", "x-1")
+        >>> f = Erstelle_Exponential_Rationale_Funktion("x+1", "x-1")
         >>> s = f.schmiegkurve()  # Schmiegkurve berechnen
         >>> r = f.stoerfunktion()  # Störfunktion berechnen
     """
@@ -495,7 +701,7 @@ def erstelle_exponential_rationale_funktion(
 # =============================================================================
 
 
-def analysiere_funktion(funktion: Funktionstyp) -> dict[str, Any]:
+def Analysiere_Funktion(funktion: Funktionstyp) -> dict[str, Any]:
     """
     Führt eine vollständige Funktionsanalyse durch.
 
@@ -506,8 +712,8 @@ def analysiere_funktion(funktion: Funktionstyp) -> dict[str, Any]:
         Dictionary mit allen Analyse-Ergebnissen
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -4, 3])  # x² - 4x + 3
-        >>> analyse = analysiere_funktion(f)
+        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
+        >>> analyse = Analysiere_Funktion(f)
         >>> print(analyse['nullstellen'])      # [1.0, 3.0]
         >>> print(analyse['extrema'])           # []
         >>> print(analyse['symmetrie'])         # "Keine einfache Symmetrie"
@@ -520,29 +726,29 @@ def analysiere_funktion(funktion: Funktionstyp) -> dict[str, Any]:
         ergebnisse["term"] = str(funktion)
 
     try:
-        ergebnisse["nullstellen"] = nullstellen(funktion)
+        ergebnisse["Nullstellen"] = Nullstellen(funktion)
     except (AttributeError, ValueError, TypeError, ZeroDivisionError):
-        ergebnisse["nullstellen"] = "Nicht berechenbar"
+        ergebnisse["Nullstellen"] = "Nicht berechenbar"
 
     try:
-        ergebnisse["extrema"] = extrema(funktion)
+        ergebnisse["Extrema"] = Extrema(funktion)
     except (AttributeError, ValueError, TypeError, ZeroDivisionError):
-        ergebnisse["extrema"] = "Nicht berechenbar"
+        ergebnisse["Extrema"] = "Nicht berechenbar"
 
     try:
-        ergebnisse["wendepunkte"] = wendepunkte(funktion)
+        ergebnisse["Wendepunkte"] = Wendepunkte(funktion)
     except (AttributeError, ValueError, TypeError, ZeroDivisionError):
-        ergebnisse["wendepunkte"] = "Nicht berechenbar"
+        ergebnisse["Wendepunkte"] = "Nicht berechenbar"
 
     try:
-        ergebnisse["symmetrie"] = symmetrie(funktion)
+        ergebnisse["Symmetrie"] = Symmetrie(funktion)
     except (AttributeError, ValueError, TypeError):
-        ergebnisse["symmetrie"] = "Nicht bestimmbar"
+        ergebnisse["Symmetrie"] = "Nicht bestimmbar"
 
     return ergebnisse
 
 
-def zeige_analyse(funktion: Funktionstyp) -> str:
+def Zeige_Analyse(funktion: Funktionstyp) -> str:
     """
     Erstellt eine übersichtliche Zusammenfassung der Funktionsanalyse.
 
@@ -553,8 +759,8 @@ def zeige_analyse(funktion: Funktionstyp) -> str:
         Formatierter Text mit allen Analyse-Ergebnissen
 
     Beispiele:
-        >>> f = erstelle_polynom([1, -4, 3])
-        >>> print(zeige_analyse(f))
+        >>> f = ErstellePolynom([1, -4, 3])
+        >>> print(Zeige_Analyse(f))
         Funktionsanalyse für f(x) = x^2 - 4x + 3
 
         Nullstellen: [1.0, 3.0]
@@ -562,7 +768,7 @@ def zeige_analyse(funktion: Funktionstyp) -> str:
         Wendepunkte: []
         Symmetrie: Keine einfache Symmetrie
     """
-    analyse = analysiere_funktion(funktion)
+    analyse = Analysiere_Funktion(funktion)
 
     text = f"Funktionsanalyse für f(x) = {analyse['term']}\n\n"
 
@@ -580,23 +786,21 @@ def zeige_analyse(funktion: Funktionstyp) -> str:
 
 __all__ = [
     # Analyse-Funktionen (Haupt-API)
-    "nullstellen",
-    "ableitung",
-    "integral",
-    "extrema",
-    "wendepunkte",
-    "symmetrie",
+    "Nullstellen",
+    "Ableitung",
+    "Integral",
+    "Extrema",
+    "Extremstellen",
+    "Extrempunkte",
+    "Wendestellen",
+    "Wendepunkte",
+    "Symmetrie",
     # Visualisierung
-    "zeichne",
+    "Zeichne",
     # Werteberechnung
-    "auswerten",
+    "Auswerten",
     # Helper-Funktionen
-    "erstelle_polynom",
-    "erstelle_funktion",
-    "erstelle_lineares_gleichungssystem",
-    # Komfort-Funktionen
-    "analysiere_funktion",
-    "zeige_analyse",
+    "ErstellePolynom",
     # Funktionstypen (für direkten Zugriff)
     "GanzrationaleFunktion",
     "QuotientFunktion",

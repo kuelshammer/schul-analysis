@@ -6,25 +6,25 @@ mit Magic Factory Pattern für die mathematische Analyse von Funktionen.
 """
 
 # Moderne Importe - kein manuelles Pfad-Management mehr nötig!
-from schul_analysis import Funktion, ableitung, extrema, nullstellen
+from schul_analysis import Ableitung, Extrema, Funktion
 
 # 1. Funktion mit Magic Factory erstellen
 print("=== 1. Funktion mit Magic Factory ===")
 f = Funktion("x^2 - 4x + 3")  # Automatische Erkennung als quadratische Funktion
 print(f"Funktion: f(x) = {f.term()}")
 print(f"Funktionstyp: {f.funktionstyp}")
-print(f"Nullstellen: {nullstellen(f)}")
+print(f"Nullstellen: {Nullstellen(f)}")
 
 # 2. Ableitungen berechnen
 print("\n=== 2. Ableitungen ===")
-f_strich = ableitung(f)  # Automatische Namensgebung: f'
+f_strich = Ableitung(f)  # Automatische Namensgebung: f'
 print(f"f'(x) = {f_strich.term()}")
 print(f"Name der Ableitung: {f_strich.name}")
-print(f"Nullstellen der Ableitung: {nullstellen(f_strich)}")
+print(f"Nullstellen der Ableitung: {Nullstellen(f_strich)}")
 
 # 3. Extremstellen finden
 print("\n=== 3. Extremstellen ===")
-extremstellen = extrema(f)
+extremstellen = Extrema(f)
 print(f"Extremstellen: {extremstellen}")
 
 # 4. Werteberechnung
@@ -35,7 +35,7 @@ print(f"f(4) = {f(4)}")
 
 # 5. Zweite Ableitung
 print("\n=== 5. Zweite Ableitung ===")
-f_strich_strich = ableitung(f_strich)  # Automatische Namensgebung: f''
+f_strich_strich = Ableitung(f_strich)  # Automatische Namensgebung: f''
 print(f"f''(x) = {f_strich_strich.term()}")
 print(f"Name der zweiten Ableitung: {f_strich_strich.name}")
 
@@ -56,7 +56,7 @@ print("\n=== 7. Zusammenfassung ===")
 print("Das moderne Schul-Analysis Framework bietet:")
 print("- ✅ Magic Factory: Funktion('x^2 - 4x + 3') - einfache Erstellung")
 print("- ✅ Automatische Typenerkennung: erkennt quadratische Funktionen automatisch")
-print("- ✅ Intuitive API: nullstellen(f), ableitung(f), extrema(f)")
+print("- ✅ Intuitive API: Nullstellen(f), Ableitung(f), Extrema(f)")
 print("- ✅ Automatische Namensgebung: f -> f' -> f''")
 print("- ✅ LaTeX-Darstellung: f zeigt automatisch f(x) = x^2 - 4x + 3 an")
 print("- ✅ Plotly-Integration für mathematisch korrekte Graphen")

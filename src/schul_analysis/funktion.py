@@ -511,6 +511,36 @@ class Funktion:
 
         return abgeleitete_funktion
 
+    def Ableitung(self, ordnung: int = 1) -> "Funktion":
+        """Berechnet die Ableitung (Alias für ableitung)"""
+        return self.ableitung(ordnung)
+
+    def integral(self, ordnung: int = 1) -> "Funktion":
+        """Berechnet das Integral"""
+        import sympy as sp
+
+        integrierter_term = sp.integrate(self.term_sympy, self._variable_symbol)
+        # Erstelle neue Funktion mit Namen
+        integrierte_funktion = Funktion(integrierter_term)
+        # Setze Namen für integrierte Funktion
+        if hasattr(self, "name") and self.name:
+            base_name = self.name
+            if ordnung == 1:
+                integrierte_funktion.name = f"∫{base_name}"
+            else:
+                integrierte_funktion.name = f"∫^{ordnung}{base_name}"
+        else:
+            # Standardnamen wenn kein Basisname vorhanden
+            if ordnung == 1:
+                integrierte_funktion.name = "∫f"
+            else:
+                integrierte_funktion.name = f"∫^{ordnung}f"
+        return integrierte_funktion
+
+    def Integral(self, ordnung: int = 1) -> "Funktion":
+        """Berechnet das Integral (Alias für integral)"""
+        return self.integral(ordnung)
+
     @property
     def nullstellen(self) -> list:
         """Berechnet die Nullstellen"""
@@ -519,6 +549,10 @@ class Funktion:
             return [lösung for lösung in lösungen if lösung.is_real]
         except Exception:
             return []
+
+    def Nullstellen(self) -> list:
+        """Berechnet die Nullstellen (Alias für nullstellen)"""
+        return self.nullstellen
 
     @property
     def extremstellen(self) -> list[tuple[Any, str]]:
@@ -573,6 +607,10 @@ class Funktion:
         except Exception:
             # Bei Fehlern leere Liste zurückgeben
             return []
+
+    def Extremstellen(self) -> list[tuple[Any, str]]:
+        """Berechnet die Extremstellen (Alias für extremstellen)"""
+        return self.extremstellen
 
     # Typenerkennung - Alle zentral!
 
@@ -712,11 +750,56 @@ class Funktion:
         # Für allgemeine Funktionen Standard-Implementierung
         return []
 
+    @property
+    def wendestellen(self) -> list[tuple[Any, str]]:
+        """Berechnet die Wendestellen der Funktion."""
+        try:
+            # Berechne zweite Ableitung
+            f_strich = sp.diff(self.term_sympy, self._variable_symbol)
+            f_doppelstrich = sp.diff(f_strich, self._variable_symbol)
+
+            # Löse f''(x) = 0
+            kritische_punkte = solve(f_doppelstrich, self._variable_symbol)
+
+            # Filtere reelle Lösungen
+            reelle_punkte = [p for p in kritische_punkte if p.is_real]
+
+            wendestellen = []
+            for punkt in reelle_punkte:
+                try:
+                    # Konvertiere zu numerischem Wert wenn möglich
+                    if hasattr(punkt, "evalf"):
+                        x_wert = punkt.evalf()
+                    else:
+                        x_wert = float(punkt) if hasattr(punkt, "__float__") else punkt
+
+                    wendestellen.append((x_wert, "Wendepunkt"))
+                except Exception:
+                    continue
+
+            return wendestellen
+        except Exception:
+            return []
+
+    def Wendestellen(self) -> list[tuple[Any, str]]:
+        """Berechnet die Wendestellen (Alias für wendestellen)."""
+        return self.wendestellen
+
     def zeige_funktion_plotly(self, x_bereich=None, **kwargs):
         """Visualisiert die Funktion mit Plotly."""
         from .visualisierung import Graph
 
         return Graph(self, x_bereich=x_bereich, **kwargs)
+
+    def graph(self, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs):
+        """Visualisiert die Funktion mit Plotly (einheitliche Methode)."""
+        from .visualisierung import Graph
+
+        return Graph(self, x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
+
+    def Graph(self, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs):
+        """Visualisiert die Funktion mit Plotly (einheitliche Methode)."""
+        return self.graph(x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
 
 
 # Factory-Funktion für Konsistenz und Abwärtskompatibilität

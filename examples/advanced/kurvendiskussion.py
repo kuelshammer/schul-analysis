@@ -6,13 +6,13 @@ Kurvendiskussion, Integralrechnung und Grenzwertanalyse.
 """
 
 from schul_analysis import (
+    Ableitung,
     AsymptotischesVerhalten,
+    Extrema,
     Funktion,
     Graph,
+    Nullstellen,
     Polstellen,
-    ableitung,
-    extrema,
-    nullstellen,
     wendepunkte,
 )
 
@@ -39,7 +39,7 @@ def kurvendiskussion(funktion, name="f"):
 
     # 2. Nullstellen
     print("2. Nullstellen:")
-    null = nullstellen(funktion)
+    null = Nullstellen(funktion)
     if null:
         print(f"   x = {null}")
     else:
@@ -47,14 +47,14 @@ def kurvendiskussion(funktion, name="f"):
 
     # 3. Ableitungen
     print("3. Ableitungen:")
-    f_strich = ableitung(funktion)
-    f_strich_strich = ableitung(f_strich)
+    f_strich = Ableitung(funktion)
+    f_strich_strich = Ableitung(f_strich)
     print(f"   f'(x) = {f_strich.term()}")
     print(f"   f''(x) = {f_strich_strich.term()}")
 
     # 4. Extremstellen
     print("4. Extremstellen:")
-    ext = extrema(funktion)
+    ext = Extrema(funktion)
     if ext:
         for xs, art in ext:
             ys = funktion(xs)

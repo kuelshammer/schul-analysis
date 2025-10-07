@@ -7,14 +7,14 @@ Dieses Beispiel zeigt fortgeschrittene Analysetechniken des Schul-Analysis Frame
 import numpy as np
 
 from schul_analysis import (
+    Ableitung,
     AsymptotischesVerhalten,
+    Extrema,
     Funktion,
     Grenzwert,
+    Integral,
+    Nullstellen,
     Polstellen,
-    ableitung,
-    extrema,
-    integral,
-    nullstellen,
     wendepunkte,
 )
 
@@ -24,17 +24,17 @@ f = Funktion("x^3 - 6x^2 + 11x - 6")
 print(f"Funktion: f(x) = {f.term()}")
 
 # Nullstellen analysieren
-nullst = nullstellen(f)
+nullst = Nullstellen(f)
 print(f"Nullstellen: {nullst}")
 
 # Ableitungen und Extremstellen
-f_strich = ableitung(f)
-f_doppelt = ableitung(f, ordnung=2)
+f_strich = Ableitung(f)
+f_doppelt = Ableitung(f, ordnung=2)
 
 print(f"f'(x) = {f_strich.term()}")
 print(f"f''(x) = {f_doppelt.term()}")
 
-extremst = extrema(f)
+extremst = Extrema(f)
 print(f"Extremstellen: {extremst}")
 
 wendep = wendepunkte(f)
@@ -74,7 +74,7 @@ h = Funktion("x^2 + 2x + 1")
 print(f"Funktion: h(x) = {h.term()}")
 
 # Unbestimmtes Integral (symbolisch)
-integral_h = integral(h)
+integral_h = Integral(h)
 print(f"∫h(x)dx = {integral_h.term()}")
 
 # Bestimmtes Integral (numerisch)
@@ -107,14 +107,14 @@ def kurvendiskussion(funktion, name="f"):
 
     # Nullstellen
     try:
-        nullst = nullstellen(funktion)
+        nullst = Nullstellen(funktion)
         print(f"Nullstellen: {nullst}")
     except Exception as e:
         print(f"Nullstellen: Fehler - {e}")
 
     # Extremstellen
     try:
-        ext = extrema(funktion)
+        ext = Extrema(funktion)
         print(f"Extremstellen: {ext}")
     except Exception as e:
         print(f"Extremstellen: Fehler - {e}")

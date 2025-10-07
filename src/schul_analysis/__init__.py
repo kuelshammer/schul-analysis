@@ -14,37 +14,22 @@ PÄDAGOGISCHE KERNPRINZIPIEN:
 # SCHÜLERFREUNDLICHE WRAPPER-API (Haupt-Import für Schüler)
 # =============================================================================
 
-from .analysis import (
-    Ableitung,
-    AsymptotischesVerhalten,
-    Extrempunkte,
-    Extremstellen,
-    Grenzwert,
-    Integral,
-    Kürzen,
-    Polstellen,
-    Schnittpunkt,
-    Wendepunkte,
-    Wendestellen,
-    Wert,
-)
+# Wichtige symbolische Komponenten
 from .api import (
     LGS,
     # Komfort-Funktionen für den Unterricht
-    ableitung,
-    analysiere_funktion,
-    auswerten,
-    erstelle_exponential_rationale_funktion,
-    erstelle_funktion,
-    erstelle_lineares_gleichungssystem,
-    erstelle_polynom,
-    extrema,
-    integral,
-    nullstellen,
-    symmetrie,
-    wendepunkte,
-    zeichne,
-    zeige_analyse,
+    Ableitung,
+    Auswerten,
+    ErstellePolynom,
+    Extrema,
+    Extrempunkte,
+    Extremstellen,
+    Integral,
+    Nullstellen,
+    Symmetrie,
+    Wendepunkte,
+    Wendestellen,
+    Zeichne,
 )
 
 # =============================================================================
@@ -78,7 +63,10 @@ from .strukturiert import (
     StrukturierteFunktion,
     SummeFunktion,
 )
-from .symbolic import Parameter, Variable
+from .symbolic import (
+    Parameter,
+    Variable,
+)
 from .symmetrie import (
     Achsensymmetrie,
     Punktsymmetrie,
@@ -102,12 +90,8 @@ a = Parameter("a")
 k = Parameter("k")
 
 # Typ-Aliases für bessere Lesbarkeit
-Polstellen = Polstellen  # Englische Variante auch verfügbar
 Ableiten = Ableitung
 Derivative = Ableitung
-IntersectionPoints = Schnittpunkt
-Limit = Grenzwert
-AsymptoticBehavior = AsymptotischesVerhalten
 
 # =============================================================================
 # VERSION
@@ -121,21 +105,16 @@ __version__ = "1.0.0"  # Hauptversion nach pädagogischer Optimierung
 
 __all__ = [
     # 🔥 SCHÜLERFREUNDLICHE API (Priorität für Unterricht)
-    "ableitung",
-    "nullstellen",
-    "integral",
-    "extrema",
-    "wendepunkte",
-    "symmetrie",
-    "zeichne",
-    "auswerten",
-    "erstelle_polynom",
-    "erstelle_funktion",
-    "erstelle_lineares_gleichungssystem",
-    "erstelle_exponential_rationale_funktion",
+    "Ableitung",
+    "Nullstellen",
+    "Integral",
+    "Extrema",
+    "Wendepunkte",
+    "Symmetrie",
+    "Zeichne",
+    "Auswerten",
+    "ErstellePolynom",
     "erstelle_funktion_automatisch",
-    "analysiere_funktion",
-    "zeige_analyse",
     # 🏗️ FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
@@ -158,17 +137,14 @@ __all__ = [
     "Graph_parametrisiert",
     # 🧮 ANALYSE-FUNKTIONEN
     "Ableitung",
-    "Wert",
     "Integral",
-    "Kürzen",
-    "Schnittpunkt",
+    "Extrema",
     "Extremstellen",
-    "Wendestellen",
     "Extrempunkte",
     "Wendepunkte",
-    "Grenzwert",
-    "AsymptotischesVerhalten",
-    "Polstellen",
+    "Wendestellen",
+    # 📊 VISUALISIERUNG
+    "Graph",
     # 📐 SPEZIALFUNKTIONEN
     "Achsensymmetrie",
     "Punktsymmetrie",

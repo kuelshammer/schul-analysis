@@ -13,7 +13,7 @@ import pytest
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from schul_analysis import Funktion, ableitung, extrema, nullstellen
+from schul_analysis import Ableitung, Extrema, Funktion, Nullstellen
 
 
 class TestMagicFactory:
@@ -52,28 +52,28 @@ class TestWrapperFunktionen:
     """Testet die modernen Wrapper-Funktionen"""
 
     def test_nullstellen_funktion(self):
-        """Test: nullstellen() Wrapper-Funktion"""
+        """Test: Nullstellen() Wrapper-Funktion"""
         f = Funktion("x^2 - 4")
 
-        null = nullstellen(f)
+        null = Nullstellen(f)
         assert sorted(null) == [-2, 2]  # Unabhängig von der Reihenfolge
 
     def test_ableitung_funktion(self):
-        """Test: ableitung() Wrapper-Funktion"""
+        """Test: Ableitung() Wrapper-Funktion"""
         f = Funktion("x^2")
 
-        f1 = ableitung(f)
+        f1 = Ableitung(f)
         assert f1.term() == "2*x"
         # name Attribut existiert möglicherweise nicht
         # assert f1.name == "f'"  # Automatische Namensgebung
 
-    def test_mehrfache_ableitung(self):
+    def test_mehrfache_Ableitung(self):
         """Test: Mehrfache Ableitungen mit korrekten Namen"""
         f = Funktion("x^3")
 
-        f1 = ableitung(f)  # f'
-        f2 = ableitung(f1)  # f''
-        f3 = ableitung(f2)  # f'''
+        f1 = Ableitung(f)  # f'
+        f2 = Ableitung(f1)  # f''
+        f3 = Ableitung(f2)  # f'''
 
         assert f1.term() == "3*x^2"  # Aktuelles Format
         assert f2.term() == "6*x"
@@ -85,12 +85,12 @@ class TestWrapperFunktionen:
         # assert f3.name == "f'''"
 
     def test_extrema_funktion(self):
-        """Test: extrema() Wrapper-Funktion"""
+        """Test: Extrema() Wrapper-Funktion"""
         f = Funktion("x^2 - 4x + 3")
 
-        # extrema() wirft Fehler weil extremstellen() nicht existiert
+        # Extrema() wirft Fehler weil extremstellen() nicht existiert
         with pytest.raises(AttributeError):
-            extrema(f)
+            Extrema(f)
 
 
 class TestFunktionsaufrufe:
@@ -176,8 +176,8 @@ class TestSpezialfaelle:
         f = Funktion("0")
 
         assert f.term() == "0"
-        # nullstellen() gibt für Nullfunktion None zurück
-        result = nullstellen(f)
+        # Nullstellen() gibt für Nullfunktion None zurück
+        result = Nullstellen(f)
         assert result is None or result == []
 
     def test_hoeherer_polynom_grad(self):
@@ -198,10 +198,10 @@ class TestIntegration:
         f = Funktion("x^3 - 3x^2 - 9x + 5")
 
         # Alle Analysen durchführen
-        null = nullstellen(f)
-        f1 = ableitung(f)
-        f2 = ableitung(f1)
-        ext = extrema(f)
+        null = Nullstellen(f)
+        f1 = Ableitung(f)
+        f2 = Ableitung(f1)
+        ext = Extrema(f)
 
         # Überprüfe Konsistenz
         assert len(null) >= 1  # Sollte mindestens eine reelle Nullstelle haben
