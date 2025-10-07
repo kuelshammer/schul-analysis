@@ -143,6 +143,30 @@ class Wendepunkt:
 
 
 @dataclass(frozen=True)
+class StationaereStelle:
+    """Präzise Typisierung für stationäre Stellen mit vollständigen Informationen."""
+
+    x: T_Expr  # x-Koordinate
+    typ: ExtremumTyp  # Art der stationären Stelle (Minimum, Maximum, Sattelpunkt)
+    exakt: bool = True  # Ob exakt berechnet wurde
+
+    def __str__(self) -> str:
+        return f"Stationäre Stelle bei x = {self.x} ({self.typ.value})"
+
+
+@dataclass(frozen=True)
+class Sattelpunkt:
+    """Präzise Typisierung für Sattelpunkte mit vollständigen Informationen."""
+
+    x: T_Expr  # x-Koordinate
+    y: T_Expr  # y-Koordinate
+    exakt: bool = True  # Ob exakt berechnet wurde
+
+    def __str__(self) -> str:
+        return f"Sattelpunkt bei P({self.x}|{self.y})"
+
+
+@dataclass(frozen=True)
 class Polstelle:
     """Präzise Typisierung für Polstellen mit zusätzlichen Informationen."""
 
@@ -189,6 +213,8 @@ class IntegralResult:
 ExactNullstellenListe = list[Nullstelle]
 ExtremaListe = list[Extremum]
 WendepunkteListe = list[Wendepunkt]
+StationaereStellenListe = list[StationaereStelle]
+SattelpunkteListe = list[Sattelpunkt]
 PolstellenListe = list[Polstelle]
 AsymptotenListe = list[Asymptote]
 

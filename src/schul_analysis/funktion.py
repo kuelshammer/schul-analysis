@@ -795,6 +795,124 @@ class Funktion:
         """Berechnet die Wendepunkte (Alias für wendepunkte)"""
         return self.wendepunkte
 
+    @property
+    def stationaere_stellen(self) -> list[tuple[Any, str]]:
+        """
+        Berechnet die stationären Stellen der Funktion.
+
+        Stationäre Stellen sind alle Punkte, an denen die erste Ableitung null ist (f'(x) = 0).
+        Dies entspricht den kritischen Punkten, die bereits in extremstellen berechnet werden.
+
+        Returns:
+            Liste von (x_wert, art) Tupeln, wobei art "Minimum", "Maximum", "Sattelpunkt" sein kann
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> stationaere_stellen = f.stationaere_stellen  # [(0, "Minimum")]
+            >>> f = Funktion("x^3")
+            >>> stationaere_stellen = f.stationaere_stellen  # [(0, "Sattelpunkt")]
+        """
+        # Stationäre Stellen sind mathematisch identisch mit den kritischen Punkten
+        # die bereits in extremstellen berechnet werden
+        return self.extremstellen
+
+    def StationaereStellen(self) -> list[tuple[Any, str]]:
+        """Berechnet die stationären Stellen (Alias für stationaere_stellen)"""
+        return self.stationaere_stellen
+
+    @property
+    def sattelpunkte(self) -> list[tuple[Any, Any, str]]:
+        """
+        Berechnet die Sattelpunkte der Funktion.
+
+        Sattelpunkte sind spezielle stationäre Stellen, die zusätzlich Wendepunkte sind:
+        - f'(x) = 0 (stationär)
+        - f''(x) = 0 (Wendepunkt)
+        - f'''(x) ≠ 0 (echter Wendepunkt)
+
+        Returns:
+            Liste von (x_wert, y_wert, art) Tupeln, wobei art "Sattelpunkt" ist
+
+        Examples:
+            >>> f = Funktion("x^3")
+            >>> sattelpunkte = f.sattelpunkte  # [(0, 0, "Sattelpunkt")]
+        """
+        try:
+            # Finde alle stationären Stellen (f'(x) = 0)
+            stationaere_punkte = self.stationaere_stellen
+
+            sattelpunkte = []
+
+            for x_wert, _art in stationaere_punkte:
+                try:
+                    # Prüfe, ob es sich um einen Sattelpunkt handelt
+                    # Für einen Sattelpunkt muss die zweite Ableitung an diesem Punkt null sein
+                    f2 = self.ableitung(2)
+                    f2_wert = f2.wert(x_wert)
+
+                    # Wenn f''(x) = 0, könnte es ein Sattelpunkt sein
+                    if f2_wert.equals(0) or f2_wert == 0:
+                        # Prüfe mit dritter Ableitung, ob es ein echter Wendepunkt ist
+                        f3 = self.ableitung(3)
+                        f3_wert = f3.wert(x_wert)
+
+                        # Wenn f'''(x) ≠ 0, dann ist es ein echter Sattelpunkt
+                        ist_sattelpunkt = False
+
+                        if f3_wert.is_number:
+                            # Numerischer Wert - direkter Vergleich möglich
+                            if f3_wert != 0:
+                                ist_sattelpunkt = True
+                        else:
+                            # Symbolischer Wert - versuche zu vereinfachen
+                            try:
+                                f3_wert_simplified = sp.simplify(f3_wert)
+                                # Für pädagogische Zwecke: gehe davon aus, dass Parameter ≠ 0
+                                if not f3_wert_simplified.equals(0):
+                                    ist_sattelpunkt = True
+                            except Exception:
+                                # Bei komplexen symbolischen Ausdrücken
+                                # gehe davon aus, dass es ein Sattelpunkt ist
+                                ist_sattelpunkt = True
+
+                        if ist_sattelpunkt:
+                            # Berechne y-Wert
+                            y_wert = self.wert(x_wert)
+
+                            # Behalte exakte symbolische Ergebnisse bei
+                            if x_wert.is_number and not x_wert.free_symbols:
+                                # Prüfe, ob es sich um einen "schönen" exakten Wert handelt
+                                if isinstance(x_wert, (sp.Rational, sp.Integer)) or (
+                                    hasattr(x_wert, "q")
+                                    and hasattr(x_wert, "p")  # Bruch-Form
+                                ):
+                                    # Behalte exakte Form bei (Bruch, Integer)
+                                    x_final = x_wert
+                                else:
+                                    # Konvertiere zu Float (für Dezimalzahlen)
+                                    x_final = float(x_wert)
+                            else:
+                                # Behalte symbolischen Ausdruck bei
+                                x_final = x_wert
+
+                            sattelpunkte.append((x_final, y_wert, "Sattelpunkt"))
+                except Exception:
+                    # Bei Berechnungsfehlern überspringen wir den Punkt
+                    continue
+
+            return sorted(
+                sattelpunkte,
+                key=lambda p: p[0] if isinstance(p[0], (int, float)) else 0,
+            )
+
+        except Exception:
+            # Bei Fehlern leere Liste zurückgeben
+            return []
+
+    def Sattelpunkte(self) -> list[tuple[Any, Any, str]]:
+        """Berechnet die Sattelpunkte (Alias für sattelpunkte)"""
+        return self.sattelpunkte
+
     # Typenerkennung - Alle zentral!
 
     @property

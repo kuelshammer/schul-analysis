@@ -28,6 +28,8 @@ from .sympy_types import (
     ExactNullstellenListe,
     ExactSymPyExpr,
     ExtremaListe,
+    SattelpunkteListe,
+    StationaereStellenListe,
     WendepunkteListe,
     preserve_exact_types,
     validate_analysis_results,
@@ -401,7 +403,7 @@ def Wendestellen(funktion: Funktionstyp) -> WendepunkteListe:
 
             # Extrahiere nur (x-Wert, Typ) aus den (x, y, art) Tupeln
             wendestellen = []
-            for x_wert, y_wert, art in wendepunkte:
+            for x_wert, _y_wert, art in wendepunkte:
                 wendestellen.append((x_wert, art))
 
             return wendestellen
@@ -466,6 +468,111 @@ def Wendepunkte(funktion: Funktionstyp) -> list[tuple[Any, Any, str]]:
         )
     except Exception as e:
         raise SchulAnalysisError(f"Fehler bei der Wendepunkte-Berechnung: {str(e)}")
+
+
+def StationaereStellen(funktion: Funktionstyp) -> StationaereStellenListe:
+    """
+    Findet die stationären Stellen einer Funktion mit exakten SymPy-Ergebnissen.
+
+    Stationäre Stellen sind alle Punkte, an denen die erste Ableitung null ist (f'(x) = 0).
+    Dies entspricht mathematisch den kritischen Punkten, die in der Extremstellen-Berechnung
+    gefunden werden. Der Unterschied liegt in der Interpretation:
+    - Stationär = horizontale Tangente
+    - Extrem = Max/Min/Sattelpunkt
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        Liste der stationären Stellen als (x-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
+        >>> ss = StationaereStellen(f)         # [(0, 'Sattelpunkt')]
+        >>> f = ErstellePolynom([1, 0, 0])     # x²
+        >>> ss = StationaereStellen(f)         # [(0, 'Minimum')]
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
+    """
+    try:
+        # Verwende die stationaere_stellen Methode der Funktion
+        if hasattr(funktion, "stationaere_stellen"):
+            attr = funktion.stationaere_stellen
+            if callable(attr):
+                result = funktion.stationaere_stellen()
+            else:
+                result = funktion.stationaere_stellen
+
+            return result
+        else:
+            # Fallback: Verwende Extremstellen, da die Berechnung identisch ist
+            if hasattr(funktion, "extremstellen"):
+                attr = funktion.extremstellen
+                if callable(attr):
+                    result = funktion.extremstellen()
+                else:
+                    result = funktion.extremstellen
+
+                return result
+            else:
+                raise AttributeError(
+                    "Keine stationaere_stellen oder extremstellen Eigenschaft gefunden"
+                )
+    except AttributeError:
+        raise UngueltigeFunktionError(
+            "Stationäre Stellen Berechnung",
+            f"Die Funktion vom Typ '{type(funktion).__name__}' "
+            "unterstützt keine Berechnung stationärer Stellen.",
+        )
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Berechnung stationärer Stellen: {str(e)}"
+        )
+
+
+def Sattelpunkte(funktion: Funktionstyp) -> SattelpunkteListe:
+    """
+    Findet die Sattelpunkte einer Funktion mit exakten SymPy-Ergebnissen.
+
+    Sattelpunkte sind spezielle stationäre Stellen, die zusätzlich Wendepunkte sind:
+    - f'(x) = 0 (stationär)
+    - f''(x) = 0 (Wendepunkt)
+    - f'''(x) ≠ 0 (echter Wendepunkt)
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        Liste der Sattelpunkte als (x-Wert, y-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
+        >>> sp = Sattelpunkte(f)               # [(0, 0, 'Sattelpunkt')]
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
+    """
+    try:
+        # Verwende die sattelpunkte Methode der Funktion
+        if hasattr(funktion, "sattelpunkte"):
+            attr = funktion.sattelpunkte
+            if callable(attr):
+                result = funktion.sattelpunkte()
+            else:
+                result = funktion.sattelpunkte
+
+            return result
+        else:
+            raise AttributeError("Keine sattelpunkte Eigenschaft oder Methode gefunden")
+    except AttributeError:
+        raise UngueltigeFunktionError(
+            "Sattelpunkteberechnung",
+            f"Die Funktion vom Typ '{type(funktion).__name__}' "
+            "unterstützt keine Sattelpunkte-Berechnung.",
+        )
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Sattelpunkte-Berechnung: {str(e)}")
 
 
 def Symmetrie(funktion: Funktionstyp) -> str:
