@@ -368,9 +368,66 @@ uv publish
 - Klare Fehlermeldungen
 - Gute Visualisierungen mit Erklärungen
 
+## 🧹 Code-Cleanup und Refactoring
+
+### **Zu überprüfende ungenutzte Methoden**
+
+Basierend auf einer Gemini Code Review vom November 2024 wurden folgende ungenutzte Methoden identifiziert:
+
+#### **API-Funktionen (src/schul_analysis/api.py)**
+
+- `Erstelle_Exponential_Rationale_Funktion()` - Never called in codebase
+- `Erstelle_Lineares_Gleichungssystem()` - Not used in tests/examples
+- `Erstelle_Funktion()` - Redundant with main `Funktion()` constructor
+- `Analysiere_Funktion()` - Comprehensive function not used in examples
+- `Zeige_Analyse()` - Helper function not used anywhere
+
+**Entscheidung**: Diese Methoden werden vorerst beibehalten, sollten aber zukünftig evaluiert werden, ob sie entfernt oder implementiert werden.
+
+#### **Hilfsfunktionen (src/schul_analysis/struktur.py)**
+
+- `teste_strukturanalyse()` - Test function not part of test suite
+- `_vereinfache_pythagoreische_identitaet()` - Specialized helper with no usage
+
+**Entscheidung**: Diese können potenziell entfernt werden, wenn keine spezifische Verwendung geplant ist.
+
+### **Bereits entfernte Methoden**
+
+#### **GanzrationaleFunktion (src/schul_analysis/ganzrationale.py)**
+
+- `get_steigung()` - Only used internally by specialized classes
+- `get_y_achsenabschnitt()` - Only used internally by specialized classes
+- `get_nullstelle()` - Only used internally by specialized classes
+- `get_oeffnungsfaktor()` - Only used by specialized classes
+- `get_scheitelpunkt()` - Only used by specialized classes
+- `get_nullstellen_pq_formel()` - Used only by specialized classes
+
+**Status**: ✅ Entfernt im November 2024
+
+#### **Pädagogische Methoden (src/schul_analysis/gebrochen_rationale.py)**
+
+- `validiere_zerlegung()` - Educational validation method
+- `zeige_zerlegung()` - Educational display method
+- `erkläre_schritt_für_schritt()` - Detailed step explanation
+- `zeige_asymptotisches_verhalten()` - Comprehensive asymptote analysis
+- `erkläre_transformation()` - Transformation explanation
+
+**Status**: ✅ Entfernt im November 2024
+
+### **Zukünftige Code-Reviews**
+
+Regelmäßige Code-Reviews sollten durchgeführt werden, um:
+
+1. Ungenutzten Code zu identifizieren
+2. Redundanzen zu entfernen
+3. Die API konsistent zu halten
+4. Pädagogische Wertigkeit zu bewerten
+
+**Tool-Empfehlung**: Gemini Code Review oder ähnliche statische Analyse-Tools verwenden.
+
 ---
 
 **Wichtig**: Dieses Development Handbook ist die zentrale Referenz für alleContributor:innen. Es muss bei Architekturänderungen始终保持 aktualisiert werden.
 
-**Letztes Update**: Oktober 2024
+**Letztes Update**: November 2024
 **Maintainer**: Development Team

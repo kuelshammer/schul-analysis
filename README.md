@@ -352,3 +352,31 @@ MIT License - siehe [LICENSE](LICENSE) für Details.
 ## Unterstützung
 
 Bei Fragen oder Problemen erstelle bitte ein [Issue](https://github.com/kuelshammer/schul-analysis/issues).
+
+## 🧹 Code-Status und Refactoring
+
+### **Kürzliche Verbesserungen (November 2024)**
+
+- **✅ API-Vereinheitlichung**: Konsistente Namenskonvention eingeführt
+- **✅ Methoden-Entfernung**: Ungenutzte `get_*`-Methoden aus ganzrational.py entfernt
+- **✅ Pädagogische Methoden**: Überflüssige Erklärungsmethoden aus gebrochen_rationale.py entfernt
+- **✅ Code-Qualität**: Kern-Dateien bestehen ruff-Prüfung
+
+### **Zu überprüfende API-Funktionen**
+
+Folgende Funktionen werden derzeit nicht genutzt, werden aber beibehalten:
+
+- `Erstelle_Exponential_Rationale_Funktion()` - Für zukünftige Verwendung
+- `Erstelle_Lineares_Gleichungssystem()` - Für LGS-Integration
+- `Analysiere_Funktion()` - Für erweiterte Analyse
+- `Zeige_Analyse()` - Für formatierte Ausgaben
+
+**Entscheidung**: Diese Funktionen bleiben als zukünftige Erweiterungen erhalten.
+
+### **Technische Schuld**
+
+- **Visualisierung**: Einige Plotly-Helper-Funktionen könnten konsolidiert werden
+- **Struktur**: `parametrisch.py` Import muss überprüft werden
+- **Type Hints**: Einige komplexe Typ-Annotationen könnten vereinfacht werden
+
+Regelmäßige Code-Reviews mit statischen Analyse-Tools (z.B. Gemini Code Review) werden empfohlen.
