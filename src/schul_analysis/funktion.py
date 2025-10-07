@@ -816,6 +816,49 @@ class Funktion:
         """Visualisiert die Funktion mit Plotly (einheitliche Methode)."""
         return self.graph(x_min=x_min, x_max=x_max, y_min=y_min, y_max=y_max, **kwargs)
 
+    def ausmultiplizieren(self):
+        """
+        Multipliziert den aktuellen SymPy-Ausdruck aus und ersetzt ihn durch die expandierte Form.
+
+        Diese Methode ist nützlich für pädagogische Zwecke, wenn Schüler die ausmultiplizierte
+        Form einer Funktion sehen müssen, anstatt der faktorisierten Darstellung.
+
+        Returns:
+            Selbst (die Funktion mit ausmultipliziertem Term)
+
+        Examples:
+            >>> f = Funktion("(x+1)(x-2)")
+            >>> print(f.term())  # (x + 1)*(x - 2)
+            >>> f.ausmultiplizieren()
+            >>> print(f.term())  # x^2 - x - 2
+
+            >>> g = Funktion("(x+1)^3")
+            >>> print(g.term())  # (x + 1)^3
+            >>> g.ausmultiplizieren()
+            >>> print(g.term())  # x^3 + 3*x^2 + 3*x + 1
+
+        Didaktischer Hinweis:
+            Das Ausmultiplizieren hilft bei der Umwandlung von Produktform in die
+        Normalform und ist wichtig für das Verständnis von Polynom-Operationen.
+        """
+        import sympy as sp
+
+        # Wende SymPy's expand-Funktion auf den aktuellen Term an
+        expandierter_term = sp.expand(self.term_sympy)
+
+        # Aktualisiere den internen SymPy-Ausdruck
+        self.term_sympy = expandierter_term
+
+        # Setze den Term-String zurück, damit er neu generiert wird
+        if hasattr(self, "_term"):
+            self._term = None
+
+        # Setze auch den gecachten LaTeX-Ausdruck zurück
+        if hasattr(self, "_latex_expr"):
+            self._latex_expr = None
+
+        return self
+
     # =============================================================================
     # ARITHMETISCHE OPERATIONEN - SymPy-basierte Funktionsoperationen
     # =============================================================================

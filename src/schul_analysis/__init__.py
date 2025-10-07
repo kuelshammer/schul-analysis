@@ -19,6 +19,7 @@ from .api import (
     LGS,
     # Komfort-Funktionen für den Unterricht
     Ableitung,
+    Ausmultiplizieren,
     Auswerten,
     ErstellePolynom,
     Extrema,
@@ -107,6 +108,7 @@ __version__ = "1.0.0"  # Hauptversion nach pädagogischer Optimierung
 __all__ = [
     # 🔥 SCHÜLERFREUNDLICHE API (Priorität für Unterricht)
     "Ableitung",
+    "Ausmultiplizieren",
     "Nullstellen",
     "Integral",
     "Extrema",

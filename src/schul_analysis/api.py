@@ -487,6 +487,54 @@ def Term(funktion: Funktionstyp) -> Any:
         raise SchulAnalysisError(f"Fehler bei der LaTeX-Darstellung: {str(e)}")
 
 
+def Ausmultiplizieren(funktion: Funktionstyp) -> Funktionstyp:
+    """
+    Multipliziert eine Funktion aus und gibt die expandierte Form zurück.
+
+    Diese Funktion ist nützlich für pädagogische Zwecke, wenn Schüler die ausmultiplizierte
+    Form einer Funktion sehen müssen, anstatt der faktorisierten Darstellung.
+
+    Args:
+        funktion: Eine beliebige Funktion aus dem Schul-Analysis Framework
+
+    Returns:
+        Die Funktion mit ausmultipliziertem Term
+
+    Examples:
+        >>> f = Funktion("(x+1)(x-2)")
+        >>> print(f.term())  # (x + 1)*(x - 2)
+        >>> f_expanded = Ausmultiplizieren(f)
+        >>> print(f_expanded.term())  # x^2 - x - 2
+        # Beachte: f_expanded ist eine NEUE Funktion, f bleibt unverändert
+
+        >>> g = Funktion("(x+1)^3")
+        >>> print(g.term())  # (x + 1)^3
+        >>> g_expanded = Ausmultiplizieren(g)
+        >>> print(g_expanded.term())  # x^3 + 3*x^2 + 3*x + 1
+
+        # In-place Änderung:
+        >>> h = Funktion("(x-1)(x+2)(x-3)")
+        >>> h.ausmultiplizieren()  # Methode direkt am Objekt
+        >>> print(h.term())  # x^3 - 2*x^2 - 5*x + 6
+
+    Didaktischer Hinweis:
+        Das Ausmultiplizieren hilft bei der Umwandlung von Produktform in die
+        Normalform und ist wichtig für das Verständnis von Polynom-Operationen.
+        Manchmal ist die faktorisierte Form besser für die Analyse (z.B. Nullstellen),
+        manchmal die expandierte Form besser für weitere Berechnungen.
+    """
+    # Erstelle eine Kopie der Funktion, um das Original nicht zu verändern
+    from . import Funktion
+
+    # Erstelle neue Funktion mit dem gleichen Term
+    neue_funktion = Funktion(funktion.term_sympy)
+
+    # Wende Ausmultiplizieren auf die neue Funktion an
+    neue_funktion.ausmultiplizieren()
+
+    return neue_funktion
+
+
 def Zeichne(
     funktion: Any,
     x_bereich: tuple[float, float] | None = None,
@@ -834,6 +882,7 @@ __all__ = [
     "Symmetrie",
     # Visualisierung
     "Term",
+    "Ausmultiplizieren",
     "Zeichne",
     # Werteberechnung
     "Auswerten",
