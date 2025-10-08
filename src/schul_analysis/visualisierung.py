@@ -10,8 +10,179 @@ import plotly.graph_objects as go
 import math
 import sympy as sp
 
-from .config import config
+from .config import config, SchulAnalysisConfig
 from .funktion import Funktion
+
+
+def _fuege_punkte_fuer_mehrfache_funktionen_hinzu(
+    fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
+):
+    """Fügt wichtige Punkte (Nullstellen, Extremstellen, Wendepunkte, Polstellen) für mehrere Funktionen hinzu
+
+    Args:
+        fig: Plotly-Figur
+        funktionen: Liste der Funktionen
+        farben: Liste der Farben für die Funktionen
+        x_min, x_max, y_min, y_max: Bereichsgrenzen
+        **kwargs: Zusätzliche Optionen (zeige_nullstellen, zeige_extremstellen, etc.)
+    """
+    # Optionen extrahieren
+    zeige_nullstellen = kwargs.get("zeige_nullstellen", True)
+    zeige_extremstellen = kwargs.get("zeige_extremstellen", True)
+    zeige_wendepunkte = kwargs.get("zeige_wendepunkte", True)
+    zeige_polstellen = kwargs.get("zeige_polstellen", True)
+
+    for i, funktion in enumerate(funktionen):
+        farbe = farben[i % len(farben)]
+        funk_name = f"f{i + 1}"
+
+        # Nullstellen
+        if hasattr(funktion, "nullstellen") and zeige_nullstellen:
+            try:
+                nullstellen = funktion.nullstellen
+                for ns in nullstellen:
+                    try:
+                        x_ns = _formatiere_float(ns)
+                        if x_min <= x_ns <= x_max:
+                            y_ns = 0.0  # Nullstellen liegen immer auf y=0
+                            if y_min <= y_ns <= y_max:
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=[x_ns],
+                                        y=[y_ns],
+                                        mode="markers",
+                                        name=f"{funk_name} Nullstelle x={x_ns:.3f}",
+                                        marker={
+                                            "color": SchulAnalysisConfig.COLORS.get(
+                                                "secondary", "red"
+                                            ),
+                                            "size": 10,
+                                            "symbol": "circle",
+                                            "line": {"color": farbe, "width": 2},
+                                        },
+                                        showlegend=False,
+                                        hovertemplate=(
+                                            f"<b>{funk_name} Nullstelle</b><br>"
+                                            f"x: {x_ns:.3f}<br>"
+                                            f"y: 0<extra></extra>"
+                                        ),
+                                    )
+                                )
+                    except (ValueError, TypeError):
+                        continue
+            except Exception:
+                continue
+
+        # Extremstellen
+        if hasattr(funktion, "extremstellen") and zeige_extremstellen:
+            try:
+                extremstellen = funktion.extremstellen
+                for es in extremstellen:
+                    try:
+                        if isinstance(es, tuple) and len(es) >= 2:
+                            x_es = _formatiere_float(es[0])
+                            art = es[1]
+                        else:
+                            x_es = _formatiere_float(es)
+                            art = "Extremum"
+
+                        y_es = funktion.wert(x_es)
+                        if (
+                            _ist_endlich(y_es)
+                            and x_min <= x_es <= x_max
+                            and y_min <= _formatiere_float(y_es) <= y_max
+                        ):
+                            color = "green" if "Maximum" in str(art) else "orange"
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=[x_es],
+                                    y=[_formatiere_float(y_es)],
+                                    mode="markers",
+                                    name=f"{funk_name} {art} ({x_es:.3f}|{_formatiere_float(y_es):.3f})",
+                                    marker={
+                                        "color": color,
+                                        "size": 10,
+                                        "symbol": "circle",
+                                        "line": {"color": farbe, "width": 2},
+                                    },
+                                    showlegend=False,
+                                    hovertemplate=(
+                                        f"<b>{funk_name} {art}</b><br>"
+                                        f"x: {x_es:.3f}<br>"
+                                        f"y: {_formatiere_float(y_es):.3f}<extra></extra>"
+                                    ),
+                                )
+                            )
+                    except (ValueError, TypeError):
+                        continue
+            except Exception:
+                continue
+
+        # Wendepunkte
+        if hasattr(funktion, "wendepunkte") and zeige_wendepunkte:
+            try:
+                wendepunkte = funktion.wendepunkte
+                for wp in wendepunkte:
+                    try:
+                        if isinstance(wp, tuple) and len(wp) >= 2:
+                            x_wp = _formatiere_float(wp[0])
+                            y_wp = wp[1]
+                        else:
+                            x_wp = _formatiere_float(wp)
+                            y_wp = funktion.wert(x_wp)
+
+                        if (
+                            _ist_endlich(y_wp)
+                            and x_min <= x_wp <= x_max
+                            and y_min <= _formatiere_float(y_wp) <= y_max
+                        ):
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=[x_wp],
+                                    y=[_formatiere_float(y_wp)],
+                                    mode="markers",
+                                    name=f"{funk_name} Wendepunkt ({x_wp:.3f}|{_formatiere_float(y_wp):.3f})",
+                                    marker={
+                                        "color": "purple",
+                                        "size": 10,
+                                        "symbol": "diamond",
+                                        "line": {"color": farbe, "width": 2},
+                                    },
+                                    showlegend=False,
+                                    hovertemplate=(
+                                        f"<b>{funk_name} Wendepunkt</b><br>"
+                                        f"x: {x_wp:.3f}<br>"
+                                        f"y: {_formatiere_float(y_wp):.3f}<extra></extra>"
+                                    ),
+                                )
+                            )
+                    except (ValueError, TypeError):
+                        continue
+            except Exception:
+                continue
+
+        # Polstellen (für gebrochen-rationale Funktionen)
+        if hasattr(funktion, "polstellen") and zeige_polstellen:
+            try:
+                polstellen = funktion.polstellen
+                for ps in polstellen:
+                    try:
+                        x_ps = _formatiere_float(ps)
+                        if x_min <= x_ps <= x_max:
+                            # Zeige Polstellen als vertikale Linien oder spezielle Marker
+                            fig.add_vline(
+                                x=x_ps,
+                                line_dash="dash",
+                                line_color=farbe,
+                                line_width=2,
+                                opacity=0.7,
+                                annotation_text=f"{funk_name} Polstelle",
+                                annotation_position="top",
+                            )
+                    except (ValueError, TypeError):
+                        continue
+            except Exception:
+                continue
 
 
 # ====================
@@ -1641,6 +1812,11 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                             showlegend=True,
                         )
                     )
+
+        # NEU: Füge wichtige Punkte für jede einzelne Funktion hinzu
+        _fuege_punkte_fuer_mehrfache_funktionen_hinzu(
+            fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
+        )
 
         # Konfiguration
         layout_config = config.get_plot_config()
