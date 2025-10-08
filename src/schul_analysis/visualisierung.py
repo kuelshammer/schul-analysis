@@ -218,13 +218,34 @@ def _berechne_y_bereich(
         # Sammle y-Werte aus interessanten Punkten
         interessante_y = []
         if interessante_punkte:
-            for _kategorie, punkte_liste in interessante_punkte.items():
+            for kategorie, punkte_liste in interessante_punkte.items():
                 try:
                     for p in punkte_liste:
                         if p is not None:
-                            if isinstance(p, tuple) and len(p) >= 2:
-                                # Bei Tupeln (x, y, ...) die y-Koordinate nehmen
-                                y_val = _formatiere_float(p[1])
+                            if isinstance(p, tuple):
+                                if kategorie == "extremstellen" and len(p) >= 2:
+                                    # Bei Extremstellen (x, art): Berechne y-Wert durch Auswertung
+                                    x_val = p[0]
+                                    y_val = funktion.wert(x_val)
+                                    if _ist_endlich(y_val):
+                                        y_float = _formatiere_float(y_val)
+                                        if y_float is not None:
+                                            interessante_y.append(y_float)
+                                elif kategorie == "wendepunkte" and len(p) >= 2:
+                                    # Bei Wendepunkten (x, y, art): nimm den y-Wert
+                                    y_val = p[1]  # y-Wert ist an Position 1
+                                    if _ist_endlich(y_val):
+                                        y_float = _formatiere_float(y_val)
+                                        if y_float is not None:
+                                            interessante_y.append(y_float)
+                                elif len(p) >= 2:
+                                    # Fallback für andere Tupel-Typen
+                                    y_val = _formatiere_float(p[1])
+                                    if y_val is not None:
+                                        interessante_y.append(y_val)
+                            else:
+                                # Bei einzelnen Punkten: könnte y-Wert sein
+                                y_val = _formatiere_float(p)
                                 if y_val is not None:
                                     interessante_y.append(y_val)
                 except (ValueError, TypeError, IndexError):
@@ -247,28 +268,82 @@ def _berechne_y_bereich(
         alle_y = y_werte + interessante_y
 
         if not alle_y:
-            return min_bereich
+            return default_range
 
-        # Finde y-Bereich mit Puffer
-        y_min_auto = min(alle_y)
-        y_max_auto = max(alle_y)
+        # EINFACHE ROBUSTE METHODE
+        # 1. Berechne y-Werte aller wichtigen Punkte (Extremstellen, Wendepunkte)
+        wichtige_y_werte = []
 
-        # Füge Puffer hinzu
+        # Hole y-Werte von Extremstellen
+        if hasattr(funktion, "extremstellen"):
+            for extremstelle in funktion.extremstellen:
+                if isinstance(extremstelle, tuple) and len(extremstelle) >= 1:
+                    x_val = extremstelle[0]
+                    y_val = funktion.wert(x_val)
+                    if _ist_endlich(y_val):
+                        y_float = _formatiere_float(y_val)
+                        if y_float is not None:
+                            wichtige_y_werte.append(y_float)
+
+        # Hole y-Werte von Wendepunkten
+        if hasattr(funktion, "wendepunkte"):
+            for wendepunkt in funktion.wendepunkte:
+                if isinstance(wendepunkt, tuple) and len(wendepunkt) >= 2:
+                    y_val = wendepunkt[1]  # y-Wert ist an Position 1
+                    if _ist_endlich(y_val):
+                        y_float = _formatiere_float(y_val)
+                        if y_float is not None:
+                            wichtige_y_werte.append(y_float)
+
+        # 2. Berechne Basisbereich aus allen y-Werten (mit Ausreißer-Schutz)
+        y_array = np.array([y for y in alle_y if y is not None])
+
+        if len(y_array) > 0:
+            # Verwende Quantile um Ausreißer zu ignorieren
+            q10 = np.percentile(y_array, 10)
+            q90 = np.percentile(y_array, 90)
+            y_min_basis = q10
+            y_max_basis = q90
+        else:
+            y_min_basis = -5
+            y_max_basis = 5
+
+        # 3. Erweitere Bereich um wichtige Punkte einzuschließen
+        if wichtige_y_werte:
+            y_min_wichtig = min(wichtige_y_werte)
+            y_max_wichtig = max(wichtige_y_werte)
+
+            y_min_auto = min(y_min_basis, y_min_wichtig)
+            y_max_auto = max(y_max_basis, y_max_wichtig)
+        else:
+            y_min_auto = y_min_basis
+            y_max_auto = y_max_basis
+
+        # 4. Füge Puffer hinzu
         hoehe = y_max_auto - y_min_auto
         if hoehe > 0:
-            puffer_wert = hoehe * puffer
+            puffer_wert = max(hoehe * puffer, 2.0)  # Mindestens 2 Einheiten Puffer
             y_min_auto -= puffer_wert
             y_max_auto += puffer_wert
         else:
-            # Falls alle y-Werte gleich sind
-            y_min_auto -= 1
-            y_max_auto += 1
+            y_min_auto -= 2
+            y_max_auto += 2
 
-        # Wenn keine sinnvollen Werte gefunden wurden, verwende Standardbereich
-        if not alle_y and not interessante_y:
-            return default_range
+        # 5. Setze vernünftige Grenzen, aber nicht zu eng
+        # Wenn der Bereich zu groß wird, begrenze ihn aber berücksichtige wichtige Punkte
+        gesamtbreite = y_max_auto - y_min_auto
+        if gesamtbreite > 200:  # Wenn Bereich größer als 200 Einheiten
+            # Zentriere auf den Mittelwert der wichtigen Punkte
+            if wichtige_y_werte:
+                center = sum(wichtige_y_werte) / len(wichtige_y_werte)
+                y_min_auto = center - 100  # ±100 um den Mittelpunkt
+                y_max_auto = center + 100
+            else:
+                y_min_auto = -100
+                y_max_auto = 100
 
-        # Wenn Werte gefunden wurden, verwende diese mit Puffer
+        return (y_min_auto, y_max_auto)
+
         return (y_min_auto, y_max_auto)
 
     except (ValueError, TypeError, AttributeError):
