@@ -12,8 +12,217 @@ import math
 from .config import config
 from .funktion import Funktion
 
+
 # ====================
-# Hilfsfunktionen für intelligente Skalierung
+# Hilfsfunktionen für intelligente Achsenintervalle
+# ====================
+
+
+def _berechne_intervalle(min_val, max_val, max_ticks=8):
+    """Berechnet optimale Intervalle für benutzerfreundliche Beschriftungen
+
+    Args:
+        min_val, max_val: Wertebereich
+        max_ticks: Maximale Anzahl an Ticks (Standard: 8)
+
+    Returns:
+        float: Optimale Schrittweite
+    """
+    span = max_val - min_val
+    if span <= 0:
+        return 1.0
+
+    # Bevorzugte Schrittweiten (runde Werte)
+    moegliche_schritte = [1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100]
+
+    # Berechne rohe Schrittweite
+    raw_step = span / max_ticks
+
+    # Finde die Größenordnung (10er-Potenz)
+    magnitude = 10 ** math.floor(math.log10(raw_step))
+
+    # Normalisiere auf 0-100 Bereich
+    normalized_step = raw_step / magnitude
+
+    # Finde die beste Schrittweite aus der Liste
+    best_step = min(moegliche_schritte, key=lambda x: abs(x - normalized_step))
+
+    return best_step * magnitude
+
+
+def _optimiere_achse(min_val, max_val, max_ticks=8):
+    """Optimiert Achsenbereich für runde Beschriftungen
+
+    Args:
+        min_val, max_val: Originaler Wertebereich
+        max_ticks: Maximale Anzahl an Ticks (Standard: 8)
+
+    Returns:
+        tuple: (optimiertes_min, optimiertes_max, schrittweite)
+    """
+    if min_val == max_val:
+        # Einzelpunkt: Bereich zentrieren
+        return min_val - 1, max_val + 1, 1.0
+
+    # Berechne optimale Schrittweite
+    step = _berechne_intervalle(min_val, max_val, max_ticks)
+
+    # Runde auf passende Schrittweite
+    new_min = math.floor(min_val / step) * step
+    new_max = math.ceil(max_val / step) * step
+
+    # Stelle sicher, dass Originalbereich enthalten ist
+    if new_min > min_val:
+        new_min -= step
+    if new_max < max_val:
+        new_max += step
+
+    # Verhindere zu kleine Bereiche
+    if new_max - new_min < step:
+        new_min -= step
+        new_max += step
+
+    return new_min, new_max, step
+
+
+# ====================
+# Vereinfachte Punktesammlung
+# ====================
+
+
+def _sammle_interessante_punkte(funktion):
+    """Sammelt alle interessanten Punkte einer Funktion für die Bereichsberechnung
+
+    Args:
+        funktion: Die zu analysierende Funktion
+
+    Returns:
+        dict: Dictionary mit x_werten, y_werten und punkten_mit_koordinaten
+    """
+    punkte = {
+        "x_werte": [],
+        "y_werte": [],
+        "punkte_mit_koordinaten": [],  # (art, x, y) für Warnungen
+    }
+
+    try:
+        # Nullstellen
+        if hasattr(funktion, "nullstellen"):
+            for ns in funktion.nullstellen:
+                try:
+                    x_val = _formatiere_float(ns)
+                    punkte["x_werte"].append(x_val)
+                    punkte["y_werte"].append(0.0)
+                    punkte["punkte_mit_koordinaten"].append(("Nullstelle", x_val, 0.0))
+                except (ValueError, TypeError):
+                    continue
+
+        # Extremstellen
+        if hasattr(funktion, "extremstellen"):
+            for es in funktion.extremstellen:
+                try:
+                    if isinstance(es, tuple) and len(es) >= 1:
+                        x_val = _formatiere_float(es[0])
+                        y_val = _formatiere_float(funktion.wert(x_val))
+                        art = es[1] if len(es) >= 2 else "Extremum"
+
+                        punkte["x_werte"].append(x_val)
+                        punkte["y_werte"].append(y_val)
+                        punkte["punkte_mit_koordinaten"].append((art, x_val, y_val))
+                    else:
+                        # Einzelner Wert (x-Koordinate)
+                        x_val = _formatiere_float(es)
+                        y_val = _formatiere_float(funktion.wert(x_val))
+
+                        punkte["x_werte"].append(x_val)
+                        punkte["y_werte"].append(y_val)
+                        punkte["punkte_mit_koordinaten"].append(
+                            ("Extremum", x_val, y_val)
+                        )
+                except (ValueError, TypeError, ZeroDivisionError):
+                    continue
+
+        # Wendepunkte
+        if hasattr(funktion, "wendepunkte"):
+            for wp in funktion.wendepunkte:
+                try:
+                    if isinstance(wp, tuple) and len(wp) >= 2:
+                        x_val = _formatiere_float(wp[0])
+                        y_val = _formatiere_float(wp[1])
+                        art = wp[2] if len(wp) >= 3 else "Wendepunkt"
+
+                        punkte["x_werte"].append(x_val)
+                        punkte["y_werte"].append(y_val)
+                        punkte["punkte_mit_koordinaten"].append((art, x_val, y_val))
+                except (ValueError, TypeError, IndexError):
+                    continue
+
+        # Polstellen (nur Y-Werte relevant für asymptotisches Verhalten)
+        if hasattr(funktion, "polstellen"):
+            try:
+                polstellen_liste = funktion.polstellen()
+                for ps in polstellen_liste:
+                    try:
+                        x_val = _formatiere_float(ps)
+                        # Für Polstellen nur X-Werte speichern (Y geht gegen Unendlich)
+                        punkte["x_werte"].append(x_val)
+                        # Kein Y-Wert für Polstellen, da diese gegen Unendlich gehen
+                        punkte["punkte_mit_koordinaten"].append(
+                            ("Polstelle", x_val, None)
+                        )
+                    except (ValueError, TypeError):
+                        continue
+            except (AttributeError, TypeError):
+                # Manche Funktionen haben keine polstellen() Methode
+                pass
+
+    except Exception as e:
+        import logging
+
+        logging.debug(f"Fehler beim Sammeln von Punkten: {e}")
+
+    return punkte
+
+
+def _filtere_sichtbare_punkte(punkte, x_min=None, x_max=None, y_min=None, y_max=None):
+    """Filtert Punkte basierend auf Bereichsgrenzen und gibt Warnungen zurück
+
+    Args:
+        punkte: Ergebnis von _sammle_interessante_punkte
+        x_min, x_max: X-Bereichsgrenzen (None = keine Begrenzung)
+        y_min, y_max: Y-Bereichsgrenzen (None = keine Begrenzung)
+
+    Returns:
+        tuple: (sichtbare_punkte, abgeschnittene_punkte)
+    """
+    # Standardwerte: Unendlich = keine Begrenzung
+    x_min_eff = x_min if x_min is not None else float("-inf")
+    x_max_eff = x_max if x_max is not None else float("inf")
+    y_min_eff = y_min if y_min is not None else float("-inf")
+    y_max_eff = y_max if y_max is not None else float("inf")
+
+    sichtbare_punkte = []
+    abgeschnittene_punkte = []
+
+    for art, x_val, y_val in punkte["punkte_mit_koordinaten"]:
+        # Sonderbehandlung für Polstellen (kein Y-Wert)
+        if art == "Polstelle":
+            if x_min_eff <= x_val <= x_max_eff:
+                sichtbare_punkte.append((art, x_val, y_val))
+            else:
+                abgeschnittene_punkte.append((art, x_val, y_val))
+        else:
+            # Normale Punkte mit X- und Y-Koordinaten
+            if (x_min_eff <= x_val <= x_max_eff) and (y_min_eff <= y_val <= y_max_eff):
+                sichtbare_punkte.append((art, x_val, y_val))
+            else:
+                abgeschnittene_punkte.append((art, x_val, y_val))
+
+    return sichtbare_punkte, abgeschnittene_punkte
+
+
+# ====================
+# Hilfsfunktionen für intelligente Skalierung (Legacy)
 # ====================
 
 
@@ -561,7 +770,9 @@ def _formatiere_float(y):
         return None
 
 
-def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
+def _erstelle_plotly_figur_mit_intelligenten_achsen(
+    funktion, x_min, x_max, y_min, y_max, x_step=None, y_step=None, **kwargs
+):
     """Erstelle die eigentliche Plotly-Figur mit allen Features
 
     Args:
@@ -717,42 +928,48 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
                     )
                 )
 
-    # 🔥 MARIMO-KOMPATIBLE KONFIGURATION 🔥
+    # 🔥 INTELLIGENTE ACHSENKONFIGURATION 🔥
     layout_config = config.get_plot_config()
+
+    # Intelligente Achsenkonfiguration basierend auf Schrittweiten
+    xaxis_config = {
+        **config.get_axis_config(
+            mathematical_mode=False
+        ),  # Kein 1:1-Verhältnis für bessere Sichtbarkeit
+        "range": [float(x_min), float(x_max)],
+        "title": "x",
+        "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
+        "uirevision": True,  # Verhindert dass Marimo die Layout-Einstellungen zurücksetzt
+        "constraintoward": "center",  # Zentriert den Bereich
+        "fixedrange": False,  # Erlaubt Zoom aber behält ursprünglichen Bereich
+    }
+
+    yaxis_config = {
+        **config.get_axis_config(mathematical_mode=False),
+        "range": [float(y_min), float(y_max)],
+        "title": "f(x)",
+        "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
+        "uirevision": True,  # Verhindert dass Marimo die Layout-Einstellungen zurücksetzt
+        "constraintoward": "center",  # Zentriert den Bereich
+        "fixedrange": False,  # Erlaubt Zoom aber behält ursprünglichen Bereich
+    }
+
+    # Füge optimierte Schrittweiten hinzu (nur für automatische Bereiche)
+    if x_step is not None:
+        xaxis_config["dtick"] = x_step
+        xaxis_config["tick0"] = x_min  # Erster Tick bei Minimum
+
+    if y_step is not None:
+        yaxis_config["dtick"] = y_step
+        yaxis_config["tick0"] = y_min  # Erster Tick bei Minimum
+
     layout_config.update(
         {
             "title": titel or f"Funktion: f(x) = {funktion.term()}",
-            "xaxis": {
-                **config.get_axis_config(
-                    mathematical_mode=False
-                ),  # Kein 1:1-Verhältnis für bessere Sichtbarkeit
-                "range": [
-                    float(x_min),
-                    float(x_max),
-                ],  # Explizite Konvertierung zu float
-                "title": "x",
-                "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
-                # Marimo-spezifische Parameter um Überschreibung zu verhindern
-                "uirevision": True,  # Verhindert dass Marimo die Layout-Einstellungen zurücksetzt
-                "constraintoward": "center",  # Zentriert den Bereich
-                "fixedrange": False,  # Erlaubt Zoom aber behält ursprünglichen Bereich
-            },
-            "yaxis": {
-                **config.get_axis_config(mathematical_mode=False),
-                "range": [
-                    float(y_min),
-                    float(y_max),
-                ],  # Explizite Konvertierung zu float
-                "title": "f(x)",
-                "autorange": False,  # Stellt sicher dass unsere Range verwendet wird
-                # Marimo-spezifische Parameter um Überschreibung zu verhindern
-                "uirevision": True,  # Verhindert dass Marimo die Layout-Einstellungen zurücksetzt
-                "constraintoward": "center",  # Zentriert den Bereich
-                "fixedrange": False,  # Erlaubt Zoom aber behält ursprünglichen Bereich
-            },
+            "xaxis": xaxis_config,
+            "yaxis": yaxis_config,
             "showlegend": True,
             "hovermode": "x unified",
-            # Globale Marimo-Kompatibilitätseinstellungen
             "uirevision": True,  # Verhindert dass Marimo das gesamte Layout zurücksetzt
         }
     )
@@ -776,12 +993,138 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
 
 
 # ====================
+# Bereichsberechnung mit manueller Kontrolle
+# ====================
+
+
+def _berechne_finale_grenzen(funktion, x_min=None, x_max=None, y_min=None, y_max=None):
+    """Berechnet finale Darstellungsgrenzen mit einfacher Logik und manueller Kontrolle
+
+    Args:
+        funktion: Die zu analysierende Funktion
+        x_min, x_max: Manuelle X-Bereichsgrenzen (None = automatisch)
+        y_min, y_max: Manuelle Y-Bereichsgrenzen (None = automatisch)
+
+    Returns:
+        tuple: (final_x_min, final_x_max, final_y_min, final_y_max, x_step, y_step)
+    """
+    # Sammle interessante Punkte
+    punkte = _sammle_interessante_punkte(funktion)
+
+    # Standardwerte für unbeschränkte Bereiche
+    x_min_eff = x_min if x_min is not None else float("-inf")
+    x_max_eff = x_max if x_max is not None else float("inf")
+    y_min_eff = y_min if y_min is not None else float("-inf")
+    y_max_eff = y_max if y_max is not None else float("inf")
+
+    # Filtere relevante Punkte basierend auf manuellen Grenzen
+    relevante_x = [x for x in punkte["x_werte"] if x_min_eff <= x <= x_max_eff]
+    relevante_y = [
+        y for y in punkte["y_werte"] if y_min_eff <= y <= y_max_eff and y is not None
+    ]
+
+    # === X-ACHSENBERECHNUNG ===
+    if x_min is not None and x_max is not None:
+        # Vollständig manuell: strikte Einhaltung
+        final_x_min, final_x_max = x_min, x_max
+        x_step = None  # Manuelle Bereiche erhalten keine optimierte Schrittweite
+    elif x_min is not None:
+        # Nur x_min manuell: Minimum fest, Maximum automatisch
+        final_x_min = x_min
+        final_x_max = max(relevante_x) if relevante_x else 5
+        x_step = _berechne_intervalle(final_x_min, final_x_max)
+    elif x_max is not None:
+        # Nur x_max manuell: Maximum fest, Minimum automatisch
+        final_x_min = min(relevante_x) if relevante_x else -5
+        final_x_max = x_max
+        x_step = _berechne_intervalle(final_x_min, final_x_max)
+    else:
+        # Vollständig automatisch
+        if relevante_x:
+            final_x_min, final_x_max = min(relevante_x), max(relevante_x)
+        else:
+            final_x_min, final_x_max = -5, 5
+        x_step = _berechne_intervalle(final_x_min, final_x_max)
+
+    # === Y-ACHSENBERECHNUNG (analog zu X) ===
+    if y_min is not None and y_max is not None:
+        # Vollständig manuell: strikte Einhaltung
+        final_y_min, final_y_max = y_min, y_max
+        y_step = None  # Manuelle Bereiche erhalten keine optimierte Schrittweite
+    elif y_min is not None:
+        # Nur y_min manuell: Minimum fest, Maximum automatisch
+        final_y_min = y_min
+        final_y_max = max(relevante_y) if relevante_y else 5
+        y_step = _berechne_intervalle(final_y_min, final_y_max)
+    elif y_max is not None:
+        # Nur y_max manuell: Maximum fest, Minimum automatisch
+        final_y_min = min(relevante_y) if relevante_y else -5
+        final_y_max = y_max
+        y_step = _berechne_intervalle(final_y_min, final_y_max)
+    else:
+        # Vollständig automatisch
+        if relevante_y:
+            final_y_min, final_y_max = min(relevante_y), max(relevante_y)
+        else:
+            final_y_min, final_y_max = -5, 5
+        y_step = _berechne_intervalle(final_y_min, final_y_max)
+
+    # === OPTIMIERUNG FÜR AUTOMATISCHE BEREICHE ===
+    # Nur optimieren, wenn beide Grenzen automatisch sind
+    if x_min is None and x_max is None:
+        final_x_min, final_x_max, x_step = _optimiere_achse(final_x_min, final_x_max)
+
+    if y_min is None and y_max is None:
+        final_y_min, final_y_max, y_step = _optimiere_achse(final_y_min, final_y_max)
+
+    # === PUFFER FÜR HALB-AUTOMATISCHE BEREICHE ===
+    # Füge kleinen Puffer hinzu, wenn nur eine Grenze manuell ist
+    if x_min is not None and x_max is None:
+        # Nur x_min manuell: Puffer nur oben
+        x_buffer = (final_x_max - final_x_min) * 0.1
+        final_x_max += x_buffer
+        x_step = _berechne_intervalle(final_x_min, final_x_max)
+    elif x_max is not None and x_min is None:
+        # Nur x_max manuell: Puffer nur unten
+        x_buffer = (final_x_max - final_x_min) * 0.1
+        final_x_min -= x_buffer
+        x_step = _berechne_intervalle(final_x_min, final_x_max)
+
+    if y_min is not None and y_max is None:
+        # Nur y_min manuell: Puffer nur oben
+        y_buffer = (final_y_max - final_y_min) * 0.1
+        final_y_max += y_buffer
+        y_step = _berechne_intervalle(final_y_min, final_y_max)
+    elif y_max is not None and y_min is None:
+        # Nur y_max manuell: Puffer nur unten
+        y_buffer = (final_y_max - final_y_min) * 0.1
+        final_y_min -= y_buffer
+        y_step = _berechne_intervalle(final_y_min, final_y_max)
+
+    # === MINDESTBEREICHE SICHERSTELLEN ===
+    # Verhindere zu kleine Bereiche
+    if final_x_max - final_x_min < 1:
+        center = (final_x_min + final_x_max) / 2
+        final_x_min = center - 0.5
+        final_x_max = center + 0.5
+        x_step = 0.1
+
+    if final_y_max - final_y_min < 1:
+        center = (final_y_min + final_y_max) / 2
+        final_y_min = center - 0.5
+        final_y_max = center + 0.5
+        y_step = 0.1
+
+    return final_x_min, final_x_max, final_y_min, final_y_max, x_step, y_step
+
+
+# ====================
 # Haupt-Visualisierungsfunktionen
 # ====================
 
 
 def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs):
-    """Erzeugt einen Graphen für eine oder mehrere Funktionen mit intelligenter Skalierung
+    """Erzeugt einen Graphen für eine oder mehrere Funktionen mit vereinfachter Bereichskontrolle
 
     Args:
         *funktionen: Eine oder mehrere Funktionen (GanzrationaleFunktion, GebrochenRationaleFunktion)
@@ -803,12 +1146,14 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
         >>> f = GanzrationaleFunktion("x^2 - 4")
         >>> fig = Graph(f)
 
-        >>> # Mehrere Funktionen mit manuellem Bereich
-        >>> g = GanzrationaleFunktion("2x + 1")
-        >>> fig = Graph(f, g, x_min=-5, x_max=5, y_min=-10, y_max=20)
+        >>> # Manuel Y-Bereich: Strikte Einhaltung von y_max=10
+        >>> fig = Graph(f, y_max=10)
 
-        >>> # Mit Titel und Optionen
-        >>> fig = Graph(f, titel="Parabel f(x) = x² - 4", zeige_extremstellen=False)
+        >>> # Halb-manuell: Nur x_min fest, y automatisch
+        >>> fig = Graph(f, x_min=0)
+
+        >>> # Vollständig manuell
+        >>> fig = Graph(f, x_min=-5, x_max=5, y_min=-10, y_max=10)
     """
     if not funktionen:
         raise ValueError("Mindestens eine Funktion muss angegeben werden")
@@ -827,32 +1172,42 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                 f"f.setze_parameter({', '.join(parameter_beispiele)})"
             )
 
-    # Wenn nur eine Funktion übergeben wurde, wende die bestehende Logik an
+    # Wenn nur eine Funktion übergeben wurde, wende die neue vereinfachte Logik an
     if len(funktionen) == 1:
         funktion = funktionen[0]
 
-        # Automatische Bereichsberechnung wenn nicht angegeben
-        if x_min is None or x_max is None:
-            interessante_punkte = _finde_interessante_punkte(funktion)
-            x_min_auto, x_max_auto = _berechne_optimalen_bereich(interessante_punkte)
+        # Berechne finale Grenzen mit der neuen vereinfachten Logik
+        final_x_min, final_x_max, final_y_min, final_y_max, x_step, y_step = (
+            _berechne_finale_grenzen(funktion, x_min, x_max, y_min, y_max)
+        )
 
-            if x_min is None:
-                x_min = x_min_auto
-            if x_max is None:
-                x_max = x_max_auto
+        # Prüfe auf abgeschnittene Punkte und gib Warnungen aus
+        punkte = _sammle_interessante_punkte(funktion)
+        sichtbare, abgeschnittene = _filtere_sichtbare_punkte(
+            punkte, final_x_min, final_x_max, final_y_min, final_y_max
+        )
 
-        if y_min is None or y_max is None:
-            interessante_punkte = _finde_interessante_punkte(funktion)
-            y_min_auto, y_max_auto = _berechne_y_bereich(
-                funktion, x_min, x_max, interessante_punkte
-            )
+        if abgeschnittene:
+            # Formatiere Warnungen für bessere Lesbarkeit
+            warnungen = []
+            for art, x_val, y_val in abgeschnittene:
+                if y_val is not None:
+                    warnungen.append(f"{art} bei ({x_val:.2f}|{y_val:.2f})")
+                else:
+                    warnungen.append(f"{art} bei x={x_val:.2f}")
 
-            if y_min is None:
-                y_min = y_min_auto
-            if y_max is None:
-                y_max = y_max_auto
+            print(f"⚠️  Hinweis: Abgeschnittene Punkte: {'; '.join(warnungen)}")
 
-        return _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs)
+        return _erstelle_plotly_figur_mit_intelligenten_achsen(
+            funktion,
+            final_x_min,
+            final_x_max,
+            final_y_min,
+            final_y_max,
+            x_step,
+            y_step,
+            **kwargs,
+        )
 
     # Bei mehreren Funktionen: Kombinierte Logik
     else:
