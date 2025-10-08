@@ -27,21 +27,569 @@ from .sympy_types import (
 )
 
 
-def _intelligente_vereinfachung(
+def _faktorisiere_parameter_koeffizienten(
+    expr: sp.Basic, parameter_liste: list[_Parameter]
+) -> sp.Basic:
+    """
+    Faktorisiert nur die Parameter in Koeffizienten, nicht die x-Terme selbst.
+
+    Args:
+        expr: Der zu optimierende Ausdruck
+        parameter_liste: Liste der Parameter
+
+    Returns:
+        Ausdruck mit faktorisierten Parametern in Koeffizienten
+
+    Examples:
+        -2*a*x + 2*b*x -> 2*x*(b - a)
+        a^2*x + 2*a*b*x + b^2*x -> x*(a + b)^2
+    """
+    if not parameter_liste:
+        return expr
+
+    # Wenn es kein Polynom ist, zurückgeben
+    x_symbol = None
+    for sym in expr.free_symbols:
+        if str(sym) not in [str(p.symbol) for p in parameter_liste]:
+            x_symbol = sym
+            break
+
+    if x_symbol is None:
+        return expr
+
+    try:
+        # Als Polynom behandeln
+        poly = expr.as_poly(x_symbol)
+        if poly is None:
+            return expr
+
+        # Koeffizienten für jeden Term extrahieren und parameter-faktorisieren
+        optimierte_terme = []
+        for i in range(poly.degree(), -1, -1):
+            coeff = poly.coeff_monomial(x_symbol**i)
+
+            if coeff != 0:
+                # Nur den Koeffizienten parameter-faktorisieren
+                if coeff.has(*[p.symbol for p in parameter_liste]):
+                    # Versuche, den Koeffizienten zu faktorisieren
+                    try:
+                        factored_coeff = sp.factor(coeff)
+                        # Nur verwenden, wenn es kompakter ist und Parameter faktorisiert
+                        if len(str(factored_coeff)) <= len(str(coeff)) * 1.5 and any(
+                            p.symbol in factored_coeff.free_symbols
+                            for p in parameter_liste
+                        ):
+                            coeff = factored_coeff
+                    except:
+                        pass
+
+                # Term rekonstruieren
+                if i == 0:
+                    optimierte_terme.append(coeff)
+                elif i == 1:
+                    if coeff == 1:
+                        optimierte_terme.append(x_symbol)
+                    elif coeff == -1:
+                        optimierte_terme.append(-x_symbol)
+                    else:
+                        optimierte_terme.append(coeff * x_symbol)
+                else:
+                    if coeff == 1:
+                        optimierte_terme.append(x_symbol**i)
+                    elif coeff == -1:
+                        optimierte_terme.append(-(x_symbol**i))
+                    else:
+                        optimierte_terme.append(coeff * x_symbol**i)
+
+        # Terme in der richtigen Reihenfolge zusammenfügen (höchste Potenz zuerst)
+        # Erzwinge die korrekte Sortierung durch explizite Addition in der richtigen Reihenfolge
+        if optimierte_terme:
+            # Beginne mit 0 und addiere Terme in der richtigen Reihenfolge (höchste Potenz zuerst)
+            result = sp.Integer(0)
+            for term in optimierte_terme:
+                result = result + term
+            return result
+        else:
+            return sp.Integer(0)
+
+    except Exception:
+        return expr
+
+
+def _optimiere_differenz_quotienten(expr: sp.Basic) -> sp.Basic:
+    """
+    Optimiert Ausdrücke wie a/2 - b/2 zu (b - a)/2 oder -(a - b)/2.
+
+    Args:
+        expr: Zu optimierender Ausdruck
+
+    Returns:
+        Optimierter Ausdruck
+    """
+    try:
+        # Prüfe, ob es eine Differenz von Termen mit gleichen Nennern ist
+        if expr.is_Add and len(expr.args) == 2:
+            term1, term2 = expr.args
+
+            # Prüfe, ob beide Terme rationale Ausdrücke mit gleichem Nenner sind
+            if (
+                term1.is_rational
+                and term2.is_rational
+                or (isinstance(term1, sp.Mul) and isinstance(term2, sp.Mul))
+            ):
+                # Versuche, gemeinsamen Faktor zu finden
+                try:
+                    # Faktorisiere den Ausdruck
+                    factored = sp.factor(expr)
+
+                    # Wenn es -(a - b)/c ist, zu (b - a)/c machen
+                    if (
+                        factored.has(-1)
+                        and len(factored.args) == 2
+                        and factored.args[0] == -1
+                    ):
+                        inner = factored.args[1]
+                        if (
+                            isinstance(inner, sp.Mul)
+                            and len(inner.args) == 2
+                            and isinstance(inner.args[1], sp.Rational)
+                        ):
+                            # Ersetze -(a - b)/c durch (b - a)/c
+                            numerator = inner.args[0]
+                            if numerator.is_Add and len(numerator.args) == 2:
+                                a, b = numerator.args
+                                if a.is_Symbol and b.is_Symbol and numerator.op == "-":
+                                    return sp.Add(b, -a) / inner.args[1]
+                except:
+                    pass
+
+        return expr
+    except:
+        return expr
+
+
+def _formatiere_mit_poly_latex(
     expr: sp.Basic, variable: sp.Symbol, parameter_liste: list[_Parameter]
+) -> str:
+    """
+    Formatiert ein Polynom mit sympy.Poly() für perfekte Sortierung und Koeffizienten-Optimierung in LaTeX.
+
+    Args:
+        expr: Der zu formatierende Ausdruck
+        variable: Die Hauptvariable
+        parameter_liste: Liste der Parameter
+
+    Returns:
+        Formatierter LaTeX-String mit korrekter Sortierung und optimierten Koeffizienten
+    """
+    if not parameter_liste:
+        return latex(expr)
+
+    try:
+        # Erstelle Polynom - dies sortiert automatisch und extrahiert Koeffizienten
+        poly = sp.Poly(expr, variable)
+        coeffs = poly.all_coeffs()
+
+        # Terme mit optimierten Koeffizienten erstellen
+        terms = []
+        for i, coeff in enumerate(coeffs):
+            deg = poly.degree() - i
+
+            # Überspringe Null-Koeffizienten
+            if coeff == 0:
+                continue
+
+            # Parameter-faktorisieren für Koeffizienten
+            if parameter_liste and coeff.has(*[p.symbol for p in parameter_liste]):
+                try:
+                    factored_coeff = sp.factor(coeff)
+
+                    # Zusätzliche Optimierung für einfache Differenzen
+                    if factored_coeff.is_Add and len(factored_coeff.args) == 2:
+                        # Prüfe ob es die Form b - a ist (was gut ist) oder -a + b
+                        if (
+                            factored_coeff.args[1].is_Mul
+                            and factored_coeff.args[1].args[0] == -1
+                            and factored_coeff.args[1].args[1].is_Symbol
+                            and factored_coeff.args[0].is_Symbol
+                        ):
+                            # Ersetze b + (-a) durch b - a für die Anzeige
+                            symbol_a = factored_coeff.args[1].args[1]
+                            symbol_b = factored_coeff.args[0]
+                            factored_coeff = symbol_b - symbol_a
+
+                    # Nur verwenden, wenn es kompakter ist
+                    if len(str(factored_coeff)) <= len(str(coeff)) * 1.5:
+                        coeff = factored_coeff
+                except:
+                    pass
+
+            # LaTeX-Term basierend auf Grad erstellen
+            coeff_latex = latex(coeff)
+
+            if deg == 0:
+                # Konstante
+                terms.append(coeff_latex)
+            elif deg == 1:
+                # Linearer Term
+                if coeff == 1:
+                    terms.append(latex(variable))
+                elif coeff == -1:
+                    terms.append(f"-{latex(variable)}")
+                else:
+                    # Prüfe ob Klammerung benötigt wird
+                    if any(op in str(coeff) for op in ["+", "-", "*", "/"]):
+                        terms.append(f"\\left({coeff_latex}\\right) {latex(variable)}")
+                    else:
+                        terms.append(f"{coeff_latex} {latex(variable)}")
+            else:
+                # Höhere Potenzen
+                if coeff == 1:
+                    terms.append(f"{latex(variable)}^{{{deg}}}")
+                elif coeff == -1:
+                    terms.append(f"-{latex(variable)}^{{{deg}}}")
+                else:
+                    # Prüfe ob Klammerung benötigt wird
+                    if any(op in str(coeff) for op in ["+", "-", "*", "/"]):
+                        terms.append(
+                            f"\\left({coeff_latex}\\right) {latex(variable)}^{{{deg}}}"
+                        )
+                    else:
+                        terms.append(f"{coeff_latex} {latex(variable)}^{{{deg}}}")
+
+        # Kombiniere Terme mit LaTeX-Formatierung
+        if not terms:
+            return "0"
+
+        # Ersetze + - durch - für LaTeX
+        result = " + ".join(terms).replace("+ -", "- ")
+
+        # LaTeX-Verschönerung
+        result = result.replace("* ", " ")
+        result = result.replace("  ", " ")
+
+        return result
+
+    except Exception:
+        # Fallback für Nicht-Polynome oder Fehler
+        return latex(expr)
+
+
+def _formatiere_mit_poly(
+    expr: sp.Basic, variable: sp.Symbol, parameter_liste: list[_Parameter]
+) -> str:
+    """
+    Formatiert ein Polynom mit sympy.Poly() für perfekte Sortierung und Koeffizienten-Optimierung.
+
+    Args:
+        expr: Der zu formatierende Ausdruck
+        variable: Die Hauptvariable
+        parameter_liste: Liste der Parameter
+
+    Returns:
+        Formatierter String mit korrekter Sortierung und optimierten Koeffizienten
+    """
+    if not parameter_liste:
+        return str(expr).replace("**", "^")
+
+    try:
+        # Erstelle Polynom - dies sortiert automatisch und extrahiert Koeffizienten
+        poly = sp.Poly(expr, variable)
+        coeffs = poly.all_coeffs()
+
+        # Terme mit optimierten Koeffizienten erstellen
+        terms = []
+        for i, coeff in enumerate(coeffs):
+            deg = poly.degree() - i
+
+            # Überspringe Null-Koeffizienten
+            if coeff == 0:
+                continue
+
+            # Parameter-faktorisieren für Koeffizienten
+            if parameter_liste and coeff.has(*[p.symbol for p in parameter_liste]):
+                try:
+                    factored_coeff = sp.factor(coeff)
+
+                    # Zusätzliche Optimierung für einfache Differenzen
+                    if factored_coeff.is_Add and len(factored_coeff.args) == 2:
+                        # Prüfe ob es die Form b - a ist (was gut ist) oder -a + b
+                        if (
+                            factored_coeff.args[1].is_Mul
+                            and factored_coeff.args[1].args[0] == -1
+                            and factored_coeff.args[1].args[1].is_Symbol
+                            and factored_coeff.args[0].is_Symbol
+                        ):
+                            # Ersetze b + (-a) durch b - a für die Anzeige
+                            symbol_a = factored_coeff.args[1].args[1]
+                            symbol_b = factored_coeff.args[0]
+                            factored_coeff = f"({symbol_b} - {symbol_a})"
+
+                    # Nur verwenden, wenn es kompakter ist (außer für die Spezialformatierung)
+                    if (
+                        isinstance(factored_coeff, str)
+                        or len(str(factored_coeff)) <= len(str(coeff)) * 1.5
+                    ):
+                        coeff = factored_coeff
+                except:
+                    pass
+
+            # Term basierend auf Grad erstellen
+            if deg == 0:
+                # Konstante
+                coeff_str = str(coeff)
+                # Komplexe Konstanten in Klammern
+                if any(
+                    op in coeff_str for op in ["+", "-", "*", "/"]
+                ) and not coeff_str.startswith("-"):
+                    terms.append(f"({coeff})")
+                elif coeff_str.startswith("-") and any(
+                    op in coeff_str[1:] for op in ["+", "-", "*", "/"]
+                ):
+                    terms.append(f"({coeff})")
+                else:
+                    terms.append(coeff_str)
+            elif deg == 1:
+                # Linearer Term
+                if coeff == 1:
+                    terms.append(str(variable))
+                elif coeff == -1:
+                    terms.append(f"-{variable}")
+                else:
+                    coeff_str = str(coeff)
+                    # Komplexe Koeffizienten immer in Klammern
+                    if any(
+                        op in coeff_str for op in ["+", "-", "*", "/"]
+                    ) or coeff_str.startswith("-"):
+                        terms.append(f"({coeff})*{variable}")
+                    else:
+                        terms.append(f"{coeff}*{variable}")
+            else:
+                # Höhere Potenzen
+                if coeff == 1:
+                    terms.append(f"{variable}**{deg}")
+                elif coeff == -1:
+                    terms.append(f"-{variable}**{deg}")
+                else:
+                    coeff_str = str(coeff)
+                    # Komplexe Koeffizienten immer in Klammern
+                    if any(
+                        op in coeff_str for op in ["+", "-", "*", "/"]
+                    ) or coeff_str.startswith("-"):
+                        terms.append(f"({coeff})*{variable}**{deg}")
+                    else:
+                        terms.append(f"{coeff}*{variable}**{deg}")
+
+        # Kombiniere Terme
+        if not terms:
+            return "0"
+
+        result = " + ".join(terms).replace("+ -", "- ")
+        return result.replace("**", "^")
+
+    except Exception:
+        # Fallback für Nicht-Polynome oder Fehler
+        return str(expr).replace("**", "^")
+
+
+# VERALTET: Diese Funktion wird durch _formatiere_mit_poly() ersetzt
+# Kann in zukünftigen Versionen entfernt werden
+def _formatiere_polynom_geordnet(
+    expr: sp.Basic, variable: sp.Symbol, parameter_liste: list[_Parameter]
+) -> str:
+    """
+    Formatiert ein Polynom mit korrekter Sortierung (höchste Potenz zuerst).
+
+    Args:
+        expr: Der zu formatierende Ausdruck
+        variable: Die Hauptvariable
+        parameter_liste: Liste der Parameter
+
+    Returns:
+        Formatierter String mit korrekter Sortierung
+    """
+    if not parameter_liste:
+        return str(expr).replace("**", "^")
+
+    try:
+        # Als Polynom behandeln
+        poly = expr.as_poly(variable)
+        if poly is None:
+            return str(expr).replace("**", "^")
+
+        # Koeffizienten für jeden Term extrahieren
+        term_info = []
+        for i in range(poly.degree(), -1, -1):
+            coeff = poly.coeff_monomial(variable**i)
+            if coeff != 0:
+                # Parameter-faktorisieren für Koeffizienten
+                if coeff.has(*[p.symbol for p in parameter_liste]):
+                    try:
+                        factored_coeff = sp.factor(coeff)
+                        # Negativzeichen optimieren: -2*(a - b) -> 2*(b - a)
+                        if (
+                            factored_coeff.has(-1)
+                            and len(factored_coeff.args) == 2
+                            and factored_coeff.args[0] == -1
+                            and factored_coeff.args[1].is_Mul
+                        ):
+                            # Extrahiere den Inhalt nach dem -1
+                            inner = factored_coeff.args[1]
+                            # Wenn es (a - b) ist, zu (b - a) machen
+                            if (
+                                len(inner.args) == 2
+                                and inner.args[0].is_Symbol
+                                and inner.args[1].is_Symbol
+                                and inner.op == "-"
+                            ):
+                                factored_coeff = sp.Mul(
+                                    -1, sp.Add(inner.args[1], -inner.args[0])
+                                )
+                            else:
+                                factored_coeff = -factored_coeff.args[1]
+                        elif factored_coeff.has(-1) and len(factored_coeff.args) == 2:
+                            factored_coeff = -factored_coeff.args[1]
+
+                        # Zusätzliche Optimierung für einfache Differenzen
+                        if factored_coeff.is_Add and len(factored_coeff.args) == 2:
+                            # Prüfe ob es die Form b - a ist (was gut ist) oder -a + b
+                            if (
+                                factored_coeff.args[1].is_Mul
+                                and factored_coeff.args[1].args[0] == -1
+                                and factored_coeff.args[1].args[1].is_Symbol
+                                and factored_coeff.args[0].is_Symbol
+                            ):
+                                # Ersetze b + (-a) durch b - a
+                                symbol_a = factored_coeff.args[1].args[1]
+                                symbol_b = factored_coeff.args[0]
+                                factored_coeff = symbol_b - symbol_a
+
+                        # Zusätzlich: Differenzquotienten optimieren
+                        factored_coeff = _optimiere_differenz_quotienten(factored_coeff)
+
+                        # Nur verwenden, wenn es kompakter ist
+                        if len(str(factored_coeff)) <= len(str(coeff)) * 1.5:
+                            coeff = factored_coeff
+                    except:
+                        pass
+
+                term_info.append((i, coeff))
+
+        # Terme in korrekter Reihenfolge formatieren
+        term_strings = []
+        for exp, coeff in term_info:
+            if exp == 0:
+                # Konstante
+                coeff_str = str(coeff)
+                # Komplexe Konstanten in Klammern
+                if any(
+                    op in coeff_str for op in ["+", "-", "*", "/"]
+                ) and not coeff_str.startswith("-"):
+                    term_strings.append(f"({coeff})")
+                elif coeff_str.startswith("-") and any(
+                    op in coeff_str[1:] for op in ["+", "-", "*", "/"]
+                ):
+                    term_strings.append(f"({coeff})")
+                else:
+                    term_strings.append(coeff_str)
+            elif exp == 1:
+                # Linearer Term
+                if coeff == 1:
+                    term_strings.append(str(variable))
+                elif coeff == -1:
+                    term_strings.append(f"-{variable}")
+                else:
+                    coeff_str = str(coeff)
+                    # Spezialfall: -a + b sollte als (b - a) dargestellt werden
+                    if coeff.is_Add and len(coeff.args) == 2:
+                        if (
+                            coeff.args[1].is_Mul
+                            and coeff.args[1].args[0] == -1
+                            and coeff.args[1].args[1].is_Symbol
+                            and coeff.args[0].is_Symbol
+                        ):
+                            # Stelle als (b - a) dar
+                            symbol_a = coeff.args[1].args[1]
+                            symbol_b = coeff.args[0]
+                            term_strings.append(f"({symbol_b} - {symbol_a})*{variable}")
+                        else:
+                            # Komplexe Koeffizienten in Klammern
+                            if any(op in coeff_str for op in ["+", "-", "*", "/"]):
+                                term_strings.append(f"({coeff})*{variable}")
+                            else:
+                                term_strings.append(f"{coeff}*{variable}")
+                    else:
+                        # Komplexe Koeffizienten in Klammern
+                        if any(op in coeff_str for op in ["+", "-", "*", "/"]):
+                            term_strings.append(f"({coeff})*{variable}")
+                        else:
+                            term_strings.append(f"{coeff}*{variable}")
+            else:
+                # Höhere Potenzen
+                if coeff == 1:
+                    term_strings.append(f"{variable}**{exp}")
+                elif coeff == -1:
+                    term_strings.append(f"-{variable}**{exp}")
+                else:
+                    coeff_str = str(coeff)
+                    # Spezialfall: -a + b sollte als (b - a) dargestellt werden
+                    if coeff.is_Add and len(coeff.args) == 2:
+                        if (
+                            coeff.args[1].is_Mul
+                            and coeff.args[1].args[0] == -1
+                            and coeff.args[1].args[1].is_Symbol
+                            and coeff.args[0].is_Symbol
+                        ):
+                            # Stelle als (b - a) dar
+                            symbol_a = coeff.args[1].args[1]
+                            symbol_b = coeff.args[0]
+                            term_strings.append(
+                                f"({symbol_b} - {symbol_a})*{variable}**{exp}"
+                            )
+                        else:
+                            # Komplexe Koeffizienten in Klammern
+                            if any(op in coeff_str for op in ["+", "-", "*", "/"]):
+                                term_strings.append(f"({coeff})*{variable}**{exp}")
+                            else:
+                                term_strings.append(f"{coeff}*{variable}**{exp}")
+                    else:
+                        # Komplexe Koeffizienten in Klammern
+                        if any(op in coeff_str for op in ["+", "-", "*", "/"]):
+                            term_strings.append(f"({coeff})*{variable}**{exp}")
+                        else:
+                            term_strings.append(f"{coeff}*{variable}**{exp}")
+
+        # Kombiniere mit korrekter Reihenfolge
+        if not term_strings:
+            return "0"
+
+        result = " + ".join(term_strings).replace("+ -", "- ")
+        return result.replace("**", "^")
+
+    except Exception:
+        return str(expr).replace("**", "^")
+
+
+def _intelligente_vereinfachung(
+    expr: sp.Basic,
+    variable: sp.Symbol,
+    parameter_liste: list[_Parameter],
+    kontext: str = "standard",
 ) -> sp.Basic:
     """
     Intelligente Vereinfachung für parametrisierte Ausdrücke.
 
     Diese Funktion wendet eine pädagogisch optimierte Vereinfachungsstrategie an:
-    - Polynome: nach Potenzen sortieren, aber nicht faktorisieren
-    - Exponential/Trigonometrische Anteile: immer ausklammern
-    - Rationale Ausdrücke: zusammenfassen
+    - "term": Polynom in Standardform x^n + ... + kx + c darstellen
+    - "ableitung": Moderate Vereinfachung, ohne Überfaktorisierung
+    - "wert": Optimale Vereinfachung für Funktionswerte
+    - "standard": Allgemeine Vereinfachung
 
     Args:
         expr: Zu vereinfachender SymPy-Ausdruck
         variable: Die Hauptvariable der Funktion (z.B. x)
         parameter_liste: Liste der Parameter in der Funktion
+        kontext: Verwendungskontext ("term", "ableitung", "wert", "standard")
 
     Returns:
         Vereinfachter, aber pädagogisch optimierter Ausdruck
@@ -62,14 +610,42 @@ def _intelligente_vereinfachung(
         # Zusätzliche Vereinfachung für exponentielle Ausdrücke
         expr = expr.simplify()  # exp(a)*exp(b) -> exp(a+b)
     else:
-        # Für reine Polynome: nach Potenzen sortieren ohne zu faktorisieren
-        expr = expr.expand()
-        expr = sp.collect(expr, variable)
+        # Strategien für reine Polynome basierend auf Kontext
+        if kontext == "term":
+            # Für Term-Darstellung: vollständig ausmultiplizieren, sammeln und Parameter faktorisieren
+            expr = expr.expand()  # Vollständig ausmultiplizieren
+            expr = sp.collect(expr, variable)  # Nach Potenzen sammeln
+            # Zusätzlich: Parameter in Koeffizienten faktorisieren
+            expr = _faktorisiere_parameter_koeffizienten(expr, parameter_liste)
 
-        # Zusätzlich: nach Parametern gruppieren für bessere Übersicht
-        for param in parameter_liste:
-            if param.symbol in expr.free_symbols:
-                expr = sp.collect(expr, param.symbol)
+        elif kontext == "ableitung":
+            # Für Ableitungen: moderate Vereinfachung mit Parameter-Faktorisierung
+            expr = expr.expand(mul=False)  # Nicht komplett ausmultiplizieren
+            expr = sp.collect(expr, variable)  # Nach Potenzen sammeln
+            # Parameter in Koeffizienten faktorisieren (aber nicht x-Terme)
+            expr = _faktorisiere_parameter_koeffizienten(expr, parameter_liste)
+
+        elif kontext == "wert":
+            # Für Funktionswerte: optimale Vereinfachung
+            expr = expr.expand()
+            expr = sp.collect(expr, variable)
+
+            # Parameter sammeln und vereinfachen
+            for param in parameter_liste:
+                if param.symbol in expr.free_symbols:
+                    expr = sp.collect(expr, param.symbol)
+
+            # Aggressive Vereinfachung für maximale Kompaktheit
+            expr = sp.simplify(expr)
+            # Zusätzlich faktorisieren für beste Darstellung
+            expr = sp.factor(expr)
+
+        else:  # "standard"
+            # Standard: gemäßigtes Vorgehen
+            expr = expr.expand(mul=False)
+            expr = sp.collect(expr, variable)
+            # Leichte Parameter-Faktorisierung
+            expr = _faktorisiere_parameter_koeffizienten(expr, parameter_liste)
 
     return expr
 
@@ -384,18 +960,24 @@ class Funktion:
     def term(self) -> str:
         """Gibt den Term als String zurück"""
         if self.parameter:
-            # Für parametrisierte Funktionen: optimierte Darstellung
-            optimierter_term = _intelligente_vereinfachung(
+            # Für parametrisierte Funktionen: optimierte Darstellung in Standardform
+            return _formatiere_mit_poly(
                 self.term_sympy, self._variable_symbol, self.parameter
             )
-            return str(optimierter_term).replace("**", "^")
         else:
             # Normale Darstellung für konkrete Funktionen
             return str(self.term_sympy).replace("**", "^")
 
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück"""
-        return latex(self.term_sympy)
+        if self.parameter:
+            # Für parametrisierte Funktionen: optimierte Darstellung in Standardform
+            return _formatiere_mit_poly_latex(
+                self.term_sympy, self._variable_symbol, self.parameter
+            )
+        else:
+            # Normale Darstellung für konkrete Funktionen
+            return latex(self.term_sympy)
 
     def __call__(self, x_wert, **kwargs):
         """
@@ -448,8 +1030,15 @@ class Funktion:
             # Substituiere den x-Wert
             ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
 
-            # Vereinfache das Ergebnis
-            ergebnis = ergebnis.simplify()
+            # Vereinfache das Ergebnis mit intelligenter Vereinfachung bei Parametern
+            if self.parameter:
+                # Bei Parametern: Intelligente Vereinfachung für Funktionswerte
+                ergebnis = _intelligente_vereinfachung(
+                    ergebnis, self._variable_symbol, self.parameter, kontext="wert"
+                )
+            else:
+                # Ohne Parameter: Normale Vereinfachung
+                ergebnis = ergebnis.simplify()
 
             # Prüfe, ob das Ergebnis noch Parameter enthält
             if ergebnis.free_symbols - {self._variable_symbol}:
@@ -561,7 +1150,10 @@ class Funktion:
         # Intelligente Vereinfachung für parametrisierte Ausdrücke
         if self.parameter:
             abgeleiteter_term = _intelligente_vereinfachung(
-                abgeleiteter_term, self._variable_symbol, self.parameter
+                abgeleiteter_term,
+                self._variable_symbol,
+                self.parameter,
+                kontext="ableitung",
             )
 
         # Erstelle neue Funktion mit Namen
@@ -680,6 +1272,8 @@ class Funktion:
 
             # Löse f'(x) = 0
             kritische_punkte = solve(f_strich, self._variable_symbol)
+            # Vereinfache die Lösungen mit together() für bessere Darstellung
+            kritische_punkte = [sp.together(p) for p in kritische_punkte]
 
             # Filtere reelle Lösungen
             reelle_punkte = []
@@ -786,6 +1380,8 @@ class Funktion:
             import sympy as sp
 
             kritische_punkte = sp.solve(f2.term_sympy, self._variable_symbol)
+            # Vereinfache die Lösungen mit together() für bessere Darstellung
+            kritische_punkte = [sp.together(p) for p in kritische_punkte]
 
             # Bestimme Wendepunkte durch dritte Ableitung
             f3 = self.ableitung(3)
