@@ -67,15 +67,45 @@ def _optimiere_achse(min_val, max_val, max_ticks=8):
     # Berechne optimale Schrittweite
     step = _berechne_intervalle(min_val, max_val, max_ticks)
 
-    # Runde auf passende Schrittweite
-    new_min = math.floor(min_val / step) * step
-    new_max = math.ceil(max_val / step) * step
+    # Spezialfall: Wenn Grenzen nahe an ganzen Zahlen sind, bevorzuge ganzzahlige Grenzen
+    if abs(min_val - round(min_val)) < 0.2 and abs(max_val - round(max_val)) < 0.2:
+        # Beide Grenzen sind nahe an ganzen Zahlen
+        min_rounded = round(min_val)
+        max_rounded = round(max_val)
+        span = max_rounded - min_rounded
 
-    # Stelle sicher, dass Originalbereich enthalten ist
-    if new_min > min_val:
-        new_min -= step
-    if new_max < max_val:
-        new_max += step
+        # Prüfe ob wir mit ganzzahliger Schrittweite auskommen oder ob es ein spezieller Fall ist
+        if span <= max_ticks or (span <= 16 and max_ticks >= 6):
+            # Bei größeren Bereichen bis 16 Einheiten: erlaube mehr Ticks für bessere Ästhetik
+            new_min = min_rounded
+            new_max = max_rounded
+            step = 1.0
+
+            # Stelle sicher dass Originalbereich enthalten ist
+            if new_min > min_val:
+                new_min -= 1
+            if new_max < max_val:
+                new_max += 1
+        else:
+            # Zu viele Ticks für Schrittweite 1, verwende normale Logik
+            new_min = math.floor(min_val / step) * step
+            new_max = math.ceil(max_val / step) * step
+
+            # Stelle sicher dass Originalbereich enthalten ist
+            if new_min > min_val:
+                new_min -= step
+            if new_max < max_val:
+                new_max += step
+    else:
+        # Normale Logik für nicht-ganzzahlige Grenzen
+        new_min = math.floor(min_val / step) * step
+        new_max = math.ceil(max_val / step) * step
+
+        # Stelle sicher dass Originalbereich enthalten ist
+        if new_min > min_val:
+            new_min -= step
+        if new_max < max_val:
+            new_max += step
 
     # Verhindere zu kleine Bereiche
     if new_max - new_min < step:
@@ -1070,29 +1100,55 @@ def _berechne_finale_grenzen(funktion, x_min=None, x_max=None, y_min=None, y_max
         y_step = _berechne_intervalle(final_y_min, final_y_max)
 
     # === OPTIMIERUNG FÜR AUTOMATISCHE BEREICHE ===
-    # Nur optimieren, wenn beide Grenzen automatisch sind
+    # Nur optimieren, wenn beide Grenzen automatisch sind ODER bei halb-automatischen mit ganzzahligen Grenzen
     if x_min is None and x_max is None:
+        # Vollständig automatisch: Immer optimieren
         final_x_min, final_x_max, x_step = _optimiere_achse(final_x_min, final_x_max)
+    elif (x_min is not None and x_max is None) or (x_min is None and x_max is not None):
+        # Halb-automatisch: Prüfen ob Grenzen nahe an ganzen Zahlen sind
+        if (
+            abs(final_x_min - round(final_x_min)) < 0.5
+            and abs(final_x_max - round(final_x_max)) < 0.5
+        ):
+            # Beide Grenzen sind nahe an ganzen Zahlen -> optimieren für bessere Ästhetik
+            final_x_min, final_x_max, x_step = _optimiere_achse(
+                final_x_min, final_x_max
+            )
 
     if y_min is None and y_max is None:
+        # Vollständig automatisch: Immer optimieren
         final_y_min, final_y_max, y_step = _optimiere_achse(final_y_min, final_y_max)
+    elif (y_min is not None and y_max is None) or (y_min is None and y_max is not None):
+        # Halb-automatisch: Prüfen ob Grenzen nahe an ganzen Zahlen sind
+        if (
+            abs(final_y_min - round(final_y_min)) < 0.5
+            and abs(final_y_max - round(final_y_max)) < 0.5
+        ):
+            # Beide Grenzen sind nahe an ganzen Zahlen -> optimieren für bessere Ästhetik
+            final_y_min, final_y_max, y_step = _optimiere_achse(
+                final_y_min, final_y_max
+            )
 
-    # === PUFFER FÜR HALB-AUTOMATISCHE BEREICHE ===
-    # Fuge verbesserten Puffer hinzu, wenn nur eine Grenze manuell ist
+    # === PUFFER FÜR HALB-AUTOMATISCHE BEREICHE (nur wenn nicht bereits optimiert) ===
+    # Fuge verbesserten Puffer hinzu, wenn nur eine Grenze manuell ist UND noch nicht optimiert wurde
     if x_min is not None and x_max is None:
-        # Nur x_min manuell: Puffer nur oben
-        x_buffer = max(
-            (final_x_max - final_x_min) * 0.15, 1.0
-        )  # Mindestens 1 Einheit Puffer
-        final_x_max += x_buffer
-        x_step = _berechne_intervalle(final_x_min, final_x_max)
+        # Prüfen ob bereits optimiert (ganzzahlige Grenzen)
+        if not (final_x_min == int(final_x_min) and final_x_max == int(final_x_max)):
+            # Nur x_min manuell: Puffer nur oben
+            x_buffer = max(
+                (final_x_max - final_x_min) * 0.15, 1.0
+            )  # Mindestens 1 Einheit Puffer
+            final_x_max += x_buffer
+            x_step = _berechne_intervalle(final_x_min, final_x_max)
     elif x_max is not None and x_min is None:
-        # Nur x_max manuell: Puffer nur unten
-        x_buffer = max(
-            (final_x_max - final_x_min) * 0.15, 1.0
-        )  # Mindestens 1 Einheit Puffer
-        final_x_min -= x_buffer
-        x_step = _berechne_intervalle(final_x_min, final_x_max)
+        # Prüfen ob bereits optimiert (ganzzahlige Grenzen)
+        if not (final_x_min == int(final_x_min) and final_x_max == int(final_x_max)):
+            # Nur x_max manuell: Puffer nur unten
+            x_buffer = max(
+                (final_x_max - final_x_min) * 0.15, 1.0
+            )  # Mindestens 1 Einheit Puffer
+            final_x_min -= x_buffer
+            x_step = _berechne_intervalle(final_x_min, final_x_max)
 
     if y_min is not None and y_max is None:
         # Nur y_min manuell: Puffer nur oben
