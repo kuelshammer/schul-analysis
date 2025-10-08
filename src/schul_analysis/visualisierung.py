@@ -342,23 +342,36 @@ def _berechne_y_bereich(
 
         # 5. Nur bei EXTREM großen Bereichen begrenzen, aber alle wichtigen Punkte erhalten
         gesamtbreite = y_max_auto - y_min_auto
-        if gesamtbreite > 800:  # Nur bei sehr großen Bereichen begrenzen
+        if (
+            gesamtbreite > 400
+        ):  # Reduziert von 800 auf 400 für pädagogisch angemessene Darstellung
             # Behalte alle wichtigen Punkte sichtbar, aber reduziere extreme Bereiche
             if wichtige_y_werte:
                 # Finde den kleinsten Bereich der alle wichtigen Punkte abdeckt
                 y_min_final = min(wichtige_y_werte)
                 y_max_final = max(wichtige_y_werte)
 
-                # Füge angemessenen Puffer hinzu
+                # Füge angemessenen Puffer hinzu - reduziert von 2.5x auf 2.0x
                 noetige_spanne = (
                     y_max_final - y_min_final
-                ) * 2.5  # 2.5x die nötige Spanne
+                ) * 2.0  # 2.0x die nötige Spanne
                 center = (y_min_final + y_max_final) / 2
 
                 y_min_auto = center - noetige_spanne / 2
                 y_max_auto = center + noetige_spanne / 2
 
-        return (y_min_auto, y_max_auto)
+        # 6. Absolutbegrenzung für pädagogische Eignung (neu)
+        y_grenze = 200  # Maximale Ausdehnung in Y-Richtung
+        if y_max_auto - y_min_auto > y_grenze:
+            # Zentriere den Bereich um die wichtigen Punkte
+            if wichtige_y_werte:
+                center = sum(wichtige_y_werte) / len(wichtige_y_werte)
+                y_min_auto = center - y_grenze / 2
+                y_max_auto = center + y_grenze / 2
+            else:
+                # Fallback: Zentriere um 0
+                y_min_auto = -y_grenze / 2
+                y_max_auto = y_grenze / 2
 
         return (y_min_auto, y_max_auto)
 
