@@ -22,14 +22,24 @@ def _():
         Ausmultiplizieren,
         Funktion,
         Term,
+        Extrempunkte,
         Wendepunkte,
         Graph,
     )
 
     # Zwei einfache Funktionen für erste Experimente
-    f = Funktion("(x+1)^2")
-    g = Funktion("(x-1)^2")
-    return Ableitung, Ausmultiplizieren, Graph, Term, Wendepunkte, f, g
+    f = Funktion("(x+a)^2")
+    g = Funktion("(x-b)^2")
+    return (
+        Ableitung,
+        Ausmultiplizieren,
+        Extrempunkte,
+        Funktion,
+        Graph,
+        Term,
+        f,
+        g,
+    )
 
 
 @app.cell
@@ -51,8 +61,8 @@ def _(Term, h):
 
 
 @app.cell
-def _(Wendepunkte, h):
-    Wendepunkte(h)
+def _(Extrempunkte, h):
+    Extrempunkte(h)
     return
 
 
@@ -69,8 +79,14 @@ def _(Term, h1):
 
 
 @app.cell
-def _(Graph, h1):
-    Graph(h1)
+def _(Funktion):
+    q = Funktion("x^2")
+    return (q,)
+
+
+@app.cell
+def _(Graph, q):
+    Graph(q)
     return
 
 

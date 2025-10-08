@@ -7,6 +7,7 @@ einschließlich intelligenter Skalierung und Plotly-Integration.
 
 import numpy as np
 import plotly.graph_objects as go
+import math
 
 from .config import config
 from .funktion import Funktion
@@ -35,11 +36,11 @@ def _finde_interessante_punkte(funktion):
     try:
         # Nullstellen
         if hasattr(funktion, "nullstellen"):
-            punkte["nullstellen"] = funktion.nullstellen()
+            punkte["nullstellen"] = funktion.nullstellen
 
         # Extremstellen
         if hasattr(funktion, "extremstellen"):
-            extremstellen = funktion.extremstellen()
+            extremstellen = funktion.extremstellen
             # Extrahiere x-Koordinaten (könnten Tupel sein)
             punkte["extremstellen"] = [
                 es[0] if isinstance(es, tuple) else es for es in extremstellen
@@ -47,7 +48,7 @@ def _finde_interessante_punkte(funktion):
 
         # Wendepunkte
         if hasattr(funktion, "wendepunkte"):
-            wendepunkte = funktion.wendepunkte()
+            wendepunkte = funktion.wendepunkte
             # Extrahiere x-Koordinaten (könnten Tupel sein)
             punkte["wendepunkte"] = [
                 wp[0] if isinstance(wp, tuple) and len(wp) >= 1 else wp
@@ -235,8 +236,8 @@ def _berechne_y_bereich(
         for x in x_werte:
             try:
                 y = funktion.wert(x)
-                if not np.isinf(y) and not np.isnan(y):
-                    y_werte.append(y)
+                if _ist_endlich(y):
+                    y_werte.append(_formatiere_float(y))
             except (ValueError, ZeroDivisionError, OverflowError):
                 continue
 
@@ -277,6 +278,37 @@ def _berechne_y_bereich(
         return min_bereich
 
 
+def _ist_numerischer_wert(y):
+    """Prüft, ob ein SymPy-Objekt ein numerischer Wert ist."""
+    if hasattr(y, "is_number") and y.is_number:
+        return True
+    try:
+        float(y)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _ist_endlich(y):
+    """Prüft, ob ein SymPy-Objekt endlich ist (kein inf oder nan)."""
+    if not _ist_numerischer_wert(y):
+        return False
+
+    try:
+        y_float = float(y)
+        return not (math.isinf(y_float) or math.isnan(y_float))
+    except (TypeError, ValueError):
+        return False
+
+
+def _formatiere_float(y):
+    """Formatiert einen SymPy-Wert als Float für die Visualisierung."""
+    try:
+        return float(y)
+    except (TypeError, ValueError):
+        return None
+
+
 def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
     """Erstelle die eigentliche Plotly-Figur mit allen Features
 
@@ -315,8 +347,8 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
                 continue
 
             y = funktion.wert(x)
-            if not np.isinf(y) and not np.isnan(y):
-                y_werte.append(y)
+            if _ist_endlich(y):
+                y_werte.append(_formatiere_float(y))
                 gueltige_x.append(x)
         except (ValueError, ZeroDivisionError, OverflowError):
             continue
@@ -339,7 +371,7 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
 
     # Füge spezielle Punkte hinzu (nur für ganzrationale Funktionen)
     if hasattr(funktion, "nullstellen") and zeige_nullstellen:
-        nullstellen = funktion.nullstellen()
+        nullstellen = funktion.nullstellen
         for ns in nullstellen:
             try:
                 x_ns = float(ns)
@@ -361,7 +393,7 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
                 continue
 
     if hasattr(funktion, "extremstellen") and zeige_extremstellen:
-        extremstellen = funktion.extremstellen()
+        extremstellen = funktion.extremstellen
         for es in extremstellen:
             try:
                 if isinstance(es, tuple):
@@ -389,7 +421,7 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
                 continue
 
     if hasattr(funktion, "wendepunkte") and zeige_wendepunkte:
-        wendepunkte = funktion.wendepunkte()
+        wendepunkte = funktion.wendepunkte
         for wp in wendepunkte:
             try:
                 if isinstance(wp, tuple) and len(wp) >= 2:
@@ -531,6 +563,15 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
     for f in funktionen:
         if not isinstance(f, Funktion):
             raise TypeError("Alle Argumente müssen Funktionen sein")
+        # Prüfe ob die Funktion parametrisiert ist
+        if f.parameter:
+            parameter_namen = [str(p.symbol) for p in f.parameter]
+            parameter_beispiele = [f"{p.symbol}=1" for p in f.parameter]
+            raise ValueError(
+                f"Die Funktion '{f.term()}' enthält Parameter ({', '.join(parameter_namen)}). "
+                f"Verwende zuerst setze_parameter() um Werte zuzuweisen, z.B.: "
+                f"f.setze_parameter({', '.join(parameter_beispiele)})"
+            )
 
     # Wenn nur eine Funktion übergeben wurde, wende die bestehende Logik an
     if len(funktionen) == 1:
@@ -601,8 +642,8 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                 for x in x_werte:
                     try:
                         y = f.wert(x)
-                        if not np.isinf(y) and not np.isnan(y):
-                            alle_y_werte.append(y)
+                        if _ist_endlich(y):
+                            alle_y_werte.append(_formatiere_float(y))
                     except (ValueError, ZeroDivisionError, OverflowError):
                         continue
 
@@ -648,8 +689,8 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             for x in x_werte:
                 try:
                     y = funktion.wert(x)
-                    if not np.isinf(y) and not np.isnan(y):
-                        y_werte.append(y)
+                    if _ist_endlich(y):
+                        y_werte.append(_formatiere_float(y))
                         gueltige_x.append(x)
                 except (ValueError, ZeroDivisionError, OverflowError):
                     continue
