@@ -5,6 +5,7 @@ Tests für die verbesserte Graph-Funktion mit manueller Bereichskontrolle
 import pytest
 import numpy as np
 from schul_analysis.ganzrationale import GanzrationaleFunktion
+from schul_analysis.exponential import ExponentialFunktion
 from schul_analysis.visualisierung import (
     _berechne_intervalle,
     _optimiere_achse,
@@ -12,6 +13,7 @@ from schul_analysis.visualisierung import (
     _filtere_sichtbare_punkte,
     _berechne_finale_grenzen,
     Graph,
+    _berechne_kombinierten_intelligenten_bereich,
 )
 
 
@@ -437,6 +439,136 @@ class TestIntegrationSzenarien:
         assert rechter_puffer >= erwarteter_prozentualer_puffer, (
             f"Rechter Puffer sollte prozentualen Puffer erreichen: {rechter_puffer} < {erwarteter_prozentualer_puffer}"
         )
+
+    def test_graph_mehrfach_kombinierter_bereich(self):
+        """Testet Graph(f, g) mit kombiniertem intelligentem Bereich"""
+        # Beispiel vom Benutzer: f = (x+4)(x-1), g = (x+3)(x-3)
+        f = GanzrationaleFunktion("(x+4)(x-1)")  # Nullstellen bei x=-4, x=1
+        g = GanzrationaleFunktion("(x+3)(x-3)")  # Nullstellen bei x=-3, x=3
+
+        fig = Graph(f, g)
+        x_range = fig.layout.xaxis.range
+
+        # Erwarteter kombinierte Bereich: -4 bis 3 (90% Kern)
+        # Mit 5% Puffer auf jeder Seite: ca. -4.35 bis 3.35
+        erwarteter_min = -4.35
+        erwarteter_max = 3.35
+
+        assert x_range[0] <= erwarteter_min, (
+            f"Linker Bereich sollte mindestens {erwarteter_min} sein: {x_range[0]}"
+        )
+        assert x_range[1] >= erwarteter_max, (
+            f"Rechter Bereich sollte mindestens {erwarteter_max} sein: {x_range[1]}"
+        )
+
+        # Prüfe, dass alle Nullstellen sichtbar sind
+        assert x_range[0] <= -4, "Linke Nullstelle von f sollte sichtbar sein"
+        assert x_range[0] <= -3, "Linke Nullstelle von g sollte sichtbar sein"
+        assert x_range[1] >= 1, "Rechte Nullstelle von f sollte sichtbar sein"
+        assert x_range[1] >= 3, "Rechte Nullstelle von g sollte sichtbar sein"
+
+        # Prüfe, dass beide Funktionen angezeigt werden
+        assert len(fig.data) == 2, "Es sollten zwei Funktionen angezeigt werden"
+
+    def test_graph_mehrfach_mit_manuellen_grenzen(self):
+        """Testet Graph(f, g) mit teilweisen manuellen Grenzen"""
+        f = GanzrationaleFunktion("(x+4)(x-1)")
+        g = GanzrationaleFunktion("(x+3)(x-3)")
+
+        # Nur x_max manuell gesetzt
+        fig = Graph(f, g, x_max=5)
+        x_range = fig.layout.xaxis.range
+
+        # Rechter Grenze sollte exakt 5 sein
+        assert abs(x_range[1] - 5) < 0.001, (
+            f"Rechte Grenze sollte exakt 5 sein: {x_range[1]}"
+        )
+
+        # Linke Grenze sollte automatisch berechnet werden (mit Puffer)
+        assert x_range[0] <= -4, "Linke Nullstellen sollten sichtbar sein"
+
+    def test_graph_mehrfach_vollstaendig_manuell(self):
+        """Testet Graph(f, g) mit vollständig manuellen Grenzen"""
+        f = GanzrationaleFunktion("(x+4)(x-1)")
+        g = GanzrationaleFunktion("(x+3)(x-3)")
+
+        # Vollständig manuelle Grenzen
+        fig = Graph(f, g, x_min=-10, x_max=10, y_min=-20, y_max=20)
+        x_range = fig.layout.xaxis.range
+        y_range = fig.layout.yaxis.range
+
+        # Grenzen sollten exakt eingehalten werden
+        assert abs(x_range[0] - (-10)) < 0.001, (
+            f"Linke Grenze sollte -10 sein: {x_range[0]}"
+        )
+        assert abs(x_range[1] - 10) < 0.001, (
+            f"Rechte Grenze sollte 10 sein: {x_range[1]}"
+        )
+        assert abs(y_range[0] - (-20)) < 0.001, (
+            f"Untere y-Grenze sollte -20 sein: {y_range[0]}"
+        )
+        assert abs(y_range[1] - 20) < 0.001, (
+            f"Obere y-Grenze sollte 20 sein: {y_range[1]}"
+        )
+
+    def test_graph_mehrfach_drei_funktionen(self):
+        """Testet Graph(f, g, h) mit drei Funktionen"""
+        f = GanzrationaleFunktion("(x+4)(x-1)")  # Bereich: -4 bis 1
+        g = GanzrationaleFunktion("(x+3)(x-3)")  # Bereich: -3 bis 3
+        h = GanzrationaleFunktion("(x+5)(x-2)")  # Bereich: -5 bis 2
+
+        fig = Graph(f, g, h)
+        x_range = fig.layout.xaxis.range
+
+        # Kombinierter Bereich sollte -5 bis 3 umfassen (größter Bereich)
+        assert x_range[0] <= -5, "Linke Nullstelle von h sollte sichtbar sein"
+        assert x_range[1] >= 3, "Rechte Nullstelle von g sollte sichtbar sein"
+
+        # Alle drei Funktionen sollten angezeigt werden
+        assert len(fig.data) == 3, "Es sollten drei Funktionen angezeigt werden"
+
+        # Prüfe, dass verschiedene Farben verwendet werden
+        farben = [trace.line.color for trace in fig.data]
+        assert len(set(farben)) == 3, "Jede Funktion sollte eine andere Farbe haben"
+
+    def test_graph_mehrfach_exponentielle_funktionen(self):
+        """Testet Graph(f, g) mit exponentiellen Funktionen"""
+        f = ExponentialFunktion("2^x")  # Wachstum für x > 0
+        g = ExponentialFunktion("0.5^x")  # Decay für x > 0
+
+        fig = Graph(f, g, x_min=-2, x_max=4)
+        x_range = fig.layout.xaxis.range
+        y_range = fig.layout.yaxis.range
+
+        # X-Bereich sollte manuell eingehalten werden
+        assert abs(x_range[0] - (-2)) < 0.001, (
+            f"Linke Grenze sollte -2 sein: {x_range[0]}"
+        )
+        assert abs(x_range[1] - 4) < 0.001, f"Rechte Grenze sollte 4 sein: {x_range[1]}"
+
+        # Y-Bereich sollte automatisch berechnet werden
+        assert y_range[0] > 0, "Y-Bereich sollte positiv sein"
+        assert y_range[1] > 1, "Y-Bereich sollte Werte > 1 enthalten"
+
+    def test_berechne_kombinierten_intelligenten_bereich(self):
+        """Testet die Hilfsfunktion _berechne_kombinierten_intelligenten_bereich direkt"""
+        f = GanzrationaleFunktion("(x+4)(x-1)")  # Bereich: -4 bis 1
+        g = GanzrationaleFunktion("(x+3)(x-3)")  # Bereich: -3 bis 3
+
+        x_min, x_max, x_step = _berechne_kombinierten_intelligenten_bereich([f, g])
+
+        # Kombinierter Bereich sollte -4 bis 3 umfassen
+        assert x_min <= -4, f"Min sollte <= -4 sein: {x_min}"
+        assert x_max >= 3, f"Max sollte >= 3 sein: {x_max}"
+
+        # Puffer sollte angewendet werden
+        gesamt_spanne = x_max - x_min
+        kern_spanne = 3 - (-4)  # 7 Einheiten
+        assert gesamt_spanne > kern_spanne, "Puffer sollte angewendet werden"
+
+        # Schrittweite sollte berechnet werden
+        assert x_step is not None, "Schrittweite sollte berechnet werden"
+        assert x_step > 0, "Schrittweite sollte positiv sein"
 
 
 if __name__ == "__main__":

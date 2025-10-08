@@ -1124,6 +1124,45 @@ def _erstelle_plotly_figur_mit_intelligenten_achsen(
 # ====================
 
 
+def _berechne_kombinierten_intelligenten_bereich(funktionen):
+    """Berechnet den kombinierten intelligenten Bereich für mehrere Funktionen
+
+    Args:
+        funktionen: Liste der zu analysierenden Funktionen
+
+    Returns:
+        tuple: (final_x_min, final_x_max, x_step)
+    """
+    if not funktionen:
+        return -5, 5, 1  # Default-Bereich
+
+    # Sammle für jede Funktion den relevanten Bereich
+    bereiche = []
+    for f in funktionen:
+        punkte = _sammle_interessante_punkte(f)
+        if punkte["x_werte"]:
+            bereich_min = min(punkte["x_werte"])
+            bereich_max = max(punkte["x_werte"])
+            bereiche.append((bereich_min, bereich_max))
+
+    if not bereiche:
+        return -5, 5, 1  # Default-Bereich
+
+    # Finde den größten kombinierten Bereich
+    kombiniert_min = min(b for b, _ in bereiche)
+    kombiniert_max = max(b for _, b in bereiche)
+
+    # Wende intelligenten Puffer an
+    int_puffer = _berechne_intelligenter_puffer(kombiniert_min, kombiniert_max)
+    final_min = kombiniert_min - int_puffer
+    final_max = kombiniert_max + int_puffer
+
+    # Optimierte glatte Grenzen berechnen
+    final_min, final_max, x_step = _optimiere_achse(final_min, final_max)
+
+    return final_min, final_max, x_step
+
+
 def _berechne_finale_grenzen(funktion, x_min=None, x_max=None, y_min=None, y_max=None):
     """Berechnet finale Darstellungsgrenzen mit intelligenter Puffer-Logik
 
@@ -1351,34 +1390,27 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             **kwargs,
         )
 
-    # Bei mehreren Funktionen: Kombinierte Logik
+    # Bei mehreren Funktionen: Intelligente kombinierte Logik
     else:
-        # Sammle interessante Punkte von allen Funktionen
-        alle_interessante_punkte = []
-        for f in funktionen:
-            punkte = _finde_interessante_punkte(f)
-            alle_interessante_punkte.append(punkte)
+        # Berechne kombinierten x-Bereich mit intelligentem Puffer-System
+        x_step = None  # Initialisieren
+        y_step = None  # Initialisieren
 
-        # Berechne kombinierten x-Bereich
         if x_min is None or x_max is None:
-            # Kombiniere alle Punkte für die Bereichsberechnung
-            kombinierte_punkte = {
-                "nullstellen": [],
-                "extremstellen": [],
-                "wendepunkte": [],
-                "polstellen": [],
-            }
-
-            for punkte_dict in alle_interessante_punkte:
-                for kategorie, punkte_liste in punkte_dict.items():
-                    kombinierte_punkte[kategorie].extend(punkte_liste)
-
-            x_min_auto, x_max_auto = _berechne_optimalen_bereich(kombinierte_punkte)
+            # Nur wenn mindestens eine Grenze automatisch ist, berechne kombinierten Bereich
+            final_x_min_auto, final_x_max_auto, x_step_auto = (
+                _berechne_kombinierten_intelligenten_bereich(funktionen)
+            )
 
             if x_min is None:
-                x_min = x_min_auto
+                x_min = final_x_min_auto
             if x_max is None:
-                x_max = x_max_auto
+                x_max = final_x_max_auto
+            # Wenn beide Grenzen automatisch waren, übernimm auch die Schrittweite
+            if x_step_auto is not None and (
+                x_min == final_x_min_auto and x_max == final_x_max_auto
+            ):
+                x_step = x_step_auto
 
         # Berechne y-Bereich basierend auf allen Funktionen mit intelligenter Logik
         if y_min is None or y_max is None:
