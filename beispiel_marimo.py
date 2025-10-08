@@ -86,7 +86,7 @@ def _(Funktion):
 
 @app.cell
 def _(Graph, q):
-    Graph(q)
+    Graph(q, x_min=0, y_max=4)
     return
 
 

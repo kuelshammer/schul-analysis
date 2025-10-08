@@ -73,7 +73,7 @@ def _finde_interessante_punkte(funktion):
 
 def _berechne_optimalen_bereich(
     punkte_dict,
-    default_range=(-10, 10),
+    default_range=(-5, 5),
     min_buffer=1.0,
     proportional_buffer=0.15,  # Reduziert von 0.2 auf 0.15
     min_span=5.0,
@@ -82,7 +82,7 @@ def _berechne_optimalen_bereich(
 
     Args:
         punkte_dict: Dictionary mit interessanten Punkten
-        default_range: Standardbereich wenn keine Punkte gefunden (Default: (-10, 10))
+        default_range: Standardbereich wenn keine Punkte gefunden (Default: (-5, 5))
         min_buffer: Minimaler absoluter Puffer (Default: 1.0)
         proportional_buffer: Proportionaler Puffer (Default: 0.15 = 15%)
         min_span: Minimale Gesamtbreite der x-Achse (Default: 5.0)
@@ -197,9 +197,9 @@ def _berechne_y_bereich(
     x_min,
     x_max,
     interessante_punkte=None,
-    min_bereich=(-5, 5),
+    default_range=(-5, 5),
     punkte=100,
-    puffer=0.1,
+    puffer=0.15,
 ):
     """Berechnet optimalen y-Bereich basierend auf Funktionswerten
 
@@ -207,9 +207,9 @@ def _berechne_y_bereich(
         funktion: Die zu analysierende Funktion
         x_min, x_max: x-Bereich für die Auswertung
         interessante_punkte: Dictionary mit interessanten Punkten für bessere y-Berechnung
-        min_bereich: Minimaler y-Bereich der garantiert wird
+        default_range: Standardbereich wenn keine Werte gefunden (Default: (-5, 5))
         punkte: Anzahl der Auswertungspunkte
-        puffer: Zusätzlicher Puffer (10%)
+        puffer: Zusätzlicher Puffer (15%)
 
     Returns:
         tuple: (y_min, y_max)
@@ -264,11 +264,12 @@ def _berechne_y_bereich(
             y_min_auto -= 1
             y_max_auto += 1
 
-        # Stelle sicher dass min_bereich eingehalten wird
-        y_min_final = min(y_min_auto, min_bereich[0])
-        y_max_final = max(y_max_auto, min_bereich[1])
+        # Wenn keine sinnvollen Werte gefunden wurden, verwende Standardbereich
+        if not alle_y and not interessante_y:
+            return default_range
 
-        return (y_min_final, y_max_final)
+        # Wenn Werte gefunden wurden, verwende diese mit Puffer
+        return (y_min_auto, y_max_auto)
 
     except (ValueError, TypeError, AttributeError):
         # Bei Fehlern Default-Bereich zurückgeben
@@ -277,7 +278,7 @@ def _berechne_y_bereich(
         logging.debug(
             f"Fehler beim Berechnen des y-Bereichs für Funktion im Bereich ({x_min}, {x_max})"
         )
-        return min_bereich
+        return default_range
 
 
 def _ist_numerischer_wert(y):
@@ -582,9 +583,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
         # Automatische Bereichsberechnung wenn nicht angegeben
         if x_min is None or x_max is None:
             interessante_punkte = _finde_interessante_punkte(funktion)
-            x_min_auto, x_max_auto = _berechne_optimalen_bereich(
-                interessante_punkte, default_range=(-10, 10)
-            )
+            x_min_auto, x_max_auto = _berechne_optimalen_bereich(interessante_punkte)
 
             if x_min is None:
                 x_min = x_min_auto
@@ -626,9 +625,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                 for kategorie, punkte_liste in punkte_dict.items():
                     kombinierte_punkte[kategorie].extend(punkte_liste)
 
-            x_min_auto, x_max_auto = _berechne_optimalen_bereich(
-                kombinierte_punkte, default_range=(-10, 10)
-            )
+            x_min_auto, x_max_auto = _berechne_optimalen_bereich(kombinierte_punkte)
 
             if x_min is None:
                 x_min = x_min_auto
