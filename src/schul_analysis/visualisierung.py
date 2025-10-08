@@ -117,9 +117,9 @@ def _berechne_optimalen_bereich(
 
             if x_val is not None:
                 try:
-                    num_x = float(x_val)
+                    num_x = _formatiere_float(x_val)
                     # Schließe NaN und Unendlich-Werte aus
-                    if not math.isinf(num_x) and not math.isnan(num_x):
+                    if num_x is not None:
                         alle_x.append(num_x)
                 except (ValueError, TypeError):
                     continue
@@ -224,7 +224,9 @@ def _berechne_y_bereich(
                         if p is not None:
                             if isinstance(p, tuple) and len(p) >= 2:
                                 # Bei Tupeln (x, y, ...) die y-Koordinate nehmen
-                                interessante_y.append(float(p[1]))
+                                y_val = _formatiere_float(p[1])
+                                if y_val is not None:
+                                    interessante_y.append(y_val)
                 except (ValueError, TypeError, IndexError):
                     continue
 
@@ -335,7 +337,7 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
 
     # Berechne Funktionswerte, vermeide Polstellen
     if hasattr(funktion, "polstellen"):
-        polstellen = [float(ps) for ps in funktion.polstellen()]
+        polstellen = [_formatiere_float(ps) for ps in funktion.polstellen()]
     else:
         polstellen = []
 
@@ -374,7 +376,7 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
         nullstellen = funktion.nullstellen
         for ns in nullstellen:
             try:
-                x_ns = float(ns)
+                x_ns = _formatiere_float(ns)
                 if x_min <= x_ns <= x_max:
                     fig.add_trace(
                         go.Scatter(
@@ -397,24 +399,24 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
         for es in extremstellen:
             try:
                 if isinstance(es, tuple):
-                    x_es = float(es[0])
+                    x_es = _formatiere_float(es[0])
                     art = es[1]
                 else:
-                    x_es = float(es)
+                    x_es = _formatiere_float(es)
                     art = "Extremum"
 
                 y_es = funktion.wert(x_es)
-                if x_min <= x_es <= x_max:
+                if _ist_endlich(y_es) and x_min <= x_es <= x_max:
                     color = "green" if art == "Maximum" else "orange"
                     fig.add_trace(
                         go.Scatter(
                             x=[x_es],
-                            y=[y_es],
+                            y=[_formatiere_float(y_es)],
                             mode="markers",
-                            name=f"{art} ({x_es:.3f}|{y_es:.3f})",
+                            name=f"{art} ({x_es:.3f}|{_formatiere_float(y_es):.3f})",
                             marker=config.get_marker_config(color_key=color, size=12),
                             showlegend=False,
-                            hovertemplate=f"<b>{art}</b><br>x: {x_es:.3f}<br>f(x): {y_es:.3f}<extra></extra>",
+                            hovertemplate=f"<b>{art}</b><br>x: {x_es:.3f}<br>f(x): {_formatiere_float(y_es):.3f}<extra></extra>",
                         )
                     )
             except (ValueError, TypeError):
@@ -425,13 +427,13 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
         for wp in wendepunkte:
             try:
                 if isinstance(wp, tuple) and len(wp) >= 2:
-                    x_ws = float(wp[0])
-                    y_ws = float(wp[1])
+                    x_ws = _formatiere_float(wp[0])
+                    y_ws = _formatiere_float(wp[1])
                     art = wp[2] if len(wp) >= 3 else "Wendepunkt"
                 else:
                     continue
 
-                if x_min <= x_ws <= x_max:
+                if _ist_endlich(y_ws) and x_min <= x_ws <= x_max:
                     fig.add_trace(
                         go.Scatter(
                             x=[x_ws],
