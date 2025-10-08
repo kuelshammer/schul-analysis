@@ -298,6 +298,64 @@ class TestIntegrationSzenarien:
         # X-Maximum sollte automatisch rechte Nullstelle umfassen
         assert x_range[1] >= 3
 
+    def test_szenario_puffer_bei_nullstellen_am_rand(self):
+        """Testet dass Nullstellen am Rand ausreichend Puffer erhalten
+
+        Dieser Test stellt sicher dass die automatische Bereichsberechnung
+        für Funktionen wie f = (x+3)(x+1)(x-10) einen angemessenen
+        Puffer um die äußersten Nullstellen herum einfügt.
+        """
+        # Testfunktion mit Nullstellen bei x=-3, x=-1, x=10
+        f = GanzrationaleFunktion("(x+3)(x+1)(x-10)")
+        nullstellen = sorted(f.nullstellen)
+        assert nullstellen == [-3, -1, 10]
+
+        # Automatische Bereichsberechnung
+        fig = Graph(f)
+        x_range = fig.layout.xaxis.range
+
+        # Überprüfe dass die äußersten Nullstellen ausreichend Puffer haben
+        linkeste_nullstelle = nullstellen[0]
+        rechtste_nullstelle = nullstellen[-1]
+
+        linker_puffer = linkeste_nullstelle - x_range[0]
+        rechter_puffer = x_range[1] - rechtste_nullstelle
+
+        # Sollte mindestens 1.0 Einheit Puffer auf jeder Seite haben
+        assert linker_puffer >= 1.0, f"Linker Puffer zu klein: {linker_puffer} < 1.0"
+        assert rechter_puffer >= 1.0, f"Rechter Puffer zu klein: {rechter_puffer} < 1.0"
+
+        # Spezifischer Testfall: Sollte von -4 bis 11 reichen (nicht -3 bis 11)
+        assert x_range[0] <= -3.5, f"Linke Grenze {x_range[0]} sollte näher an -4 sein"
+        assert x_range[1] >= 10.5, f"Rechte Grenze {x_range[1]} sollte näher an 11 sein"
+
+    def test_szenario_puffer_fuer_verschiedene_funktionen(self):
+        """Testet Pufferlogik für verschiedene Funktionstypen"""
+        test_cases = [
+            ("(x+1)(x-5)", [-1, 5]),  # Einfache quadratische Funktion
+            ("(x+2)(x-1)(x-8)", [-2, 1, 8]),  # Kubische Funktion
+            ("(x+4)(x+2)(x-3)(x-7)", [-4, -2, 3, 7]),  # Quartische Funktion
+        ]
+
+        for func_str, expected_zeros in test_cases:
+            f = GanzrationaleFunktion(func_str)
+            fig = Graph(f)
+            x_range = fig.layout.xaxis.range
+
+            linkeste_nullstelle = min(expected_zeros)
+            rechtste_nullstelle = max(expected_zeros)
+
+            linker_puffer = linkeste_nullstelle - x_range[0]
+            rechter_puffer = x_range[1] - rechtste_nullstelle
+
+            # Alle Funktionen sollten konsistenten Puffer haben
+            assert linker_puffer >= 1.0, (
+                f"{func_str}: Linker Puffer zu klein: {linker_puffer}"
+            )
+            assert rechter_puffer >= 1.0, (
+                f"{func_str}: Rechter Puffer zu klein: {rechter_puffer}"
+            )
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

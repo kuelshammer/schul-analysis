@@ -145,15 +145,15 @@ def _optimiere_achse(min_val, max_val, max_ticks=8, wichtige_punkte=None):
 
             # Zusätzlicher Puffer für wichtige Punkte: verhindere dass wichtige Punkte am Rand liegen
             if wichtige_punkte:
-                # Prüfe ob wichtige Punkte zu nah am Rand sind (innerhalb von 0.5 Einheiten)
-                rand_puffer = 0.5
+                # Prüfe ob wichtige Punkte zu nah am Rand sind (innerhalb von 1.0 Einheiten)
+                rand_puffer = 1.0
                 for punkt_x in wichtige_punkte:
                     if punkt_x is not None:
                         # Linker Rand
-                        if abs(punkt_x - new_min) < rand_puffer:
+                        if abs(punkt_x - new_min) <= rand_puffer:
                             new_min = math.floor(punkt_x - rand_puffer)
                         # Rechter Rand
-                        if abs(punkt_x - new_max) < rand_puffer:
+                        if abs(punkt_x - new_max) <= rand_puffer:
                             new_max = math.ceil(punkt_x + rand_puffer)
         else:
             # Zu viele Ticks für Schrittweite 1, verwende normale Logik
