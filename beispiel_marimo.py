@@ -87,7 +87,7 @@ def _(Funktion):
 @app.cell
 def _(Funktion):
     p = Funktion("3x+5")
-    return (p,)
+    return
 
 
 @app.cell
@@ -98,8 +98,8 @@ def _(Ausmultiplizieren, Term, q):
 
 
 @app.cell
-def _(Graph, p, q):
-    Graph(q, p)
+def _(Graph, q):
+    Graph(q, x_max=11)
     return
 
 

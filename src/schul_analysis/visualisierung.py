@@ -50,12 +50,68 @@ def _berechne_intervalle(min_val, max_val, max_ticks=8):
     return best_step * magnitude
 
 
-def _optimiere_achse(min_val, max_val, max_ticks=8):
+def _optimiere_achse_einfach(min_val, max_val, max_ticks=8):
+    """Optimiert Achsenbereich für runde Beschriftungen OHNE wichtige Punkte Puffer
+    Args:
+        min_val, max_val: Originaler Wertebereich
+        max_ticks: Maximale Anzahl an Ticks (Standard: 8)
+    Returns:
+        tuple: (optimiertes_min, optimiertes_max, schrittweite)
+    """
+    if min_val == max_val:
+        # Einzelpunkt: Bereich zentrieren
+        return min_val - 1, max_val + 1, 1.0
+    # Berechne optimale Schrittweite
+    step = _berechne_intervalle(min_val, max_val, max_ticks)
+    # Spezialfall: Wenn Grenzen nahe an ganzen Zahlen sind, bevorzuge ganzzahlige Grenzen
+    if abs(min_val - round(min_val)) < 0.2 and abs(max_val - round(max_val)) < 0.2:
+        # Beide Grenzen sind nahe an ganzen Zahlen
+        min_rounded = round(min_val)
+        max_rounded = round(max_val)
+        span = max_rounded - min_rounded
+        # Prüfe ob wir mit ganzzahliger Schrittweite auskommen oder ob es ein spezieller Fall ist
+        if span <= max_ticks or (span <= 16 and max_ticks >= 6):
+            # Bei größeren Bereichen bis 16 Einheiten: erlaube mehr Ticks für bessere Ästhetik
+            new_min = min_rounded
+            new_max = max_rounded
+            step = 1.0
+            # Stelle sicher dass Originalbereich enthalten ist
+            if new_min > min_val:
+                new_min -= 1
+            if new_max < max_val:
+                new_max += 1
+        else:
+            # Zu viele Ticks für Schrittweite 1, verwende normale Logik
+            new_min = math.floor(min_val / step) * step
+            new_max = math.ceil(max_val / step) * step
+            # Stelle sicher dass Originalbereich enthalten ist
+            if new_min > min_val:
+                new_min -= step
+            if new_max < max_val:
+                new_max += step
+    else:
+        # Normale Logik für nicht-ganzzahlige Grenzen
+        new_min = math.floor(min_val / step) * step
+        new_max = math.ceil(max_val / step) * step
+        # Stelle sicher dass Originalbereich enthalten ist
+        if new_min > min_val:
+            new_min -= step
+        if new_max < max_val:
+            new_max += step
+    # Verhindere zu kleine Bereiche
+    if new_max - new_min < step:
+        new_min -= step
+        new_max += step
+    return new_min, new_max, step
+
+
+def _optimiere_achse(min_val, max_val, max_ticks=8, wichtige_punkte=None):
     """Optimiert Achsenbereich für runde Beschriftungen
 
     Args:
         min_val, max_val: Originaler Wertebereich
         max_ticks: Maximale Anzahl an Ticks (Standard: 8)
+        wichtige_punkte: Liste wichtiger X-Koordinaten (z.B. Nullstellen)
 
     Returns:
         tuple: (optimiertes_min, optimiertes_max, schrittweite)
@@ -86,6 +142,19 @@ def _optimiere_achse(min_val, max_val, max_ticks=8):
                 new_min -= 1
             if new_max < max_val:
                 new_max += 1
+
+            # Zusätzlicher Puffer für wichtige Punkte: verhindere dass wichtige Punkte am Rand liegen
+            if wichtige_punkte:
+                # Prüfe ob wichtige Punkte zu nah am Rand sind (innerhalb von 0.5 Einheiten)
+                rand_puffer = 0.5
+                for punkt_x in wichtige_punkte:
+                    if punkt_x is not None:
+                        # Linker Rand
+                        if abs(punkt_x - new_min) < rand_puffer:
+                            new_min = math.floor(punkt_x - rand_puffer)
+                        # Rechter Rand
+                        if abs(punkt_x - new_max) < rand_puffer:
+                            new_max = math.ceil(punkt_x + rand_puffer)
         else:
             # Zu viele Ticks für Schrittweite 1, verwende normale Logik
             new_min = math.floor(min_val / step) * step
@@ -1100,34 +1169,28 @@ def _berechne_finale_grenzen(funktion, x_min=None, x_max=None, y_min=None, y_max
         y_step = _berechne_intervalle(final_y_min, final_y_max)
 
     # === OPTIMIERUNG FÜR AUTOMATISCHE BEREICHE ===
-    # Nur optimieren, wenn beide Grenzen automatisch sind ODER bei halb-automatischen mit ganzzahligen Grenzen
+    # Nur optimieren, wenn beide Grenzen automatisch sind (wichtige Punkte Puffer nur hier)
     if x_min is None and x_max is None:
-        # Vollständig automatisch: Immer optimieren
-        final_x_min, final_x_max, x_step = _optimiere_achse(final_x_min, final_x_max)
+        # Vollständig automatisch: Immer optimiere mit wichtigen Punkte Puffer
+        final_x_min, final_x_max, x_step = _optimiere_achse(
+            final_x_min, final_x_max, wichtige_punkte=punkte["x_werte"]
+        )
     elif (x_min is not None and x_max is None) or (x_min is None and x_max is not None):
-        # Halb-automatisch: Prüfen ob Grenzen nahe an ganzen Zahlen sind
-        if (
-            abs(final_x_min - round(final_x_min)) < 0.5
-            and abs(final_x_max - round(final_x_max)) < 0.5
-        ):
-            # Beide Grenzen sind nahe an ganzen Zahlen -> optimieren für bessere Ästhetik
-            final_x_min, final_x_max, x_step = _optimiere_achse(
-                final_x_min, final_x_max
-            )
+        # Halb-automatisch: Nur einfache Optimierung, KEINE wichtigen Punkte Puffer
+        final_x_min, final_x_max, x_step = _optimiere_achse_einfach(
+            final_x_min, final_x_max
+        )
 
     if y_min is None and y_max is None:
-        # Vollständig automatisch: Immer optimieren
-        final_y_min, final_y_max, y_step = _optimiere_achse(final_y_min, final_y_max)
+        # Vollständig automatisch: Immer optimiere mit wichtigen Punkte Puffer
+        final_y_min, final_y_max, y_step = _optimiere_achse(
+            final_y_min, final_y_max, wichtige_punkte=punkte["y_werte"]
+        )
     elif (y_min is not None and y_max is None) or (y_min is None and y_max is not None):
-        # Halb-automatisch: Prüfen ob Grenzen nahe an ganzen Zahlen sind
-        if (
-            abs(final_y_min - round(final_y_min)) < 0.5
-            and abs(final_y_max - round(final_y_max)) < 0.5
-        ):
-            # Beide Grenzen sind nahe an ganzen Zahlen -> optimieren für bessere Ästhetik
-            final_y_min, final_y_max, y_step = _optimiere_achse(
-                final_y_min, final_y_max
-            )
+        # Halb-automatisch: Nur einfache Optimierung, KEINE wichtigen Punkte Puffer
+        final_y_min, final_y_max, y_step = _optimiere_achse_einfach(
+            final_y_min, final_y_max
+        )
 
     # === PUFFER FÜR HALB-AUTOMATISCHE BEREICHE (nur wenn nicht bereits optimiert) ===
     # Fuge verbesserten Puffer hinzu, wenn nur eine Grenze manuell ist UND noch nicht optimiert wurde
