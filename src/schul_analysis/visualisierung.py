@@ -400,6 +400,136 @@ def _berechne_y_bereich(
         return default_range
 
 
+def _berechne_y_bereich_mehrfach(funktionen, x_min, x_max, default_range=(-5, 5)):
+    """Berechnet optimalen y-Bereich für mehrere Funktionen mit intelligenter Logik
+
+    Args:
+        funktionen: Liste der zu analysierenden Funktionen
+        x_min, x_max: x-Bereich für die Auswertung
+        default_range: Standardbereich wenn keine Werte gefunden (Default: (-5, 5))
+
+    Returns:
+        tuple: (y_min, y_max)
+    """
+    try:
+        # 1. Sammle wichtige Punkte von ALLEN Funktionen
+        alle_wichtige_y_werte = []
+        alle_y_werte = []
+
+        for funktion in funktionen:
+            # Sammle y-Werte von wichtigen Punkten dieser Funktion
+            funktion_wichtige_y = []
+
+            # Extremstellen
+            if hasattr(funktion, "extremstellen"):
+                for extremstelle in funktion.extremstellen:
+                    if isinstance(extremstelle, tuple) and len(extremstelle) >= 1:
+                        x_val = extremstelle[0]
+                        y_val = funktion.wert(x_val)
+                        if _ist_endlich(y_val):
+                            y_float = _formatiere_float(y_val)
+                            if y_float is not None:
+                                funktion_wichtige_y.append(y_float)
+                                alle_wichtige_y_werte.append(y_float)
+
+            # Wendepunkte
+            if hasattr(funktion, "wendepunkte"):
+                for wendepunkt in funktion.wendepunkte:
+                    if isinstance(wendepunkt, tuple) and len(wendepunkt) >= 2:
+                        y_val = wendepunkt[1]  # y-Wert ist an Position 1
+                        if _ist_endlich(y_val):
+                            y_float = _formatiere_float(y_val)
+                            if y_float is not None:
+                                funktion_wichtige_y.append(y_float)
+                                alle_wichtige_y_werte.append(y_float)
+
+            # Sammle einige Funktionswerte für die Basisbereichsberechnung
+            x_werte = np.linspace(
+                x_min, x_max, 50
+            )  # Reduziert von 200 auf 50 für Effizienz
+            for x in x_werte:
+                try:
+                    y = funktion.wert(x)
+                    if _ist_endlich(y):
+                        y_float = _formatiere_float(y)
+                        if y_float is not None:
+                            alle_y_werte.append(y_float)
+                except (ValueError, ZeroDivisionError, OverflowError):
+                    continue
+
+        # 2. Wenn keine wichtigen Punkte gefunden, verwende einfache Logik
+        if not alle_wichtige_y_werte:
+            if alle_y_werte:
+                y_min_auto = min(alle_y_werte)
+                y_max_auto = max(alle_y_werte)
+                # Füge Puffer hinzu
+                hoehe = y_max_auto - y_min_auto
+                if hoehe > 0:
+                    puffer = hoehe * 0.15
+                    y_min_auto -= puffer
+                    y_max_auto += puffer
+                else:
+                    y_min_auto -= 1
+                    y_max_auto += 1
+                return (y_min_auto, y_max_auto)
+            else:
+                return default_range
+
+        # 3. Berechne Basisbereich mit Quantilen (wie bei einzelnen Funktionen)
+        if alle_y_werte:
+            y_array = np.array([y for y in alle_y_werte if y is not None])
+            if len(y_array) > 0:
+                q10 = np.percentile(y_array, 10)
+                q90 = np.percentile(y_array, 90)
+                y_min_basis = q10
+                y_max_basis = q90
+            else:
+                y_min_basis = min(alle_wichtige_y_werte)
+                y_max_basis = max(alle_wichtige_y_werte)
+        else:
+            y_min_basis = min(alle_wichtige_y_werte)
+            y_max_basis = max(alle_wichtige_y_werte)
+
+        # 4. Erweitere Bereich um ALLE wichtigen Punkte einzuschließen
+        y_min_wichtig = min(alle_wichtige_y_werte)
+        y_max_wichtig = max(alle_wichtige_y_werte)
+
+        y_min_auto = min(y_min_basis, y_min_wichtig)
+        y_max_auto = max(y_max_basis, y_max_wichtig)
+
+        # 5. Füge ausreichend Puffer hinzu (3x wie bei einzelnen Funktionen)
+        spanne_wichtig = y_max_wichtig - y_min_wichtig
+        if spanne_wichtig > 0:
+            noetige_spanne = spanne_wichtig * 3.0  # 3x Puffer für klare Sichtbarkeit
+            center = (y_min_wichtig + y_max_wichtig) / 2
+            y_min_auto = min(y_min_auto, center - noetige_spanne / 2)
+            y_max_auto = max(y_max_auto, center + noetige_spanne / 2)
+
+        # 6. Zusätzlicher Puffer
+        hoehe = y_max_auto - y_min_auto
+        if hoehe > 0:
+            puffer_wert = max(hoehe * 0.15, 3.0)
+            y_min_auto -= puffer_wert
+            y_max_auto += puffer_wert
+        else:
+            y_min_auto -= 3
+            y_max_auto += 3
+
+        # 7. Absolutbegrenzung auf 400 Einheiten (wie bei einzelnen Funktionen)
+        y_grenze = 400
+        if y_max_auto - y_min_auto > y_grenze:
+            # Zentriere um die wichtigen Punkte
+            center = sum(alle_wichtige_y_werte) / len(alle_wichtige_y_werte)
+            y_min_auto = center - y_grenze / 2
+            y_max_auto = center + y_grenze / 2
+
+        return (y_min_auto, y_max_auto)
+
+    except (ValueError, TypeError, AttributeError):
+        # Bei Fehlern Default-Bereich zurückgeben
+        return default_range
+
+
 def _ist_numerischer_wert(y):
     """Prüft, ob ein SymPy-Objekt ein numerischer Wert ist."""
     if hasattr(y, "is_number") and y.is_number:
@@ -753,44 +883,16 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             if x_max is None:
                 x_max = x_max_auto
 
-        # Berechne y-Bereich basierend auf allen Funktionen
+        # Berechne y-Bereich basierend auf allen Funktionen mit intelligenter Logik
         if y_min is None or y_max is None:
-            alle_y_werte = []
+            y_min_auto, y_max_auto = _berechne_y_bereich_mehrfach(
+                funktionen, x_min, x_max
+            )
 
-            for f in funktionen:
-                x_werte = np.linspace(x_min, x_max, 200)
-                for x in x_werte:
-                    try:
-                        y = f.wert(x)
-                        if _ist_endlich(y):
-                            alle_y_werte.append(_formatiere_float(y))
-                    except (ValueError, ZeroDivisionError, OverflowError):
-                        continue
-
-            if alle_y_werte:
-                y_min_auto = min(alle_y_werte)
-                y_max_auto = max(alle_y_werte)
-
-                # Füge Puffer hinzu
-                hoehe = y_max_auto - y_min_auto
-                if hoehe > 0:
-                    puffer = hoehe * 0.1
-                    y_min_auto -= puffer
-                    y_max_auto += puffer
-                else:
-                    y_min_auto -= 1
-                    y_max_auto += 1
-
-                if y_min is None:
-                    y_min = y_min_auto
-                if y_max is None:
-                    y_max = y_max_auto
-            else:
-                # Fallback
-                if y_min is None:
-                    y_min = -5
-                if y_max is None:
-                    y_max = 5
+            if y_min is None:
+                y_min = y_min_auto
+            if y_max is None:
+                y_max = y_max_auto
 
         # Erstelle Figur für mehrere Funktionen
         fig = go.Figure()
