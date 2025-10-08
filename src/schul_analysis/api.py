@@ -1098,6 +1098,97 @@ def Zeige_Analyse(funktion: Funktionstyp) -> str:
 
 
 # =============================================================================
+# FLÄCHENBERECHNUNG
+# =============================================================================
+
+
+def Flaeche(funktion: Funktionstyp, a: float, b: float) -> Any:
+    """
+    Berechnet die Fläche zwischen einer Funktion und der x-Achse über dem Intervall [a, b].
+
+    Dies ist eine pädagogische Klarfunktion, die die vorhandene Integral-Funktionalität
+    für die Flächenberechnung zugänglich macht.
+
+    Args:
+        funktion: Die Funktion, deren Fläche berechnet werden soll
+        a: Untere Integrationsgrenze
+        b: Obere Integrationsgrenze
+
+    Returns:
+        Der exakte Wert der Fläche als SymPy-Ausdruck oder numerischer Wert
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0])  # x²
+        >>> A = Flaeche(f, 0, 1)            # 1/3 (Fläche von 0 bis 1)
+        >>> A = Flaeche(f, -1, 1)           # 2/3 (Fläche von -1 bis 1)
+
+    Didaktischer Hinweis:
+        Diese Funktion macht das Konzept der Fläche unter einer Kurve
+        für Schüler zugänglich und intuitiv.
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
+    """
+    return Integral(funktion, a, b)
+
+
+def FlaecheZweiFunktionen(
+    funktion1: Funktionstyp, funktion2: Funktionstyp, a: float, b: float
+) -> Any:
+    """
+    Berechnet die Fläche zwischen zwei Funktionen über dem Intervall [a, b].
+
+    Args:
+        funktion1: Die obere Funktion
+        funktion2: Die untere Funktion
+        a: Untere Integrationsgrenze
+        b: Obere Integrationsgrenze
+
+    Returns:
+        Der exakte Wert der Fläche zwischen den Funktionen als SymPy-Ausdruck
+
+    Beispiele:
+        >>> f1 = ErstellePolynom([1, 0, 0])    # x²
+        >>> f2 = ErstellePolynom([0, 2])        # 2x
+        >>> A = Flaeche(f1, f2, 0, 2)         # 4/3 (Fläche zwischen Parabel und Gerade)
+
+    Didaktischer Hinweis:
+        Visualisiert das Konzept der Fläche zwischen zwei Kurven,
+        das in vielen Anwendungen wichtig ist.
+
+    Technische Hinweis:
+        Berechnet Integral(funktion1 - funktion2, a, b) für die Fläche zwischen den Kurven.
+    """
+    try:
+        # Erstelle Differenzfunktion direkt mit SymPy
+        import sympy as sp
+
+        # Stelle sicher, dass beide Funktionen die gleiche Variable verwenden
+        if funktion1._variable_symbol != funktion2._variable_symbol:
+            term2 = funktion2.term_sympy.subs(
+                funktion2._variable_symbol, funktion1._variable_symbol
+            )
+        else:
+            term2 = funktion2.term_sympy
+
+        # Berechne Differenz der Terme
+        differenz_term = funktion1.term_sympy - term2
+
+        # Erstelle neue Funktion für die Differenz
+        from .funktion import Funktion
+
+        differenz_funktion = Funktion(differenz_term)
+
+        # Berechne Integral der Differenzfunktion
+        return Integral(differenz_funktion, a, b)
+
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Flächenberechnung zwischen zwei Funktionen: {str(e)}"
+        )
+
+
+# =============================================================================
 # EXPORT: ALLE FUNKTIONEN, DIE IMPORTIERT WERDEN SOLLEN
 # =============================================================================
 
@@ -1106,6 +1197,8 @@ __all__ = [
     "Nullstellen",
     "Ableitung",
     "Integral",
+    "Flaeche",
+    "FlaecheZweiFunktionen",
     "Extrema",
     "Extremstellen",
     "Extrempunkte",

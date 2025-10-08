@@ -86,7 +86,7 @@ def _(Funktion):
 
 @app.cell
 def _(Funktion):
-    p = Funktion("2x+6")
+    p = Funktion("9")
     return (p,)
 
 
@@ -94,7 +94,6 @@ def _(Funktion):
 def _(Ausmultiplizieren, Term, q):
     Ausmultiplizieren(q)
     Term(q)
-
 
 
     return

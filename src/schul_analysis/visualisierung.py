@@ -185,6 +185,132 @@ def _fuege_punkte_fuer_mehrfache_funktionen_hinzu(
                 continue
 
 
+def _fuege_flaeche_zu_graph_hinzu(
+    fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
+):
+    """Fügt Flächenvisualisierung zum Graphen hinzu
+
+    Args:
+        fig: Plotly-Figur
+        funktionen: Liste der Funktionen
+        farben: Liste der Farben für die Funktionen
+        x_min, x_max, y_min, y_max: Bereichsgrenzen
+        **kwargs: Zusätzliche Optionen für Flächenvisualisierung
+    """
+    # Parameter extrahieren
+    flaeche = kwargs.get("flaeche", False)
+    flaeche_grenzen = kwargs.get("flaeche_grenzen", None)
+    flaeche_farbe = kwargs.get("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+    flaeche_zwei_funktionen = kwargs.get("flaeche_zwei_funktionen", False)
+
+    if not flaeche and not flaeche_zwei_funktionen:
+        return
+
+    # Importiere API für Flächenberechnung
+    from .api import Flaeche, FlaecheZweiFunktionen
+
+    if flaeche and funktionen:
+        # Fläche unter erster Funktion zur x-Achse
+        f1 = funktionen[0]
+
+        # Bestimme Integrationsgrenzen
+        if flaeche_grenzen:
+            a, b = flaeche_grenzen
+        else:
+            a, b = x_min, x_max
+
+        # Berechne Flächenwert für Anzeige
+        try:
+            flaechen_wert = Flaeche(f1, a, b)
+            flaechen_text = f"Fläche: {flaechen_wert}"
+        except Exception:
+            flaechen_text = "Fläche"
+
+        # Erstelle Punkte für die Flächenfüllung
+        x_werte = np.linspace(a, b, 100)
+        y_werte_funktion = []
+        y_werte_null = []
+
+        for x in x_werte:
+            try:
+                y = f1.wert(x)
+                if _ist_endlich(y):
+                    y_werte_funktion.append(_formatiere_float(y))
+                    y_werte_null.append(0.0)
+            except (ValueError, ZeroDivisionError, OverflowError):
+                continue
+
+        if y_werte_funktion:
+            # Erstelle gefüllte Fläche zwischen Funktion und x-Achse
+            fig.add_trace(
+                go.Scatter(
+                    x=np.concatenate([x_werte, x_werte[::-1]]),
+                    y=np.concatenate([y_werte_funktion, y_werte_null[::-1]]),
+                    fill="toself",
+                    fillcolor=flaeche_farbe,
+                    line=dict(width=0),
+                    name=flaechen_text,
+                    hovertemplate=(
+                        f"<b>{flaechen_text}</b><br>"
+                        f"Intervall: [{a:.2f}, {b:.2f}]<br>"
+                        f"<extra></extra>"
+                    ),
+                    showlegend=True,
+                )
+            )
+
+    elif flaeche_zwei_funktionen and len(funktionen) >= 2:
+        # Fläche zwischen zwei Funktionen
+        f1, f2 = funktionen[0], funktionen[1]
+
+        # Bestimme Integrationsgrenzen
+        if flaeche_grenzen:
+            a, b = flaeche_grenzen
+        else:
+            a, b = x_min, x_max
+
+        # Berechne Flächenwert für Anzeige
+        try:
+            flaechen_wert = FlaecheZweiFunktionen(f1, f2, a, b)
+            flaechen_text = f"Fläche zwischen f1 und f2: {flaechen_wert}"
+        except Exception:
+            flaechen_text = "Fläche zwischen Funktionen"
+
+        # Erstelle Punkte für beide Funktionen
+        x_werte = np.linspace(a, b, 100)
+        y_werte_f1 = []
+        y_werte_f2 = []
+
+        for x in x_werte:
+            try:
+                y1 = f1.wert(x)
+                y2 = f2.wert(x)
+                if _ist_endlich(y1) and _ist_endlich(y2):
+                    y_werte_f1.append(_formatiere_float(y1))
+                    y_werte_f2.append(_formatiere_float(y2))
+            except (ValueError, ZeroDivisionError, OverflowError):
+                continue
+
+        if y_werte_f1 and y_werte_f2:
+            # Erstelle gefüllte Fläche zwischen den beiden Funktionen
+            fig.add_trace(
+                go.Scatter(
+                    x=np.concatenate([x_werte, x_werte[::-1]]),
+                    y=np.concatenate([y_werte_f1, y_werte_f2[::-1]]),
+                    fill="toself",
+                    fillcolor="rgba(255, 165, 0, 0.3)",  # Orange für Fläche zwischen Funktionen
+                    line=dict(width=0),
+                    name=flaechen_text,
+                    hovertemplate=(
+                        f"<b>{flaechen_text}</b><br>"
+                        f"Intervall: [{a:.2f}, {b:.2f}]<br>"
+                        f"<extra></extra>"
+                    ),
+                    showlegend=True,
+                )
+            )
+
+
 # ====================
 # Hilfsfunktionen für intelligente Achsenintervalle
 # ====================
@@ -1635,6 +1761,10 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             - zeige_extremstellen: Zeige Extremstellen (Standard: True)
             - zeige_wendepunkte: Zeige Wendepunkte (Standard: True)
             - zeige_polstellen: Zeige Polstellen (Standard: True)
+            - flaeche: Zeige Fläche unter der ersten Funktion (Standard: False)
+            - flaeche_grenzen: Tupel (a, b) für Flächenintervall (Standard: None)
+            - flaeche_farbe: Farbe für Flächenfüllung (Standard: "rgba(0, 100, 255, 0.3)")
+            - flaeche_zwei_funktionen: Zeige Fläche zwischen zwei Funktionen (Standard: False)
 
     Returns:
         plotly.graph_objects.Figure: Plotly-Figur mit der/den Funktion(en)
@@ -1815,6 +1945,11 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
 
         # NEU: Füge wichtige Punkte für jede einzelne Funktion hinzu
         _fuege_punkte_fuer_mehrfache_funktionen_hinzu(
+            fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
+        )
+
+        # NEU: Füge Flächenvisualisierung hinzu
+        _fuege_flaeche_zu_graph_hinzu(
             fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
         )
 
