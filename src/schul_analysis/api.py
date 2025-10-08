@@ -484,13 +484,13 @@ def StationaereStellen(funktion: Funktionstyp) -> StationaereStellenListe:
         funktion: Eine beliebige Funktion
 
     Returns:
-        Liste der stationären Stellen als (x-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
+        StationaereStellenListe mit strukturierten StationaereStelle-Objekten und exakten SymPy-Ausdrücken
 
     Beispiele:
         >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
-        >>> ss = StationaereStellen(f)         # [(0, 'Sattelpunkt')]
+        >>> ss = StationaereStellen(f)         # [StationaereStelle(x=0, typ=ExtremumTyp.SATTELPUNKT)]
         >>> f = ErstellePolynom([1, 0, 0])     # x²
-        >>> ss = StationaereStellen(f)         # [(0, 'Minimum')]
+        >>> ss = StationaereStellen(f)         # [StationaereStelle(x=0, typ=ExtremumTyp.MINIMUM)]
 
     Typ-Sicherheit:
         Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
@@ -498,23 +498,36 @@ def StationaereStellen(funktion: Funktionstyp) -> StationaereStellenListe:
     try:
         # Verwende die stationaere_stellen Methode der Funktion
         if hasattr(funktion, "stationaere_stellen"):
-            attr = funktion.stationaere_stellen
-            if callable(attr):
-                result = funktion.stationaere_stellen()
-            else:
-                result = funktion.stationaere_stellen
-
+            # Bei Properties einfach zugreifen, nicht als Funktion aufrufen
+            result = funktion.stationaere_stellen
             return result
         else:
             # Fallback: Verwende Extremstellen, da die Berechnung identisch ist
             if hasattr(funktion, "extremstellen"):
-                attr = funktion.extremstellen
-                if callable(attr):
-                    result = funktion.extremstellen()
-                else:
-                    result = funktion.extremstellen
+                # Bei Properties einfach zugreifen, nicht als Funktion aufrufen
+                result = funktion.extremstellen
 
-                return result
+                # Konvertiere Tupel zu StationaereStelle-Objekten für Fallback
+                from .sympy_types import ExtremumTyp, StationaereStelle
+
+                stationaere_stellen_liste = []
+                for x_wert, art in result:
+                    # Konvertiere String zu ExtremumTyp Enum
+                    if art == "Minimum":
+                        extremum_typ = ExtremumTyp.MINIMUM
+                    elif art == "Maximum":
+                        extremum_typ = ExtremumTyp.MAXIMUM
+                    elif art == "Sattelpunkt":
+                        extremum_typ = ExtremumTyp.SATTELPUNKT
+                    else:
+                        extremum_typ = ExtremumTyp.SATTELPUNKT
+
+                    stationaere_stelle = StationaereStelle(
+                        x=x_wert, typ=extremum_typ, exakt=True
+                    )
+                    stationaere_stellen_liste.append(stationaere_stelle)
+
+                return stationaere_stellen_liste
             else:
                 raise AttributeError(
                     "Keine stationaere_stellen oder extremstellen Eigenschaft gefunden"
@@ -544,11 +557,11 @@ def Sattelpunkte(funktion: Funktionstyp) -> SattelpunkteListe:
         funktion: Eine beliebige Funktion
 
     Returns:
-        Liste der Sattelpunkte als (x-Wert, y-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
+        SattelpunkteListe mit strukturierten Sattelpunkt-Objekten und exakten SymPy-Ausdrücken
 
     Beispiele:
         >>> f = ErstellePolynom([1, 0, 0, 0])  # x³
-        >>> sp = Sattelpunkte(f)               # [(0, 0, 'Sattelpunkt')]
+        >>> sp = Sattelpunkte(f)               # [Sattelpunkt(x=0, y=0, exakt=True)]
 
     Typ-Sicherheit:
         Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
@@ -556,12 +569,8 @@ def Sattelpunkte(funktion: Funktionstyp) -> SattelpunkteListe:
     try:
         # Verwende die sattelpunkte Methode der Funktion
         if hasattr(funktion, "sattelpunkte"):
-            attr = funktion.sattelpunkte
-            if callable(attr):
-                result = funktion.sattelpunkte()
-            else:
-                result = funktion.sattelpunkte
-
+            # Bei Properties einfach zugreifen, nicht als Funktion aufrufen
+            result = funktion.sattelpunkte
             return result
         else:
             raise AttributeError("Keine sattelpunkte Eigenschaft oder Methode gefunden")

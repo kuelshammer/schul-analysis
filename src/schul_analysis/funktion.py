@@ -21,6 +21,11 @@ from .symbolic import _Parameter, _Variable
 from .sympy_types import (
     VALIDATION_EXACT,
     ExactNullstellenListe,
+    ExtremumTyp,
+    Sattelpunkt,
+    SattelpunkteListe,
+    StationaereStelle,
+    StationaereStellenListe,
     preserve_exact_types,
     validate_exact_results,
     validate_function_result,
@@ -796,34 +801,57 @@ class Funktion:
         return self.wendepunkte
 
     @property
-    def stationaere_stellen(self) -> list[tuple[Any, str]]:
+    @preserve_exact_types
+    def stationaere_stellen(self) -> StationaereStellenListe:
         """
-        Berechnet die stationären Stellen der Funktion.
+        Berechnet die stationären Stellen der Funktion mit exakten DataClasses.
 
         Stationäre Stellen sind alle Punkte, an denen die erste Ableitung null ist (f'(x) = 0).
         Dies entspricht den kritischen Punkten, die bereits in extremstellen berechnet werden.
 
         Returns:
-            Liste von (x_wert, art) Tupeln, wobei art "Minimum", "Maximum", "Sattelpunkt" sein kann
+            StationaereStellenListe mit strukturierten StationaereStelle-Objekten
 
         Examples:
             >>> f = Funktion("x^2")
-            >>> stationaere_stellen = f.stationaere_stellen  # [(0, "Minimum")]
+            >>> stationaere_stellen = f.stationaere_stellen  # [StationaereStelle(x=0, typ=ExtremumTyp.MINIMUM)]
             >>> f = Funktion("x^3")
-            >>> stationaere_stellen = f.stationaere_stellen  # [(0, "Sattelpunkt")]
+            >>> stationaere_stellen = f.stationaere_stellen  # [StationaereStelle(x=0, typ=ExtremumTyp.SATTELPUNKT)]
         """
-        # Stationäre Stellen sind mathematisch identisch mit den kritischen Punkten
-        # die bereits in extremstellen berechnet werden
-        return self.extremstellen
+        # Konvertiere extremstellen-Tupel zu StationaereStelle-Objekten
+        stationaere_stellen_liste = []
 
-    def StationaereStellen(self) -> list[tuple[Any, str]]:
+        for x_wert, art in self.extremstellen:
+            # Konvertiere String zu ExtremumTyp Enum
+            if art == "Minimum":
+                extremum_typ = ExtremumTyp.MINIMUM
+            elif art == "Maximum":
+                extremum_typ = ExtremumTyp.MAXIMUM
+            elif art == "Sattelpunkt":
+                extremum_typ = ExtremumTyp.SATTELPUNKT
+            else:
+                # Fallback für unbekannte Typen
+                extremum_typ = ExtremumTyp.SATTELPUNKT
+
+            # Erstelle strukturiertes StationaereStelle-Objekt
+            stationaere_stelle = StationaereStelle(
+                x=x_wert,
+                typ=extremum_typ,
+                exakt=True,  # Exakte Berechnung garantiert
+            )
+            stationaere_stellen_liste.append(stationaere_stelle)
+
+        return stationaere_stellen_liste
+
+    def StationaereStellen(self) -> StationaereStellenListe:
         """Berechnet die stationären Stellen (Alias für stationaere_stellen)"""
         return self.stationaere_stellen
 
     @property
-    def sattelpunkte(self) -> list[tuple[Any, Any, str]]:
+    @preserve_exact_types
+    def sattelpunkte(self) -> SattelpunkteListe:
         """
-        Berechnet die Sattelpunkte der Funktion.
+        Berechnet die Sattelpunkte der Funktion mit exakten DataClasses.
 
         Sattelpunkte sind spezielle stationäre Stellen, die zusätzlich Wendepunkte sind:
         - f'(x) = 0 (stationär)
@@ -831,11 +859,11 @@ class Funktion:
         - f'''(x) ≠ 0 (echter Wendepunkt)
 
         Returns:
-            Liste von (x_wert, y_wert, art) Tupeln, wobei art "Sattelpunkt" ist
+            SattelpunkteListe mit strukturierten Sattelpunkt-Objekten
 
         Examples:
             >>> f = Funktion("x^3")
-            >>> sattelpunkte = f.sattelpunkte  # [(0, 0, "Sattelpunkt")]
+            >>> sattelpunkte = f.sattelpunkte  # [Sattelpunkt(x=0, y=0, exakt=True)]
         """
         try:
             # Finde alle stationären Stellen (f'(x) = 0)
@@ -844,7 +872,9 @@ class Funktion:
             sattelpunkte = []
             fehlerhafte_punkte = []  # Für Debugging-Informationen
 
-            for x_wert, _art in stationaere_punkte:
+            for stationaere_stelle in stationaere_punkte:
+                x_wert = stationaere_stelle.x
+
                 # Verwende die sichere Prüfmethode
                 ist_sattelpunkt, status = self._ist_sattelpunkt_sicher(x_wert)
 
@@ -869,7 +899,13 @@ class Funktion:
                             # Behalte symbolischen Ausdruck bei
                             x_final = x_wert
 
-                        sattelpunkte.append((x_final, y_wert, "Sattelpunkt"))
+                        # Erstelle strukturiertes Sattelpunkt-Objekt
+                        sattelpunkt = Sattelpunkt(
+                            x=x_wert,  # Immer den ursprünglichen x_wert verwenden (T_Expr)
+                            y=y_wert,
+                            exakt=True,  # Exakte Berechnung garantiert
+                        )
+                        sattelpunkte.append(sattelpunkt)
                     except (ValueError, TypeError, ZeroDivisionError) as e:
                         # Spezifische Fehler bei y-Wert-Berechnung
                         fehlerhafte_punkte.append(
@@ -882,7 +918,7 @@ class Funktion:
 
             return sorted(
                 sattelpunkte,
-                key=lambda p: p[0] if isinstance(p[0], (int, float)) else 0,
+                key=lambda p: p.x if isinstance(p.x, (int, float)) else 0,
             )
 
         except (ValueError, TypeError, AttributeError, sp.SympifyError):
@@ -892,7 +928,7 @@ class Funktion:
             # Nur für wirklich unerwartete Fehler
             return []
 
-    def Sattelpunkte(self) -> list[tuple[Any, Any, str]]:
+    def Sattelpunkte(self) -> SattelpunkteListe:
         """Berechnet die Sattelpunkte (Alias für sattelpunkte)"""
         return self.sattelpunkte
 
