@@ -192,6 +192,18 @@ class Asymptote:
 
 
 @dataclass(frozen=True)
+class Schnittpunkt:
+    """Präzise Typisierung für Schnittpunkte zwischen zwei Funktionen."""
+
+    x: T_Expr  # x-Koordinate des Schnittpunkts
+    y: T_Expr  # y-Koordinate des Schnittpunkts
+    exakt: bool = True  # Ob exakt berechnet wurde
+
+    def __str__(self) -> str:
+        return f"Schnittpunkt bei P({self.x}|{self.y})"
+
+
+@dataclass(frozen=True)
 class IntegralResult:
     """Präzise Typisierung für Integral-Ergebnisse."""
 
@@ -217,6 +229,7 @@ StationaereStellenListe = list[StationaereStelle]
 SattelpunkteListe = list[Sattelpunkt]
 PolstellenListe = list[Polstelle]
 AsymptotenListe = list[Asymptote]
+SchnittpunkteListe = list[Schnittpunkt]
 
 # Mathematische Punktelisten für graphische Darstellung
 PunktListe = list[tuple[T_Expr, T_Expr]]  # (x, y) Koordinaten
@@ -368,6 +381,22 @@ def is_exact_sympy_expr(expr: Any) -> TypeGuard[T_Expr]:
     return not any(isinstance(atom, sp.Float) for atom in expr.atoms(sp.Number))
 
 
+def is_exact_schnittpunkt(schnittpunkt: Any) -> TypeGuard[Schnittpunkt]:
+    """
+    Type Guard für exakte Schnittpunkte ohne numerische Approximation.
+
+    Args:
+        schnittpunkt: Zu überprüfender Schnittpunkt
+
+    Returns:
+        True wenn der Schnittpunkt exakte Koordinaten hat
+    """
+    if not isinstance(schnittpunkt, Schnittpunkt):
+        return False
+    # Prüfe beide Koordinaten auf Exaktheit
+    return is_exact_sympy_expr(schnittpunkt.x) and is_exact_sympy_expr(schnittpunkt.y)
+
+
 def is_exact_numeric(expr: Any) -> TypeGuard[T_Num]:
     """
     Type Guard für exakte numerische SymPy-Werte.
@@ -447,12 +476,24 @@ def validate_exact_results(results: list[Any], analysis_type: str) -> bool:
     Raises:
         ValueError: Wenn inexakte Ergebnisse gefunden werden
     """
-    if not all(is_exact_sympy_expr(result) for result in results):
-        raise ValueError(
-            f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
-            f"aber es wurden approximative Ergebnisse gefunden. "
-            f"Verwenden Sie symbolische Berechnungen für genaue Ergebnisse."
-        )
+    # Spezialbehandlung für Schnittpunkte
+    if analysis_type == "Schnittpunkte":
+        validations = [is_exact_schnittpunkt(result) for result in results]
+        if not all(validations):
+            raise ValueError(
+                f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
+                f"aber es wurden approximative Ergebnisse gefunden. "
+                f"Verwenden Sie symbolische Berechnungen für genaue Ergebnisse."
+            )
+    else:
+        # Standardbehandlung für andere Analyse-Typen
+        validations = [is_exact_sympy_expr(result) for result in results]
+        if not all(validations):
+            raise ValueError(
+                f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
+                f"aber es wurden approximative Ergebnisse gefunden. "
+                f"Verwenden Sie symbolische Berechnungen für genaue Ergebnisse."
+            )
     return True
 
 
@@ -551,13 +592,22 @@ def validate_analysis_results(analysis_type: str):
                 )
 
             # Validiere, dass alle Elemente exakt sind
-            if not all(
-                is_exact_sympy_expr(item) for item in result if hasattr(item, "x")
-            ):
-                raise ValueError(
-                    f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
-                    f"aber es wurden approximative Ergebnisse gefunden"
-                )
+            if analysis_type == "Schnittpunkte":
+                # Spezialbehandlung für Schnittpunkte
+                if not all(is_exact_schnittpunkt(item) for item in result):
+                    raise ValueError(
+                        f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
+                        f"aber es wurden approximative Ergebnisse gefunden"
+                    )
+            else:
+                # Standardbehandlung für andere Analyse-Typen
+                if not all(
+                    is_exact_sympy_expr(item) for item in result if hasattr(item, "x")
+                ):
+                    raise ValueError(
+                        f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
+                        f"aber es wurden approximative Ergebnisse gefunden"
+                    )
 
             return result
 

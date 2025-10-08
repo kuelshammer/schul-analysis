@@ -21,6 +21,8 @@ from .symbolic import _Parameter, _Variable
 from .sympy_types import (
     VALIDATION_EXACT,
     ExactNullstellenListe,
+    Schnittpunkt,
+    SchnittpunkteListe,
     preserve_exact_types,
     validate_exact_results,
     validate_function_result,
@@ -1584,6 +1586,77 @@ class Funktion:
     def Wendepunkte(self) -> list[tuple[Any, Any, str]]:
         """Berechnet die Wendepunkte (Alias für wendepunkte)"""
         return self.wendepunkte
+
+    def schnittpunkte(self, andere_funktion: "Funktion") -> SchnittpunkteListe:
+        """
+        Berechnet die Schnittpunkte mit einer anderen Funktion mit exakten SymPy-Ergebnissen.
+
+        Args:
+            andere_funktion: Die andere Funktion, mit der die Schnittpunkte berechnet werden sollen
+
+        Returns:
+            Liste der Schnittpunkte als Schnittpunkt-Objekte mit exakten Koordinaten
+
+        Examples:
+            >>> f = Funktion("x^2")
+            >>> g = Funktion("2*x")
+            >>> schnittpunkte = f.schnittpunkte(g)  # [Schnittpunkt bei P(0|0), Schnittpunkt bei P(2|4)]
+
+            >>> f = Funktion("a*x^2 + b*x + c")
+            >>> g = Funktion("d*x + e")
+            >>> schnittpunkte = f.schnittpunkte(g)  # Symbolische Ergebnisse mit Parametern
+        """
+        try:
+            import sympy as sp
+
+            # Stelle sicher, dass beide Funktionen die gleiche Variable verwenden
+            if self._variable_symbol != andere_funktion._variable_symbol:
+                # Wenn verschiedene Variablen, ersetze sie
+                andere_term = andere_funktion.term_sympy.subs(
+                    andere_funktion._variable_symbol, self._variable_symbol
+                )
+            else:
+                andere_term = andere_funktion.term_sympy
+
+            # Löse die Gleichung f(x) = g(x)
+            gleichung = sp.Eq(self.term_sympy, andere_term)
+            x_loesungen = sp.solve(gleichung, self._variable_symbol)
+
+            # Vereinfache die Lösungen für bessere Darstellung
+            x_loesungen = [sp.together(lösung) for lösung in x_loesungen]
+
+            # Erstelle Schnittpunkt-Objekte
+            schnittpunkte = []
+            for x_loesung in x_loesungen:
+                try:
+                    # Berechne y-Wert durch Einsetzen in eine der Funktionen
+                    y_wert = self.wert(x_loesung)
+
+                    # Erstelle Schnittpunkt mit exakten Koordinaten
+                    schnittpunkt = Schnittpunkt(x=x_loesung, y=y_wert, exakt=True)
+                    schnittpunkte.append(schnittpunkt)
+
+                except Exception:
+                    # Bei Berechnungsfehlern für den y-Wert überspringen wir diesen Punkt
+                    continue
+
+            # Validiere die Ergebnisse
+            # Validiere die Ergebnisse
+            validate_exact_results(schnittpunkte, "Schnittpunkte")
+
+            return schnittpunkte
+
+        except Exception as e:
+            raise ValueError(
+                f"Fehler bei der Schnittpunktberechnung: {str(e)}\n"
+                "Tipp: Die Gleichung kann möglicherweise nicht symbolisch gelöst werden."
+            ) from e
+
+    def Schnittpunkte(self, andere_funktion: "Funktion") -> SchnittpunkteListe:
+        """
+        Berechnet die Schnittpunkte mit exakten SymPy-Ergebnissen (Alias für schnittpunkte).
+        """
+        return self.schnittpunkte(andere_funktion)
 
     @property
     def stationaere_stellen(self) -> list[tuple[Any, str]]:

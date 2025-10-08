@@ -1192,7 +1192,7 @@ def _erstelle_plotly_figur_mit_intelligenten_achsen(
 
 
 def _berechne_schnittpunkte(funktionen):
-    """Berechnet Schnittpunkte zwischen mehreren Funktionen
+    """Berechnet Schnittpunkte zwischen mehreren Funktionen mit der neuen API
 
     Args:
         funktionen: Liste der zu analysierenden Funktionen (mindestens 2)
@@ -1203,8 +1203,10 @@ def _berechne_schnittpunkte(funktionen):
     if len(funktionen) < 2:
         return []
 
+    # Importiere die neue API
+    from .api import Schnittpunkte
+
     schnittpunkte = []
-    x = sp.Symbol("x")
 
     # Prüfe alle Paare von Funktionen
     for i in range(len(funktionen)):
@@ -1213,35 +1215,37 @@ def _berechne_schnittpunkte(funktionen):
             f2 = funktionen[j]
 
             try:
-                # Löse die Gleichung f1(x) = f2(x)
-                gleichung = sp.Eq(f1.term_sympy, f2.term_sympy)
-                x_loesungen = sp.solve(gleichung, x)
+                # Verwende die neue Schnittpunkte-API
+                ergebnisse = Schnittpunkte(f1, f2)
 
-                # Verarbeite jede Lösung
-                for x_loesung in x_loesungen:
+                # Konvertiere Schnittpunkt-Objekte zu (x, y) Tupeln für die Darstellung
+                for schnittpunkt in ergebnisse:
                     try:
-                        # Prüfe ob x-Wert reell und endlich ist
-                        if x_loesung.is_real and x_loesung.is_finite:
-                            x_float = float(x_loesung)
+                        # Konvertiere exakte SymPy-Ausdrücke zu Float für die Darstellung
+                        x_wert = schnittpunkt.x
+                        y_wert = schnittpunkt.y
 
-                            # Berechne y-Wert (mit beiden Funktionen zur Sicherheit)
-                            y1_float = float(f1.term_sympy.subs(x, x_loesung))
-                            y2_float = float(f2.term_sympy.subs(x, x_loesung))
+                        # Handle symbolische Ergebnisse (Parameter) vs. numerische Ergebnisse
+                        if x_wert.is_number and x_wert.is_real and x_wert.is_finite:
+                            x_float = float(x_wert)
+                        else:
+                            # Überspringe symbolische Ergebnisse in der Visualisierung
+                            continue
 
-                            # Prüfe ob y-Werte übereinstimmen und endlich sind
-                            if (
-                                abs(y1_float - y2_float) < 1e-10
-                                and abs(y1_float) != float("inf")
-                                and abs(y2_float) != float("inf")
-                            ):
-                                schnittpunkte.append((x_float, y1_float))
+                        if y_wert.is_number and y_wert.is_real and y_wert.is_finite:
+                            y_float = float(y_wert)
+                        else:
+                            # Überspringe symbolische Ergebnisse in der Visualisierung
+                            continue
+
+                        schnittpunkte.append((x_float, y_float))
 
                     except (TypeError, ValueError, OverflowError):
-                        # Überspringe ungültige Lösungen
+                        # Bei Konvertierungsfehlern überspringen
                         continue
 
             except Exception:
-                # Überspringe Funktionen, die keine Gleichungen lösen können
+                # Bei Fehlern überspringen
                 continue
 
     # Sortiere Schnittpunkte nach x-Wert

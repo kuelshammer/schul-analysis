@@ -29,6 +29,7 @@ from .sympy_types import (
     ExactSymPyExpr,
     ExtremaListe,
     SattelpunkteListe,
+    SchnittpunkteListe,
     StationaereStellenListe,
     WendepunkteListe,
     preserve_exact_types,
@@ -468,6 +469,75 @@ def Wendepunkte(funktion: Funktionstyp) -> list[tuple[Any, Any, str]]:
         )
     except Exception as e:
         raise SchulAnalysisError(f"Fehler bei der Wendepunkte-Berechnung: {str(e)}")
+
+
+@validate_analysis_results("Schnittpunkte")
+def Schnittpunkte(
+    funktion1: Funktionstyp, funktion2: Funktionstyp
+) -> SchnittpunkteListe:
+    """
+    Berechnet die Schnittpunkte zwischen zwei Funktionen mit exakten SymPy-Ergebnissen.
+
+    Diese Funktion liefert exakte symbolische Ergebnisse und rundet nicht fälschlicherweise
+    zu Float-Werten. Bei parametrisierten Funktionen bleiben die Parameter erhalten,
+    bei numerischen Funktionen werden Brüche und exakte Werte beibehalten.
+
+    Args:
+        funktion1: Erste Funktion
+        funktion2: Zweite Funktion
+
+    Returns:
+        SchnittpunkteListe mit strukturierten Schnittpunkt-Objekten und exakten SymPy-Ausdrücken
+
+    Beispiele:
+        >>> f = Funktion("x^2")
+        >>> g = Funktion("2*x")
+        >>> schnittpunkte = Schnittpunkte(f, g)  # [Schnittpunkt(x=0, y=0), Schnittpunkt(x=2, y=4)]
+
+        >>> f = Funktion("a*x^2 + b*x + c")
+        >>> g = Funktion("d*x + e")
+        >>> schnittpunkte = Schnittpunkte(f, g)  # Symbolische Ergebnisse mit Parametern
+
+    Didaktischer Hinweis:
+        Diese Funktion folgt der natürlichen mathematischen Sprache, die Schüler aus dem Unterricht kennen:
+        "Berechne die Schnittpunkte von f und g"
+
+    Typ-Sicherheit:
+        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
+    """
+    try:
+        # Handle both method and property access
+        if hasattr(funktion1, "schnittpunkte"):
+            attr = funktion1.schnittpunkte
+            if callable(attr):
+                # It's a method - call it with the other function
+                return funktion1.schnittpunkte(funktion2)
+            else:
+                # It's a property - this shouldn't happen for schnittpunkte
+                raise AttributeError(
+                    "schnittpunkte sollte eine Methode sein, keine Property"
+                )
+        elif hasattr(funktion1, "Schnittpunkte"):
+            attr = funktion1.Schnittpunkte
+            if callable(attr):
+                # It's a method - call it with the other function
+                return funktion1.Schnittpunkte(funktion2)
+            else:
+                # It's a property - this shouldn't happen for Schnittpunkte
+                raise AttributeError(
+                    "Schnittpunkte sollte eine Methode sein, keine Property"
+                )
+        else:
+            raise AttributeError("Keine schnittpunkte Methode gefunden")
+
+    except AttributeError:
+        raise UngueltigeFunktionError(
+            "Schnittpunktberechnung",
+            f"Die Funktion vom Typ '{type(funktion1).__name__}' "
+            "unterstützt keine Schnittpunkt-Berechnung.",
+        )
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Schnittpunkt-Berechnung: {str(e)}")
 
 
 def StationaereStellen(funktion: Funktionstyp) -> StationaereStellenListe:
@@ -1044,6 +1114,7 @@ __all__ = [
     "StationaereStellen",
     "Sattelpunkte",
     "Symmetrie",
+    "Schnittpunkte",
     # Visualisierung
     "Term",
     "Ausmultiplizieren",
