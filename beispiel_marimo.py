@@ -23,12 +23,13 @@ def _():
         Funktion,
         Term,
         Wendepunkte,
+        Graph,
     )
 
     # Zwei einfache Funktionen für erste Experimente
-    f = Funktion("(x+a)^2")
-    g = Funktion("(x-b)^2")
-    return Ableitung, Ausmultiplizieren, Term, Wendepunkte, f, g
+    f = Funktion("(x+1)^2")
+    g = Funktion("(x-1)^2")
+    return Ableitung, Ausmultiplizieren, Graph, Term, Wendepunkte, f, g
 
 
 @app.cell
@@ -64,6 +65,12 @@ def _(Ableitung, h):
 @app.cell
 def _(Term, h1):
     Term(h1)
+    return
+
+
+@app.cell
+def _(Graph, h1):
+    Graph(h1)
     return
 
 

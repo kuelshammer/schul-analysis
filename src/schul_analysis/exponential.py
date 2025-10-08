@@ -48,7 +48,7 @@ class ExponentialFunktion(Funktion):
             for base in [expr.base]
         )
 
-    def ableitung(self, ordnung: int = 1) -> sp.Basic:
+    def ableitung(self, ordnung: int = 1) -> "Funktion":
         """
         Berechnet die Ableitung gegebener Ordnung.
         Für exponentialfunktionen gelten spezielle Regeln.
@@ -60,7 +60,20 @@ class ExponentialFunktion(Funktion):
         ableitung = diff(self.term_sympy, self._variable_symbol, ordnung)
         # Validiere das Ergebnis für exakte Berechnungen
         validate_function_result(ableitung, VALIDATION_EXACT)
-        return ableitung
+
+        # Intelligente Vereinfachung für parametrisierte Ausdrücke
+        if self.parameter:
+            # Import hier, um Zirkelreferenzen zu vermeiden
+            from .funktion import _intelligente_vereinfachung
+
+            ableitung = _intelligente_vereinfachung(
+                ableitung, self._variable_symbol, self.parameter
+            )
+
+        # Erstelle neue Funktion
+        from .funktion import Funktion
+
+        return Funktion(ableitung)
 
     def nullstellen(self) -> list:
         """
