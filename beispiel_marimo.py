@@ -80,13 +80,13 @@ def _(Term, h1):
 
 @app.cell
 def _(Funktion):
-    q = Funktion("(x+1)*(x+3)*(x-10)^2")
+    q = Funktion("(x-10)^2")
     return (q,)
 
 
 @app.cell
 def _(Funktion):
-    p = Funktion("3x+5")
+    p = Funktion("2x+6")
     return (p,)
 
 
@@ -101,8 +101,8 @@ def _(Ausmultiplizieren, Term, q):
 
 
 @app.cell
-def _(Graph, p):
-    Graph(p)
+def _(Graph, p, q):
+    Graph(q,p)
     return
 
 

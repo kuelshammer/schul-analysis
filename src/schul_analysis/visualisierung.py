@@ -783,15 +783,63 @@ def _berechne_y_bereich_mehrfach(funktionen, x_min, x_max, default_range=(-5, 5)
             x_werte = np.linspace(
                 x_min, x_max, 50
             )  # Reduziert von 200 auf 50 für Effizienz
-            for x in x_werte:
-                try:
-                    y = funktion.wert(x)
-                    if _ist_endlich(y):
-                        y_float = _formatiere_float(y)
-                        if y_float is not None:
-                            alle_y_werte.append(y_float)
-                except (ValueError, ZeroDivisionError, OverflowError):
-                    continue
+            # 2. Sammle strategische Funktionswerte (Vermeide extreme Randwerte!)
+            # Teile den Bereich in Zonen und nimm Stichproben aus jeder Zone
+            bereich_breite = x_max - x_min
+            if bereich_breite > 0:
+                # Erstelle 5 Zonen: Randzonen (10% each) und Mitte (80%)
+                rand_zone_breite = bereich_breite * 0.1
+                mitte_min = x_min + rand_zone_breite
+                mitte_max = x_max - rand_zone_breite
+
+                # Stichproben aus der Mitte (wichtigste Zone)
+                if mitte_max > mitte_min:
+                    x_werte_mitte = np.linspace(mitte_min, mitte_max, 30)
+                    for x in x_werte_mitte:
+                        try:
+                            y = funktion.wert(x)
+                            if _ist_endlich(y):
+                                y_float = _formatiere_float(y)
+                                if y_float is not None:
+                                    alle_y_werte.append(y_float)
+                        except (ValueError, ZeroDivisionError, OverflowError):
+                            continue
+
+                # Wenige Stichproben aus den Randzonen (nur um Trends zu sehen)
+                x_werte_rand_links = np.linspace(x_min, mitte_min, 5)
+                x_werte_rand_rechts = np.linspace(mitte_max, x_max, 5)
+
+                for x in x_werte_rand_links:
+                    try:
+                        y = funktion.wert(x)
+                        if _ist_endlich(y):
+                            y_float = _formatiere_float(y)
+                            if y_float is not None:
+                                alle_y_werte.append(y_float)
+                    except (ValueError, ZeroDivisionError, OverflowError):
+                        continue
+
+                for x in x_werte_rand_rechts:
+                    try:
+                        y = funktion.wert(x)
+                        if _ist_endlich(y):
+                            y_float = _formatiere_float(y)
+                            if y_float is not None:
+                                alle_y_werte.append(y_float)
+                    except (ValueError, ZeroDivisionError, OverflowError):
+                        continue
+            else:
+                # Bei sehr kleinem Bereich: normale Stichproben
+                x_werte = np.linspace(x_min, x_max, 20)
+                for x in x_werte:
+                    try:
+                        y = funktion.wert(x)
+                        if _ist_endlich(y):
+                            y_float = _formatiere_float(y)
+                            if y_float is not None:
+                                alle_y_werte.append(y_float)
+                    except (ValueError, ZeroDivisionError, OverflowError):
+                        continue
 
         # 2. Wenn keine wichtigen Punkte gefunden, verwende einfache Logik
         if not alle_wichtige_y_werte:
@@ -833,10 +881,28 @@ def _berechne_y_bereich_mehrfach(funktionen, x_min, x_max, default_range=(-5, 5)
         y_min_auto = min(y_min_basis, y_min_wichtig)
         y_max_auto = max(y_max_basis, y_max_wichtig)
 
-        # 5. Füge ausreichend Puffer hinzu (3x wie bei einzelnen Funktionen)
+        # 5. Füge intelligenten Puffer hinzu (angepasst für mehrere Funktionen)
         spanne_wichtig = y_max_wichtig - y_min_wichtig
         if spanne_wichtig > 0:
-            noetige_spanne = spanne_wichtig * 3.0  # 3x Puffer für klare Sichtbarkeit
+            # Bei nur einem wichtigen Punkt oder kleiner Spanne: andere Logik
+            if len(alle_wichtige_y_werte) <= 1 or spanne_wichtig < 10:
+                # Nutze die Quantil-basierte Spanne als Basis
+                if alle_y_werte:
+                    y_array = np.array([y for y in alle_y_werte if y is not None])
+                    if len(y_array) > 0:
+                        q10 = np.percentile(y_array, 10)
+                        q90 = np.percentile(y_array, 90)
+                        quantil_spanne = q90 - q10
+                        # Verwende größere der beiden Spannen
+                        noetige_spanne = max(spanne_wichtig * 2.0, quantil_spanne * 1.5)
+                    else:
+                        noetige_spanne = spanne_wichtig * 2.0
+                else:
+                    noetige_spanne = spanne_wichtig * 2.0
+            else:
+                # Normale Logik bei mehreren wichtigen Punkten
+                noetige_spanne = spanne_wichtig * 2.0  # Reduziert von 3.0 auf 2.0
+
             center = (y_min_wichtig + y_max_wichtig) / 2
             y_min_auto = min(y_min_auto, center - noetige_spanne / 2)
             y_max_auto = max(y_max_auto, center + noetige_spanne / 2)
@@ -1464,7 +1530,9 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             {
                 "title": kwargs.get("titel", "Vergleich mehrerer Funktionen"),
                 "xaxis": {
-                    **config.get_axis_config(mathematical_mode=True),
+                    **config.get_axis_config(
+                        mathematical_mode=False
+                    ),  # Keine 1:1 Aspect Ratio für mehrere Funktionen!
                     "range": [float(x_min), float(x_max)],
                     "title": "x",
                     "autorange": False,
