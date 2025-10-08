@@ -308,39 +308,55 @@ def _berechne_y_bereich(
             y_min_basis = -5
             y_max_basis = 5
 
-        # 3. Erweitere Bereich um wichtige Punkte einzuschließen
+        # 3. Erweitere Bereich um ALLE wichtigen Punkte einzuschließen (garantiert sichtbar)
         if wichtige_y_werte:
             y_min_wichtig = min(wichtige_y_werte)
             y_max_wichtig = max(wichtige_y_werte)
 
+            # Starte mit einem Bereich der ALLE wichtigen Punkte einschließt
             y_min_auto = min(y_min_basis, y_min_wichtig)
             y_max_auto = max(y_max_basis, y_max_wichtig)
+
+            # Erweitere ausreichend um alle Punkte garantiert sichtbar zu machen
+            spanne_wichtig = y_max_wichtig - y_min_wichtig
+            if spanne_wichtig > 0:
+                # Füge genug Platz damit Punkte nicht am Rand kleben
+                extra_puffer = max(
+                    spanne_wichtig * 0.5, 10.0
+                )  # Mindestens 10 Einheiten
+                y_min_auto = min(y_min_auto, y_min_wichtig - extra_puffer)
+                y_max_auto = max(y_max_auto, y_max_wichtig + extra_puffer)
         else:
             y_min_auto = y_min_basis
             y_max_auto = y_max_basis
 
-        # 4. Füge Puffer hinzu
+        # 4. Füge zusätzlichen Puffer hinzu
         hoehe = y_max_auto - y_min_auto
         if hoehe > 0:
-            puffer_wert = max(hoehe * puffer, 2.0)  # Mindestens 2 Einheiten Puffer
+            puffer_wert = max(hoehe * puffer, 3.0)  # Mindestens 3 Einheiten Puffer
             y_min_auto -= puffer_wert
             y_max_auto += puffer_wert
         else:
-            y_min_auto -= 2
-            y_max_auto += 2
+            y_min_auto -= 3
+            y_max_auto += 3
 
-        # 5. Setze vernünftige Grenzen, aber nicht zu eng
-        # Wenn der Bereich zu groß wird, begrenze ihn aber berücksichtige wichtige Punkte
+        # 5. Nur bei EXTREM großen Bereichen begrenzen, aber alle wichtigen Punkte erhalten
         gesamtbreite = y_max_auto - y_min_auto
-        if gesamtbreite > 200:  # Wenn Bereich größer als 200 Einheiten
-            # Zentriere auf den Mittelwert der wichtigen Punkte
+        if gesamtbreite > 800:  # Nur bei sehr großen Bereichen begrenzen
+            # Behalte alle wichtigen Punkte sichtbar, aber reduziere extreme Bereiche
             if wichtige_y_werte:
-                center = sum(wichtige_y_werte) / len(wichtige_y_werte)
-                y_min_auto = center - 100  # ±100 um den Mittelpunkt
-                y_max_auto = center + 100
-            else:
-                y_min_auto = -100
-                y_max_auto = 100
+                # Finde den kleinsten Bereich der alle wichtigen Punkte abdeckt
+                y_min_final = min(wichtige_y_werte)
+                y_max_final = max(wichtige_y_werte)
+
+                # Füge angemessenen Puffer hinzu
+                noetige_spanne = (
+                    y_max_final - y_min_final
+                ) * 2.5  # 2.5x die nötige Spanne
+                center = (y_min_final + y_max_final) / 2
+
+                y_min_auto = center - noetige_spanne / 2
+                y_max_auto = center + noetige_spanne / 2
 
         return (y_min_auto, y_max_auto)
 
