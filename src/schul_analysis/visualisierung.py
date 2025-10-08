@@ -1078,28 +1078,98 @@ def _berechne_finale_grenzen(funktion, x_min=None, x_max=None, y_min=None, y_max
         final_y_min, final_y_max, y_step = _optimiere_achse(final_y_min, final_y_max)
 
     # === PUFFER FÜR HALB-AUTOMATISCHE BEREICHE ===
-    # Füge kleinen Puffer hinzu, wenn nur eine Grenze manuell ist
+    # Fuge verbesserten Puffer hinzu, wenn nur eine Grenze manuell ist
     if x_min is not None and x_max is None:
         # Nur x_min manuell: Puffer nur oben
-        x_buffer = (final_x_max - final_x_min) * 0.1
+        x_buffer = max(
+            (final_x_max - final_x_min) * 0.15, 1.0
+        )  # Mindestens 1 Einheit Puffer
         final_x_max += x_buffer
         x_step = _berechne_intervalle(final_x_min, final_x_max)
     elif x_max is not None and x_min is None:
         # Nur x_max manuell: Puffer nur unten
-        x_buffer = (final_x_max - final_x_min) * 0.1
+        x_buffer = max(
+            (final_x_max - final_x_min) * 0.15, 1.0
+        )  # Mindestens 1 Einheit Puffer
         final_x_min -= x_buffer
         x_step = _berechne_intervalle(final_x_min, final_x_max)
 
     if y_min is not None and y_max is None:
         # Nur y_min manuell: Puffer nur oben
-        y_buffer = (final_y_max - final_y_min) * 0.1
+        y_buffer = max(
+            (final_y_max - final_y_min) * 0.15, 1.0
+        )  # Mindestens 1 Einheit Puffer
         final_y_max += y_buffer
         y_step = _berechne_intervalle(final_y_min, final_y_max)
     elif y_max is not None and y_min is None:
         # Nur y_max manuell: Puffer nur unten
-        y_buffer = (final_y_max - final_y_min) * 0.1
+        y_buffer = max(
+            (final_y_max - final_y_min) * 0.15, 1.0
+        )  # Mindestens 1 Einheit Puffer
         final_y_min -= y_buffer
         y_step = _berechne_intervalle(final_y_min, final_y_max)
+
+    # === SPEZIELLER PUFFER FÜR WICHTIGE PUNKTE (BEI VOLLSTÄNDIG AUTOMATISCHEN BEREICHEN) ===
+    # Wenn beide Grenzen automatisch sind, sicherstellen dass wichtige Punkte nicht am Rand liegen
+    if x_min is None and x_max is None and relevante_x:
+        # Finde wichtige Punkte am Rand (innerhalb von 5% des Bereichs)
+        x_span = final_x_max - final_x_min
+        rand_tolerance = x_span * 0.05
+
+        # Prüfe ob wichtige Punkte zu nah am Rand sind
+        punkte_am_rand = []
+        for art, x_val, y_val in punkte["punkte_mit_koordinaten"]:
+            if art in ["Nullstelle", "Extremum", "Wendepunkt"]:  # Wichtige Punkte
+                if (
+                    abs(x_val - final_x_min) < rand_tolerance
+                    or abs(x_val - final_x_max) < rand_tolerance
+                ):
+                    punkte_am_rand.append((art, x_val, y_val))
+
+        # Wenn wichtige Punkte am Rand sind, erweitere den Bereich
+        if punkte_am_rand:
+            # Finde den kleinsten und größten x-Wert der wichtigen Punkte
+            min_wichtig = min(p[1] for p in punkte_am_rand)
+            max_wichtig = max(p[1] for p in punkte_am_rand)
+
+            # Erweitere den Bereich um mindestens 15% oder 1 Einheit
+            if min_wichtig - final_x_min < rand_tolerance:
+                final_x_min = min_wichtig - max(x_span * 0.15, 1.0)
+            if final_x_max - max_wichtig < rand_tolerance:
+                final_x_max = max_wichtig + max(x_span * 0.15, 1.0)
+
+            # Berechne neue Schrittweite
+            x_step = _berechne_intervalle(final_x_min, final_x_max)
+
+    if y_min is None and y_max is None and relevante_y:
+        # Finde wichtige Punkte am Rand (innerhalb von 5% des Bereichs)
+        y_span = final_y_max - final_y_min
+        rand_tolerance = y_span * 0.05
+
+        # Prüfe ob wichtige Punkte zu nah am Rand sind
+        punkte_am_rand = []
+        for art, x_val, y_val in punkte["punkte_mit_koordinaten"]:
+            if art in ["Nullstelle", "Extremum", "Wendepunkt"] and y_val is not None:
+                if (
+                    abs(y_val - final_y_min) < rand_tolerance
+                    or abs(y_val - final_y_max) < rand_tolerance
+                ):
+                    punkte_am_rand.append((art, x_val, y_val))
+
+        # Wenn wichtige Punkte am Rand sind, erweitere den Bereich
+        if punkte_am_rand:
+            # Finde den kleinsten und größten y-Wert der wichtigen Punkte
+            min_wichtig = min(p[2] for p in punkte_am_rand)
+            max_wichtig = max(p[2] for p in punkte_am_rand)
+
+            # Erweitere den Bereich um mindestens 15% oder 1 Einheit
+            if min_wichtig - final_y_min < rand_tolerance:
+                final_y_min = min_wichtig - max(y_span * 0.15, 1.0)
+            if final_y_max - max_wichtig < rand_tolerance:
+                final_y_max = max_wichtig + max(y_span * 0.15, 1.0)
+
+            # Berechne neue Schrittweite
+            y_step = _berechne_intervalle(final_y_min, final_y_max)
 
     # === MINDESTBEREICHE SICHERSTELLEN ===
     # Verhindere zu kleine Bereiche

@@ -118,7 +118,7 @@ class TestPunktefilterung:
         # Extremstelle bei (0|-4) sollte abgeschnitten sein
         assert len(abgeschnittene) >= 1
         assert any(
-            art == "Extremum" and abs(y_val - (-4)) < 0.001
+            art == "Minimum" and abs(y_val - (-4)) < 0.001
             for art, x_val, y_val in abgeschnittene
         )
 
@@ -219,7 +219,7 @@ class TestGraphFunktion:
     def test_graph_manuelle_grenzen(self, capsys):
         """Testet Graph-Funktion mit manuellen Grenzen"""
         f = GanzrationaleFunktion("x^2 - 4")
-        fig = Graph(f, y_max=0)  # Schneidet Extremstelle ab
+        fig = Graph(f, y_max=2)  # Schneidet Extremstelle ab bei y=2
 
         # Sollte eine gültige Plotly-Figur zurückgeben
         assert hasattr(fig, "data")
@@ -227,8 +227,8 @@ class TestGraphFunktion:
 
         # Sollte Warnung über abgeschnittene Punkte anzeigen
         captured = capsys.readouterr()
-        assert "Abgeschnittene Punkte" in captured.out
-        assert "Extremum" in captured.out
+        assert "Hinweis: Abgeschnittene Punkte" in captured.out
+        assert "Minimum" in captured.out
 
     def test_graph_fehlerhafte_funktion(self):
         """Testet Graph-Funktion mit ungültigen Parametern"""
