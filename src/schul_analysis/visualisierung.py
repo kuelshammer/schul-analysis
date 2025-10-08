@@ -361,13 +361,28 @@ def _berechne_y_bereich(
                 y_max_auto = center + noetige_spanne / 2
 
         # 6. Absolutbegrenzung für pädagogische Eignung (neu)
-        y_grenze = 200  # Maximale Ausdehnung in Y-Richtung
+        y_grenze = 400  # Maximale Ausdehnung in Y-Richtung (erhöht von 200 auf 400)
         if y_max_auto - y_min_auto > y_grenze:
-            # Zentriere den Bereich um die wichtigen Punkte
+            # Dynamische Bereichsanpassung: Stelle sicher dass alle wichtigen Punkte gut sichtbar sind
             if wichtige_y_werte:
-                center = sum(wichtige_y_werte) / len(wichtige_y_werte)
-                y_min_auto = center - y_grenze / 2
-                y_max_auto = center + y_grenze / 2
+                y_min_final = min(wichtige_y_werte)
+                y_max_final = max(wichtige_y_werte)
+
+                # Berechne notwendige Spanne mit ausreichend Puffer für gute Sichtbarkeit
+                noetige_spanne = (
+                    y_max_final - y_min_final
+                ) * 3.0  # 3x Puffer für klare Sichtbarkeit
+
+                # Wenn die notwendige Spanne kleiner als y_grenze ist, verwende sie
+                if noetige_spanne <= y_grenze:
+                    center = (y_min_final + y_max_final) / 2
+                    y_min_auto = center - noetige_spanne / 2
+                    y_max_auto = center + noetige_spanne / 2
+                else:
+                    # Ansonsten verwende die maximale Grenze, aber zentriere um wichtige Punkte
+                    center = sum(wichtige_y_werte) / len(wichtige_y_werte)
+                    y_min_auto = center - y_grenze / 2
+                    y_max_auto = center + y_grenze / 2
             else:
                 # Fallback: Zentriere um 0
                 y_min_auto = -y_grenze / 2
@@ -578,7 +593,9 @@ def _erstelle_plotly_figur(funktion, x_min, x_max, y_min, y_max, **kwargs):
         {
             "title": titel or f"Funktion: f(x) = {funktion.term()}",
             "xaxis": {
-                **config.get_axis_config(mathematical_mode=True),
+                **config.get_axis_config(
+                    mathematical_mode=False
+                ),  # Kein 1:1-Verhältnis für bessere Sichtbarkeit
                 "range": [
                     float(x_min),
                     float(x_max),
