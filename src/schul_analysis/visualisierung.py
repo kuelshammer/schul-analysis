@@ -8,6 +8,7 @@ einschließlich intelligenter Skalierung und Plotly-Integration.
 import numpy as np
 import plotly.graph_objects as go
 import math
+import sympy as sp
 
 from .config import config
 from .funktion import Funktion
@@ -1190,6 +1191,65 @@ def _erstelle_plotly_figur_mit_intelligenten_achsen(
 # ====================
 
 
+def _berechne_schnittpunkte(funktionen):
+    """Berechnet Schnittpunkte zwischen mehreren Funktionen
+
+    Args:
+        funktionen: Liste der zu analysierenden Funktionen (mindestens 2)
+
+    Returns:
+        list: Liste von (x, y) Tupeln mit gültigen Schnittpunkten
+    """
+    if len(funktionen) < 2:
+        return []
+
+    schnittpunkte = []
+    x = sp.Symbol("x")
+
+    # Prüfe alle Paare von Funktionen
+    for i in range(len(funktionen)):
+        for j in range(i + 1, len(funktionen)):
+            f1 = funktionen[i]
+            f2 = funktionen[j]
+
+            try:
+                # Löse die Gleichung f1(x) = f2(x)
+                gleichung = sp.Eq(f1.term_sympy, f2.term_sympy)
+                x_loesungen = sp.solve(gleichung, x)
+
+                # Verarbeite jede Lösung
+                for x_loesung in x_loesungen:
+                    try:
+                        # Prüfe ob x-Wert reell und endlich ist
+                        if x_loesung.is_real and x_loesung.is_finite:
+                            x_float = float(x_loesung)
+
+                            # Berechne y-Wert (mit beiden Funktionen zur Sicherheit)
+                            y1_float = float(f1.term_sympy.subs(x, x_loesung))
+                            y2_float = float(f2.term_sympy.subs(x, x_loesung))
+
+                            # Prüfe ob y-Werte übereinstimmen und endlich sind
+                            if (
+                                abs(y1_float - y2_float) < 1e-10
+                                and abs(y1_float) != float("inf")
+                                and abs(y2_float) != float("inf")
+                            ):
+                                schnittpunkte.append((x_float, y1_float))
+
+                    except (TypeError, ValueError, OverflowError):
+                        # Überspringe ungültige Lösungen
+                        continue
+
+            except Exception:
+                # Überspringe Funktionen, die keine Gleichungen lösen können
+                continue
+
+    # Sortiere Schnittpunkte nach x-Wert
+    schnittpunkte.sort(key=lambda p: p[0])
+
+    return schnittpunkte
+
+
 def _berechne_kombinierten_intelligenten_bereich(funktionen):
     """Berechnet den kombinierten intelligenten Bereich für mehrere Funktionen
 
@@ -1204,6 +1264,8 @@ def _berechne_kombinierten_intelligenten_bereich(funktionen):
 
     # Sammle für jede Funktion den relevanten Bereich
     bereiche = []
+    schnittpunkte_liste = []  # NEU: Sammle auch Schnittpunkte
+
     for f in funktionen:
         punkte = _sammle_interessante_punkte(f)
         if punkte["x_werte"]:
@@ -1211,12 +1273,26 @@ def _berechne_kombinierten_intelligenten_bereich(funktionen):
             bereich_max = max(punkte["x_werte"])
             bereiche.append((bereich_min, bereich_max))
 
+    # NEU: Berechne Schnittpunkte und füge sie zur Bereichsberechnung hinzu
+    if len(funktionen) >= 2:
+        schnittpunkte = _berechne_schnittpunkte(funktionen)
+        if schnittpunkte:
+            schnittpunkte_liste = [x for x, y in schnittpunkte]
+            print(f"ℹ️  Gefundene Schnittpunkte: {len(schnittpunkte)}")
+            for i, (x, y) in enumerate(schnittpunkte, 1):
+                print(f"   {i}. Bei x={x:.3f}, y={y:.3f}")
+
     if not bereiche:
         return -5, 5, 1  # Default-Bereich
 
     # Finde den größten kombinierten Bereich
     kombiniert_min = min(b for b, _ in bereiche)
     kombiniert_max = max(b for _, b in bereiche)
+
+    # NEU: Erweitere Bereich um Schnittpunkte
+    if schnittpunkte_liste:
+        kombiniert_min = min(kombiniert_min, min(schnittpunkte_liste))
+        kombiniert_max = max(kombiniert_max, max(schnittpunkte_liste))
 
     # Wende intelligenten Puffer an
     int_puffer = _berechne_intelligenter_puffer(kombiniert_min, kombiniert_max)
@@ -1523,6 +1599,44 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
                         hovertemplate=f"<b>x</b>: %{{x:.3f}}<br><b>f{i + 1}(x)</b>: %{{y:.3f}}<extra></extra>",
                     )
                 )
+
+        # NEU: Füge Schnittpunkte hinzu
+        if len(funktionen) >= 2:
+            schnittpunkte = _berechne_schnittpunkte(funktionen)
+            if schnittpunkte:
+                # Filtere Schnittpunkte, die im sichtbaren Bereich liegen
+                sichtbare_schnittpunkte = [
+                    (x, y)
+                    for x, y in schnittpunkte
+                    if x_min <= x <= x_max and y_min <= y <= y_max
+                ]
+
+                if sichtbare_schnittpunkte:
+                    # Extrahiere x- und y-Koordinaten
+                    schnitt_x = [x for x, y in sichtbare_schnittpunkte]
+                    schnitt_y = [y for x, y in sichtbare_schnittpunkte]
+
+                    # Füge Schnittpunkte als spezielle Marker hinzu
+                    fig.add_trace(
+                        go.Scatter(
+                            x=schnitt_x,
+                            y=schnitt_y,
+                            mode="markers",
+                            name="Schnittpunkte",
+                            marker={
+                                "color": "black",
+                                "size": 12,
+                                "symbol": "diamond",
+                                "line": {"color": "white", "width": 2},
+                            },
+                            hovertemplate=(
+                                "<b>Schnittpunkt</b><br>"
+                                "<b>x</b>: %{x:.3f}<br>"
+                                "<b>y</b>: %{y:.3f}<extra></extra>"
+                            ),
+                            showlegend=True,
+                        )
+                    )
 
         # Konfiguration
         layout_config = config.get_plot_config()
