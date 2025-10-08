@@ -60,8 +60,13 @@ class TestPunktesammlung:
 
         # Sollte Nullstellen bei x=2 und x=-2 haben
         assert len(punkte["x_werte"]) >= 2
-        assert -2.001 <= punkte["x_werte"][0] <= -1.999  # x≈-2
-        assert 1.999 <= punkte["x_werte"][1] <= 2.001  # x≈2
+        # Sortiere die x-Werte für konsistente Tests
+        sortierte_x = sorted(punkte["x_werte"])
+        # Finde die Nullstellen in der sortierten Liste
+        nullstellen = [x for x in sortierte_x if abs(x) > 1.5]  # x≈-2 und x≈2
+        assert len(nullstellen) >= 2
+        assert -2.001 <= nullstellen[0] <= -1.999  # x≈-2
+        assert 1.999 <= nullstellen[1] <= 2.001  # x≈2
 
         # Sollte Extremstelle bei x=0 haben
         assert any(abs(x - 0) < 0.001 for x in punkte["x_werte"])
@@ -321,20 +326,40 @@ class TestIntegrationSzenarien:
         linker_puffer = linkeste_nullstelle - x_range[0]
         rechter_puffer = x_range[1] - rechtste_nullstelle
 
-        # Sollte mindestens 1.0 Einheit Puffer auf jeder Seite haben
-        assert linker_puffer >= 1.0, f"Linker Puffer zu klein: {linker_puffer} < 1.0"
-        assert rechter_puffer >= 1.0, f"Rechter Puffer zu klein: {rechter_puffer} < 1.0"
+        # Sollte mindestens 5% + 1 Einheit Puffer auf jeder Seite haben
+        # Bei Spanne von 13 Einheiten (-3 bis 10): 5% = 0.65, also mindestens 1.0 Einheit
+        erwarteter_min_puffer = max(13 * 0.05, 1.0)
+        assert linker_puffer >= erwarteter_min_puffer, (
+            f"Linker Puffer zu klein: {linker_puffer} < {erwarteter_min_puffer}"
+        )
+        assert rechter_puffer >= erwarteter_min_puffer, (
+            f"Rechter Puffer zu klein: {rechter_puffer} < {erwarteter_min_puffer}"
+        )
 
-        # Spezifischer Testfall: Sollte von -4 bis 11 reichen (nicht -3 bis 11)
-        assert x_range[0] <= -3.5, f"Linke Grenze {x_range[0]} sollte näher an -4 sein"
-        assert x_range[1] >= 10.5, f"Rechte Grenze {x_range[1]} sollte näher an 11 sein"
+        # Sollte etwa 5% Puffer auf jeder Seite haben (Gesamtbereich ca. 14.3 Einheiten)
+        gesamtbereich = x_range[1] - x_range[0]
+        prozentualer_puffer_links = linker_puffer / gesamtbereich
+        prozentualer_puffer_rechts = rechter_puffer / gesamtbereich
+
+        assert prozentualer_puffer_links >= 0.04, (
+            f"Linker prozentualer Puffer zu klein: {prozentualer_puffer_links:.3f} < 0.04"
+        )
+        assert prozentualer_puffer_rechts >= 0.04, (
+            f"Rechter prozentualer Puffer zu klein: {prozentualer_puffer_rechts:.3f} < 0.04"
+        )
+        assert prozentualer_puffer_links <= 0.15, (
+            f"Linker prozentualer Puffer zu groß: {prozentualer_puffer_links:.3f} > 0.15"
+        )
+        assert prozentualer_puffer_rechts <= 0.15, (
+            f"Rechter prozentualer Puffer zu groß: {prozentualer_puffer_rechts:.3f} > 0.15"
+        )
 
     def test_szenario_puffer_fuer_verschiedene_funktionen(self):
-        """Testet Pufferlogik für verschiedene Funktionstypen"""
+        """Testet Pufferlogik für verschiedene Funktionstypen mit prozentualer Berechnung"""
         test_cases = [
-            ("(x+1)(x-5)", [-1, 5]),  # Einfache quadratische Funktion
-            ("(x+2)(x-1)(x-8)", [-2, 1, 8]),  # Kubische Funktion
-            ("(x+4)(x+2)(x-3)(x-7)", [-4, -2, 3, 7]),  # Quartische Funktion
+            ("(x+1)(x-5)", [-1, 5]),  # Einfache quadratische Funktion, Spanne=6
+            ("(x+2)(x-1)(x-8)", [-2, 1, 8]),  # Kubische Funktion, Spanne=10
+            ("(x+4)(x+2)(x-3)(x-7)", [-4, -2, 3, 7]),  # Quartische Funktion, Spanne=11
         ]
 
         for func_str, expected_zeros in test_cases:
@@ -348,13 +373,70 @@ class TestIntegrationSzenarien:
             linker_puffer = linkeste_nullstelle - x_range[0]
             rechter_puffer = x_range[1] - rechtste_nullstelle
 
-            # Alle Funktionen sollten konsistenten Puffer haben
-            assert linker_puffer >= 1.0, (
-                f"{func_str}: Linker Puffer zu klein: {linker_puffer}"
+            # Berechne erwarteten prozentualen Puffer
+            spanne = rechtste_nullstelle - linkeste_nullstelle
+            erwarteter_min_puffer = max(spanne * 0.05, 1.0)  # 5% + min 1 Einheit
+
+            # Teste Mindestpuffer
+            assert linker_puffer >= erwarteter_min_puffer, (
+                f"{func_str}: Linker Puffer {linker_puffer} < Minimum {erwarteter_min_puffer}"
             )
-            assert rechter_puffer >= 1.0, (
-                f"{func_str}: Rechter Puffer zu klein: {rechter_puffer}"
+            assert rechter_puffer >= erwarteter_min_puffer, (
+                f"{func_str}: Rechter Puffer {rechter_puffer} < Minimum {erwarteter_min_puffer}"
             )
+
+            # Teste dass Puffer nicht zu groß ist (sollte vernünftig sein)
+            gesamtbereich = x_range[1] - x_range[0]
+            max_akzeptabler_puffer = (
+                gesamtbereich * 0.25
+            )  # Maximal 25% vom Gesamtbereich
+
+            assert linker_puffer <= max_akzeptabler_puffer, (
+                f"{func_str}: Linker Puffer {linker_puffer} > Maximum {max_akzeptabler_puffer}"
+            )
+            assert rechter_puffer <= max_akzeptabler_puffer, (
+                f"{func_str}: Rechter Puffer {rechter_puffer} > Maximum {max_akzeptabler_puffer}"
+            )
+
+    def test_szenario_intelligenter_puffer_kleine_spanne(self):
+        """Testet den intelligenten Puffer bei kleinen Spannen (sollte Mindestpuffer verwenden)"""
+        # Funktion mit kleiner Spanne (2 Einheiten)
+        f = GanzrationaleFunktion("(x-1)(x-3)")  # Nullstellen bei x=1, x=3, Spanne=2
+        fig = Graph(f)
+        x_range = fig.layout.xaxis.range
+
+        linker_puffer = 1 - x_range[0]  # Puffer um linke Nullstelle
+        rechter_puffer = x_range[1] - 3  # Puffer um rechte Nullstelle
+
+        # Bei kleiner Spanne sollte der Mindestpuffer (1.0) dominant sein
+        assert linker_puffer >= 1.0, (
+            f"Linker Puffer sollte Mindestpuffer erreichen: {linker_puffer} < 1.0"
+        )
+        assert rechter_puffer >= 1.0, (
+            f"Rechter Puffer sollte Mindestpuffer erreichen: {rechter_puffer} < 1.0"
+        )
+
+    def test_szenario_intelligenter_puffer_grosse_spanne(self):
+        """Testet den intelligenten Puffer bei großen Spannen (sollte prozentualen Puffer verwenden)"""
+        # Funktion mit großer Spanne (100 Einheiten)
+        f = GanzrationaleFunktion(
+            "(x+50)(x-50)"
+        )  # Nullstellen bei x=-50, x=50, Spanne=100
+        fig = Graph(f)
+        x_range = fig.layout.xaxis.range
+
+        linker_puffer = -50 - x_range[0]  # Puffer um linke Nullstelle
+        rechter_puffer = x_range[1] - 50  # Puffer um rechte Nullstelle
+
+        # Bei großer Spanne sollte der prozentuale Puffer (5% = 5 Einheiten) dominant sein
+        erwarteter_prozentualer_puffer = 100 * 0.05  # 5 Einheiten
+
+        assert linker_puffer >= erwarteter_prozentualer_puffer, (
+            f"Linker Puffer sollte prozentualen Puffer erreichen: {linker_puffer} < {erwarteter_prozentualer_puffer}"
+        )
+        assert rechter_puffer >= erwarteter_prozentualer_puffer, (
+            f"Rechter Puffer sollte prozentualen Puffer erreichen: {rechter_puffer} < {erwarteter_prozentualer_puffer}"
+        )
 
 
 if __name__ == "__main__":

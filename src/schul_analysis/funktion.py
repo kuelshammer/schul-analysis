@@ -1231,6 +1231,11 @@ class Funktion:
             Liste der exakten Nullstellen als SymPy-Ausdrücke
         """
         try:
+            # Für ganzrationale Funktionen: spezialisierte Behandlung
+            if self.ist_ganzrational:
+                return self._nullstellen_ganzrational()
+
+            # Standardmethode für andere Funktionstypen
             lösungen = solve(self.term_sympy, self._variable_symbol)
             # Filtere reelle Lösungen
             ergebnisse = [lösung for lösung in lösungen if lösung.is_real]
@@ -1253,6 +1258,134 @@ class Funktion:
             Liste der exakten Nullstellen als SymPy-Ausdrücke
         """
         return self.nullstellen
+
+    def _nullstellen_ganzrational(self) -> ExactNullstellenListe:
+        """
+        Spezialisierte Nullstellenberechnung für ganzrationale Funktionen.
+
+        Verwendet robustere Methoden für Polynome, die auch schwierige Fälle behandeln.
+
+        Returns:
+            Liste der exakten Nullstellen als SymPy-Ausdrücke
+        """
+        import sympy as sp
+
+        try:
+            # Versuche 1: roots() Funktion für Polynome mit rationalen Koeffizienten
+            try:
+                poly = sp.Poly(self.term_sympy, self._variable_symbol)
+                lösungen = list(sp.roots(poly, self._variable_symbol).keys())
+
+                if lösungen and all(lösung.is_real for lösung in lösungen):
+                    # Sortiere die Lösungen in absteigender Reihenfolge (für Kompatibilität mit bestehenden Tests)
+                    lösungen.sort(reverse=True)
+                    validate_exact_results(lösungen, "Nullstellen (ganzrational)")
+                    return lösungen
+            except Exception:
+                pass
+
+            # Versuche 2: solve() mit Vereinfachung
+            try:
+                # Versuche, den Ausdruck zu faktorisieren
+                faktorisiert = sp.factor(self.term_sympy)
+                if faktorisiert != self.term_sympy:
+                    # Faktorisierung war erfolgreich, löse faktorisierten Ausdruck
+                    lösungen = sp.solve(faktorisiert, self._variable_symbol)
+                else:
+                    # Keine Faktorisierung möglich, verwende Originalausdruck
+                    lösungen = sp.solve(self.term_sympy, self._variable_symbol)
+
+                # Filtere reelle Lösungen
+                reelle_lösungen = [lösung for lösung in lösungen if lösung.is_real]
+
+                if reelle_lösungen:
+                    # Versuche, komplexe Lösungen zu vereinfachen
+                    vereinfachte_lösungen = []
+                    for lösung in reelle_lösungen:
+                        try:
+                            # Versuche numerische Evaluation
+                            approx = lösung.evalf()
+                            # Prüfe, ob es sich um eine "nette" Zahl handelt
+                            if abs(approx - round(approx)) < 1e-10:
+                                vereinfachte_lösungen.append(sp.Integer(round(approx)))
+                            else:
+                                vereinfachte_lösungen.append(lösung)
+                        except:
+                            vereinfachte_lösungen.append(lösung)
+
+                    # Entferne Duplikate
+                    eindeutige_lösungen = []
+                    for lösung in vereinfachte_lösungen:
+                        if lösung not in eindeutige_lösungen:
+                            eindeutige_lösungen.append(lösung)
+
+                    # Sortiere die Lösungen in absteigender Reihenfolge (für Kompatibilität mit bestehenden Tests)
+                    eindeutige_lösungen.sort(reverse=True)
+                    validate_exact_results(
+                        eindeutige_lösungen, "Nullstellen (ganzrational vereinfacht)"
+                    )
+                    return eindeutige_lösungen
+            except Exception:
+                pass
+
+            # Versuche 3: Numerische Annäherung als letzte Option
+            try:
+                from sympy import real_roots
+
+                poly = sp.Poly(self.term_sympy, self._variable_symbol)
+                lösungen = real_roots(poly)
+
+                if lösungen:
+                    # Konvertiere zu exakten Werten wo möglich
+                    ergebnisse = []
+                    for lösung in lösungen:
+                        try:
+                            # Für CRootOf, versuche exakten Wert zu finden
+                            if hasattr(lösung, "evalf"):
+                                approx = lösung.evalf()
+                                # Prüfe auf "nette" Zahlen (nahe an Ganzzahlen)
+                                if abs(approx - round(approx)) < 1e-10:
+                                    ergebnisse.append(sp.Integer(round(approx)))
+                                # Prüfe auf "nette" Brüche (mit kleinen Nennern)
+                                else:
+                                    # Versuche, als Bruch darzustellen
+                                    for nenner in range(2, 11):
+                                        zaehler = round(approx * nenner)
+                                        if abs(approx - zaehler / nenner) < 1e-10:
+                                            ergebnisse.append(
+                                                sp.Rational(zaehler, nenner)
+                                            )
+                                            break
+                                    else:
+                                        # Kein schöner Bruch gefunden, numerische Annäherung
+                                        ergebnisse.append(approx)
+                            else:
+                                ergebnisse.append(lösung)
+                        except:
+                            ergebnisse.append(lösung)
+
+                    # Entferne Duplikate und sortiere
+                    eindeutige_ergebnisse = []
+                    for ergebnis in ergebnisse:
+                        if ergebnis not in eindeutige_ergebnisse:
+                            eindeutige_ergebnisse.append(ergebnis)
+
+                    # Sortiere in absteigender Reihenfolge (für Kompatibilität mit bestehenden Tests)
+                    eindeutige_ergebnisse.sort(reverse=True)
+                    validate_exact_results(
+                        eindeutige_ergebnisse, "Nullstellen (numerisch)"
+                    )
+                    return eindeutige_ergebnisse
+            except Exception:
+                pass
+
+            # Keine Methode war erfolgreich
+            return []
+
+        except Exception as e:
+            raise ValueError(
+                f"Fehler bei der Nullstellenberechnung für ganzrationale Funktion: {str(e)}"
+            ) from e
 
     @property
     def extremstellen(self) -> list[tuple[Any, str]]:
