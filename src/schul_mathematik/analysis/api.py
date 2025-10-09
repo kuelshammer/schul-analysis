@@ -355,27 +355,6 @@ def Extrempunkte(funktion: Funktionstyp) -> list[tuple[Any, Any, str]]:
 
 
 @validate_analysis_results("Extrema")
-def Extrema(funktion: Funktionstyp) -> ExtremaListe:
-    """
-    Findet die Extrempunkte einer Funktion mit exakten SymPy-Ergebnissen (Alias für Extremstellen).
-
-    Args:
-        funktion: Eine beliebige Funktion
-
-    Returns:
-        Liste der Extremstellen als (x-Wert, Typ)-Tupel mit exakten SymPy-Ausdrücken
-
-    Beispiele:
-        >>> f = ErstellePolynom([1, -3, -4, 12])  # x³ - 3x² - 4x + 12
-        >>> ext = Extrema(f)                       # [(-1, 'Maximum'), ...] mit exakten Werten
-
-    Typ-Sicherheit:
-        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
-    """
-    # Extrema ist ein Alias für Extremstellen für Abwärtskompatibilität
-    return Extremstellen(funktion)
-
-
 @validate_analysis_results("Wendepunkte")
 def Wendestellen(funktion: Funktionstyp) -> WendepunkteListe:
     """
@@ -655,9 +634,54 @@ def Sattelpunkte(funktion: Funktionstyp) -> SattelpunkteListe:
         raise SchulAnalysisError(f"Fehler bei der Sattelpunkte-Berechnung: {str(e)}")
 
 
+def Achsensymmetrie(funktion: Funktionstyp) -> bool:
+    """
+    Prüft, ob eine Funktion achsensymmetrisch ist.
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        True, wenn die Funktion achsensymmetrisch ist, sonst False
+
+    Beispiele:
+        >>> f = Funktion("x^2")      # x²
+        >>> sym = Achsensymmetrie(f)  # True
+    """
+    from .symmetrie import Achsensymmetrie as SymmetrieCheck
+
+    try:
+        return SymmetrieCheck(funktion)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Achsensymmetrie-Prüfung: {str(e)}")
+
+
+def Punktsymmetrie(funktion: Funktionstyp) -> bool:
+    """
+    Prüft, ob eine Funktion punktsymmetrisch ist.
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        True, wenn die Funktion punktsymmetrisch ist, sonst False
+
+    Beispiele:
+        >>> f = Funktion("x^3")      # x³
+        >>> sym = Punktsymmetrie(f)  # True
+    """
+    from .symmetrie import Punktsymmetrie as SymmetrieCheck
+
+    try:
+        return SymmetrieCheck(funktion)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Punktsymmetrie-Prüfung: {str(e)}")
+
+
+# Für Abwärtskompatibilität
 def Symmetrie(funktion: Funktionstyp) -> str:
     """
-    Bestimmt die Symmetrie einer Funktion.
+    Bestimmt die Symmetrie einer Funktion (veraltet, nutze Achsensymmetrie/Punktsymmetrie).
 
     Args:
         funktion: Eine beliebige Funktion
@@ -666,24 +690,15 @@ def Symmetrie(funktion: Funktionstyp) -> str:
         Beschreibung der Symmetrie
 
     Beispiele:
-        >>> f = ErstellePolynom([1, 0, 0])      # x²
-        >>> sym = Symmetrie(f)                   # "Achsensymmetrisch zur y-Achse"
+        >>> f = Funktion("x^2")      # x²
+        >>> sym = Symmetrie(f)       # "Achsensymmetrisch zur y-Achse"
     """
-    try:
-        # Versuche zuerst die Symmetrie() Methode
-        return funktion.Symmetrie()
-    except AttributeError:
-        # Fallback: Prüfe auf alte syme property
-        try:
-            return funktion.syme
-        except AttributeError:
-            raise UngueltigeFunktionError(
-                "Symmetrieanalyse",
-                f"Die Funktion vom Typ '{type(funktion).__name__}' "
-                "unterstützt keine Symmetrie-Analyse.",
-            )
-    except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Symmetrie-Analyse: {str(e)}")
+    if Achsensymmetrie(funktion):
+        return "Achsensymmetrisch zur y-Achse"
+    elif Punktsymmetrie(funktion):
+        return "Punktsymmetrisch zum Ursprung"
+    else:
+        return "Keine einfache Symmetrie"
 
 
 # =============================================================================
@@ -768,59 +783,75 @@ def Ausmultiplizieren(funktion: Funktionstyp) -> None:
     funktion.ausmultiplizieren()
 
 
-def Zeichne(
+def Graph(
     funktion: Any,
     x_bereich: tuple[float, float] | None = None,
     y_bereich: tuple[float, float] | None = None,
+    *weitere_funktionen,
     **kwargs,
 ) -> Any:
     """
-    Zeichnet eine Funktion im gegebenen Bereich.
+    Zeichnet eine oder mehrere Funktionen im gegebenen Bereich.
 
     Args:
         funktion: Eine beliebige Funktion (auch Python-Funktionen)
         x_bereich: x-Bereich als (von, bis) - Standard: automatisch
         y_bereich: y-Bereich als (von, bis) - Standard: automatisch
+        weitere_funktionen: Zusätzliche Funktionen, die gezeichnet werden sollen
         **kwargs: Zusätzliche Parameter für die Visualisierung
 
     Returns:
         Interaktiver Plotly-Graph
 
     Beispiele:
-        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
-        >>> Zeichne(f, (-2, 6))               # Zeichnet Funktion von x=-2 bis x=6
+        >>> f = Funktion("x^2 - 4x + 3")  # x² - 4x + 3
+        >>> Graph(f, (-2, 6))               # Zeichnet Funktion von x=-2 bis x=6
+
+        # Mehrere Funktionen:
+        >>> g = Funktion("2*x + 1")
+        >>> Graph(f, g, (-2, 6))            # Zeichnet beide Funktionen
 
         # Auch mit normalen Python-Funktionen möglich:
-        >>> Zeichne(lambda x: x**2, (-5, 5))
+        >>> Graph(lambda x: x**2, (-5, 5))
     """
     try:
-        # Versuche zuerst die graph() Methode (neue API)
-        if hasattr(funktion, "graph"):
-            if x_bereich:
-                kwargs["x_min"] = x_bereich[0]
-                kwargs["x_max"] = x_bereich[1]
-            if y_bereich:
-                kwargs["y_min"] = y_bereich[0]
-                kwargs["y_max"] = y_bereich[1]
-            return funktion.graph(**kwargs)
+        # Konvertiere x_bereich zu x_min/x_max für Graph-Funktion
+        if x_bereich:
+            kwargs["x_min"] = x_bereich[0]
+            kwargs["x_max"] = x_bereich[1]
+        if y_bereich:
+            kwargs["y_min"] = y_bereich[0]
+            kwargs["y_max"] = y_bereich[1]
 
-        # Fallback: zeige_funktion Methode (alte API)
-        elif hasattr(funktion, "zeige_funktion"):
-            if x_bereich:
-                return funktion.zeige_funktion(x_bereich, **kwargs)
-            else:
-                return funktion.zeige_funktion(**kwargs)
+        # Wenn mehrere Funktionen übergeben wurden
+        if weitere_funktionen:
+            from .visualisierung import Graph as VisualisierungsGraph
 
-        # Fallback für beliebige callable Objekte
-        elif callable(funktion):
-            from .visualisierung import zeige_funktion
-
-            return zeige_funktion(funktion, x_bereich, **kwargs)
+            return VisualisierungsGraph(funktion, *weitere_funktionen, **kwargs)
         else:
-            raise TypeError("Das übergebene Objekt ist keine zeichnenbare Funktion.")
+            # Einzelne Funktion
+            if hasattr(funktion, "graph"):
+                return funktion.graph(**kwargs)
+            elif hasattr(funktion, "zeige_funktion"):
+                if x_bereich:
+                    return funktion.zeige_funktion(x_bereich, **kwargs)
+                else:
+                    return funktion.zeige_funktion(**kwargs)
+            elif callable(funktion):
+                from .visualisierung import zeige_funktion
+
+                return zeige_funktion(funktion, x_bereich, **kwargs)
+            else:
+                raise TypeError(
+                    "Das übergebene Objekt ist keine zeichnenbare Funktion."
+                )
 
     except Exception as e:
         raise SchulAnalysisError(f"Fehler bei der Visualisierung: {str(e)}")
+
+
+# Für Abwärtskompatibilität
+Zeichne = Graph
 
 
 # =============================================================================
@@ -828,274 +859,9 @@ def Zeichne(
 # =============================================================================
 
 
-def Auswerten(funktion: Any, x_wert: float | np.ndarray) -> float | np.ndarray:
-    """
-    Wertet eine Funktion an einem Punkt oder Array aus.
-
-    Args:
-        funktion: Eine beliebige Funktion
-        x_wert: Der x-Wert oder Array von x-Werten
-
-    Returns:
-        Der y-Wert oder Array von y-Werten
-
-    Beispiele:
-        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
-        >>> y = Auswerten(f, 2)               # f(2) = -1
-        >>> y_array = Auswerten(f, [1, 2, 3]) # [f(1), f(2), f(3)] = [0, -1, 0]
-    """
-    try:
-        return funktion(x_wert)
-    except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Auswertung: {str(e)}")
-
-
 # =============================================================================
 # HELPER-FUNKTIONEN FÜR SCHÜLER
 # =============================================================================
-
-
-def ErstellePolynom(koeffizienten: list[float | int]) -> Funktion:
-    """
-    Erstellt ein Polynom aus Koeffizienten.
-
-    Args:
-        koeffizienten: Liste der Koeffizienten [a₀, a₁, a₂, ...]
-                     für a₀ + a₁x + a₂x² + ...
-
-    Returns:
-        Eine ganzrationale Funktion
-
-    Beispiele:
-        >>> f = ErstellePolynom([3, -4, 1])     # 3 - 4x + x²
-        >>> g = ErstellePolynom([0, 1])        # x
-        >>> h = ErstellePolynom([5])           # 5 (konstant)
-
-    Didaktischer Hinweis:
-        Diese Funktion ist besonders für Anfänger geeignet,
-        da sie die Polynom-Erstellung sehr einfach macht.
-
-    Magic Factory Hinweis:
-        Alternativ kann jetzt auch Funktion("x^2 - 4x + 3") verwendet werden,
-        was automatisch die richtige Funktionstyp zurückgibt.
-    """
-
-    # Erstelle String aus Koeffizienten und verwende Magic Factory
-    if not koeffizienten:
-        raise ValueError("Koeffizientenliste darf nicht leer sein")
-
-    # Erstelle Term aus Koeffizienten
-    termbestandteile = []
-    for i, koeff in enumerate(koeffizienten):
-        if koeff == 0:
-            continue
-        if i == 0:
-            termbestandteile.append(str(koeff))
-        elif i == 1:
-            if koeff == 1:
-                termbestandteile.append("x")
-            elif koeff == -1:
-                termbestandteile.append("-x")
-            else:
-                termbestandteile.append(f"{koeff}*x")
-        else:
-            if koeff == 1:
-                termbestandteile.append(f"x^{i}")
-            elif koeff == -1:
-                termbestandteile.append(f"-x^{i}")
-            else:
-                termbestandteile.append(f"{koeff}*x^{i}")
-
-    if not termbestandteile:
-        term = "0"
-    else:
-        term = " + ".join(termbestandteile).replace("+ -", "- ")
-
-    return GanzrationaleFunktion(term)
-
-
-def Erstelle_Funktion(term: str) -> Any:
-    """
-    Erstellt eine Funktion aus einem Term-String.
-
-    Args:
-        term: Der mathematische Term als String
-
-    Returns:
-        Eine Funktion (automatisch typisiert durch Magic Factory)
-
-    Beispiele:
-        >>> f = Erstelle_Funktion("x^2 - 4x + 3")    # x² - 4x + 3
-        >>> g = Erstelle_Funktion("2*x + 5")          # 2x + 5
-        >>> h = Erstelle_Funktion("(x-2)*(x+1)")     # (x-2)(x+1) = x² - x - 2
-        >>> i = Erstelle_Funktion("x^2/(x+1)")      # QuotientFunktion!
-
-    Didaktischer Hinweis:
-        Unterstützt verschiedene Schreibweisen, die Schüler aus dem Unterricht kennen.
-
-    Magic Factory Hinweis:
-        Diese Funktion nutzt jetzt die Magic Factory und gibt automatisch den
-        richtigen Funktionstyp zurück (QuadratischeFunktion, ProduktFunktion, etc.)
-    """
-    from .funktion import Funktion
-
-    return Funktion(term)
-
-
-def Erstelle_Lineares_Gleichungssystem(
-    koeffizienten: list[list[float | int]], ergebnisse: list[float | int]
-) -> Any:
-    """
-    Erstellt ein lineares Gleichungssystem.
-
-    Args:
-        koeffizienten: Matrix der Koeffizienten [[a₁₁, a₁₂], [a₂₁, a₂₂], ...]
-        ergebnisse: Vektor der Ergebnisse [b₁, b₂, ...]
-
-    Returns:
-        Ein lineares Gleichungssystem
-
-    Beispiele:
-        >>> lgs = Erstelle_Lineares_Gleichungssystem(
-        ...     [[2, 3], [1, -2]],    # 2x + 3y = 8, x - 2y = -3
-        ...     [8, -3]
-        ... )
-        >>> lösung = lgs.loese()        # [2, 1.333...]
-    """
-    return LGS(koeffizienten, ergebnisse)
-
-
-def Erstelle_Exponential_Rationale_Funktion(
-    zaehler: GanzrationaleFunktion | str,
-    nenner: GanzrationaleFunktion | str,
-    exponent_param: float = 1.0,
-) -> Funktion:
-    """
-    Erstellt eine exponential-rationale Funktion f(x) = P(e^{ax})/Q(e^{ax}).
-
-    Args:
-        zaehler: Polynom in e^{ax} als GanzrationaleFunktion oder String
-        nenner: Polynom in e^{ax} als GanzrationaleFunktion oder String
-        exponent_param: Parameter a in e^{ax} (Standard: 1.0)
-
-    Returns:
-        ExponentialRationaleFunktion
-
-    Beispiele:
-        >>> f = Erstelle_Exponential_Rationale_Funktion("x+1", "x-1")
-        >>> s = f.schmiegkurve()  # Schmiegkurve berechnen
-        >>> r = f.stoerfunktion()  # Störfunktion berechnen
-    """
-    # 🔥 UNIFIED ARCHITECTURE FIX: Erstelle kombinierten Ausdruck statt separater Parameter 🔥
-    if exponent_param == 1.0:
-        # Für a=1: Standardfall e^x
-        zaehler_expr = (
-            zaehler.replace("x", "(exp(x)") if isinstance(zaehler, str) else zaehler
-        )
-        nenner_expr = (
-            nenner.replace("x", "(exp(x)") if isinstance(nenner, str) else nenner
-        )
-    else:
-        # Für a≠1: Ersetze x mit exp(a*x)
-        replacement = f"(exp({exponent_param}*x)"
-        zaehler_expr = (
-            zaehler.replace("x", replacement) if isinstance(zaehler, str) else zaehler
-        )
-        nenner_expr = (
-            nenner.replace("x", replacement) if isinstance(nenner, str) else nenner
-        )
-
-    # Kombiniere zu vollständigen Term
-    if isinstance(zaehler_expr, str) and isinstance(nenner_expr, str):
-        voller_term = f"({zaehler_expr})/({nenner_expr})"
-    else:
-        voller_term = f"({zaehler_expr})/({nenner_expr})"
-
-    return Funktion(voller_term)
-
-
-# =============================================================================
-# KOMFORT-FUNKTIONEN FÜR DEN UNTERRICHT
-# =============================================================================
-
-
-def Analysiere_Funktion(funktion: Funktionstyp) -> dict[str, Any]:
-    """
-    Führt eine vollständige Funktionsanalyse durch.
-
-    Args:
-        funktion: Eine beliebige Funktion
-
-    Returns:
-        Dictionary mit allen Analyse-Ergebnissen
-
-    Beispiele:
-        >>> f = ErstellePolynom([1, -4, 3])  # x² - 4x + 3
-        >>> analyse = Analysiere_Funktion(f)
-        >>> print(analyse['nullstellen'])      # [1.0, 3.0]
-        >>> print(analyse['extrema'])           # []
-        >>> print(analyse['symmetrie'])         # "Keine einfache Symmetrie"
-    """
-    ergebnisse = {}
-
-    try:
-        ergebnisse["term"] = funktion.term()
-    except (AttributeError, ValueError, TypeError):
-        ergebnisse["term"] = str(funktion)
-
-    try:
-        ergebnisse["Nullstellen"] = Nullstellen(funktion)
-    except (AttributeError, ValueError, TypeError, ZeroDivisionError):
-        ergebnisse["Nullstellen"] = "Nicht berechenbar"
-
-    try:
-        ergebnisse["Extrema"] = Extrema(funktion)
-    except (AttributeError, ValueError, TypeError, ZeroDivisionError):
-        ergebnisse["Extrema"] = "Nicht berechenbar"
-
-    try:
-        ergebnisse["Wendepunkte"] = Wendepunkte(funktion)
-    except (AttributeError, ValueError, TypeError, ZeroDivisionError):
-        ergebnisse["Wendepunkte"] = "Nicht berechenbar"
-
-    try:
-        ergebnisse["Symmetrie"] = Symmetrie(funktion)
-    except (AttributeError, ValueError, TypeError):
-        ergebnisse["Symmetrie"] = "Nicht bestimmbar"
-
-    return ergebnisse
-
-
-def Zeige_Analyse(funktion: Funktionstyp) -> str:
-    """
-    Erstellt eine übersichtliche Zusammenfassung der Funktionsanalyse.
-
-    Args:
-        funktion: Eine beliebige Funktion
-
-    Returns:
-        Formatierter Text mit allen Analyse-Ergebnissen
-
-    Beispiele:
-        >>> f = ErstellePolynom([1, -4, 3])
-        >>> print(Zeige_Analyse(f))
-        Funktionsanalyse für f(x) = x^2 - 4x + 3
-
-        Nullstellen: [1.0, 3.0]
-        Extrema: []
-        Wendepunkte: []
-        Symmetrie: Keine einfache Symmetrie
-    """
-    analyse = Analysiere_Funktion(funktion)
-
-    text = f"Funktionsanalyse für f(x) = {analyse['term']}\n\n"
-
-    text += f"Nullstellen: {analyse['nullstellen']}\n"
-    text += f"Extrema: {analyse['extrema']}\n"
-    text += f"Wendepunkte: {analyse['wendepunkte']}\n"
-    text += f"Symmetrie: {analyse['symmetrie']}"
-
-    return text
 
 
 # =============================================================================
@@ -1452,146 +1218,31 @@ def Taylorpolynom(
         )
 
 
-def FlaecheZweiFunktionen(
-    funktion1: Funktionstyp,
-    funktion2: Funktionstyp,
-    a: float,
-    b: float,
-    anzeigen: bool = False,
-    **kwargs,
-) -> Any:
-    """
-    Zeigt die Fläche zwischen zwei Funktionen über dem Intervall [a, b] visuell an.
-
-    Diese pädagogische Funktion erstellt eine graphische Darstellung der Fläche zwischen
-    zwei Kurven und zeigt sowohl den numerischen Wert als auch die visuelle Repräsentation.
-
-    Args:
-        funktion1: Die erste Funktion
-        funktion2: Die zweite Funktion
-        a: Untere Integrationsgrenze
-        b: Obere Integrationsgrenze
-        anzeigen: Ob der Graph direkt angezeigt werden soll (Standard: True)
-        **kwargs: Zusätzliche Parameter für die Visualisierung
-            - flaeche_farbe: Farbe für Flächenfüllung (Standard: "rgba(0, 100, 255, 0.3)")
-            - titel: Benutzerdefinierter Titel für den Graphen
-            - breite: Breite des Graphen (Standard: 800)
-            - hoehe: Höhe des Graphen (Standard: 600)
-
-    Returns:
-        Wenn anzeigen=True: Plotly-Figure-Objekt (zeigt den Graphen an)
-        Wenn anzeigen=False: Plotly-Figure-Objekt (kann weiterverarbeitet werden)
-        Zusätzlich wird der numerische Wert im Graphen angezeigt
-
-    Beispiele:
-        >>> f1 = ErstellePolynom([1, 0, 0])    # x²
-        >>> f2 = ErstellePolynom([0, 2])        # 2x
-        >>> fig = FlaecheZweiFunktionen(f1, f2, 0, 2)  # Zeigt Fläche zwischen Parabel und Gerade
-        >>> fig = FlaecheZweiFunktionen(f1, f2, 0, 2,
-        ...                             flaeche_farbe="rgba(255, 0, 0, 0.3)",
-        ...                             titel="Fläche zwischen x² und 2x")  # Benutzerdefiniert
-
-    Didaktischer Hinweis:
-        Diese Funktion macht das Konzept der Fläche zwischen zwei Kurven durch
-        visuelle Darstellung für Schüler greifbar und intuitiv verständlich.
-
-    Technische Hinweis:
-        Berechnet Integral(funktion1 - funktion2, a, b) für die Fläche zwischen den Kurven
-        und zeigt den Bereich zwischen den Funktionen farbig hervorgehoben.
-    """
-    try:
-        # Berechne zuerst den numerischen Wert der Fläche
-        import sympy as sp
-
-        # Stelle sicher, dass beide Funktionen die gleiche Variable verwenden
-        if funktion1._variable_symbol != funktion2._variable_symbol:
-            term2 = funktion2.term_sympy.subs(
-                funktion2._variable_symbol, funktion1._variable_symbol
-            )
-        else:
-            term2 = funktion2.term_sympy
-
-        # Berechne Differenz der Terme
-        differenz_term = funktion1.term_sympy - term2
-
-        # Erstelle neue Funktion für die Differenz
-        from .funktion import Funktion
-
-        differenz_funktion = Funktion(differenz_term)
-
-        # Berechne numerischen Wert
-        flaechen_wert = Integral(differenz_funktion, a, b)
-
-        # Standardparameter für Flächenvisualisierung
-        flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
-        titel = kwargs.pop("titel", f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}")
-
-        # Bereich für die Darstellung automatisch erweitern für bessere Sichtbarkeit
-        bereich_erweiterung = (b - a) * 0.2  # 20% Puffer auf jeder Seite
-        x_min = a - bereich_erweiterung
-        x_max = b + bereich_erweiterung
-
-        # Erstelle Visualisierung mit Flächenfüllung zwischen zwei Funktionen
-        fig = Graph(
-            funktion1,
-            funktion2,
-            x_min=x_min,
-            x_max=x_max,
-            flaeche_zwei_funktionen=True,
-            flaeche_grenzen=(a, b),
-            flaeche_farbe=flaeche_farbe,
-            titel=titel,
-            **kwargs,
-        )
-
-        # Zeige den Graphen an, wenn gewünscht
-        if anzeigen:
-            fig.show()
-
-        return fig
-
-    except Exception as e:
-        raise SchulAnalysisError(
-            f"Fehler bei der Flächenberechnung zwischen zwei Funktionen: {str(e)}"
-        )
-
-
 # =============================================================================
 # EXPORT: ALLE FUNKTIONEN, DIE IMPORTIERT WERDEN SOLLEN
 # =============================================================================
 
 __all__ = [
-    # Analyse-Funktionen (Haupt-API)
+    # 🔥 KERN-ANALYSE-FUNKTIONEN (Haupt-API für Schüler)
     "Nullstellen",
     "Ableitung",
     "Integral",
     "Flaeche",
-    "FlaecheZweiFunktionen",
-    "Extrema",
     "Extremstellen",
     "Extrempunkte",
-    "Wendestellen",
     "Wendepunkte",
-    "StationaereStellen",
     "Sattelpunkte",
-    "Symmetrie",
     "Schnittpunkte",
-    # Visualisierung
+    # 🔍 SYMMETRIE-FUNKTIONEN
+    "Achsensymmetrie",
+    "Punktsymmetrie",
+    "Symmetrie",  # Für Abwärtskompatibilität
+    # 📊 VISUALISIERUNG
+    "Graph",
+    "Zeichne",  # Für Abwärtskompatibilität
     "Term",
     "Ausmultiplizieren",
-    "Zeichne",
-    # Werteberechnung
-    "Auswerten",
-    # Helper-Funktionen
-    "ErstellePolynom",
-    # Funktionstypen (für direkten Zugriff)
-    "GanzrationaleFunktion",
-    "QuotientFunktion",
-    "ProduktFunktion",
-    "SummeFunktion",
-    "KompositionFunktion",
-    "LGS",
-    # Advanced Analysis Functions
+    # 📈 TAYLOR-FUNKTIONEN
     "Tangente",
     "Taylorpolynom",
     # Type-Hints

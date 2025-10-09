@@ -60,21 +60,28 @@ Ableiten = Ableitung
 Derivative = Ableitung
 
 __all__ = [
-    # 🔥 SCHÜLERFREUNDLICHE API
-    "Ableitung",
-    "Ausmultiplizieren",
+    # 🔥 KERN-ANALYSE-FUNKTIONEN (Haupt-API für Schüler)
     "Nullstellen",
-    "Schnittpunkte",
+    "Ableitung",
     "Integral",
     "Flaeche",
-    "FlaecheZweiFunktionen",
-    "Extrema",
+    "Extremstellen",
+    "Extrempunkte",
     "Wendepunkte",
-    "Symmetrie",
+    "Sattelpunkte",
+    "Schnittpunkte",
+    # 🔍 SYMMETRIE-FUNKTIONEN
+    "Achsensymmetrie",
+    "Punktsymmetrie",
+    "Symmetrie",  # Für Abwärtskompatibilität
+    # 📊 VISUALISIERUNG
+    "Graph",
+    "Zeichne",  # Für Abwärtskompatibilität
     "Term",
-    "Zeichne",
-    "Auswerten",
-    "ErstellePolynom",
+    "Ausmultiplizieren",
+    # 📈 TAYLOR-FUNKTIONEN
+    "Tangente",
+    "Taylorpolynom",
     # 🏗️ FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
@@ -92,25 +99,9 @@ __all__ = [
     "t",
     "a",
     "k",
-    # 📊 VISUALISIERUNG
-    "Graph",
+    # 📊 VISUALISIERUNG (erweitert)
     "Graph_parametrisiert",
-    # 🧮 ANALYSE-FUNKTIONEN
-    "Ableitung",
-    "Integral",
-    "Extrema",
-    "Extremstellen",
-    "Extrempunkte",
-    "Wendepunkte",
-    "Wendestellen",
-    # 📈 TAYLOR-FUNKTIONEN
-    "taylorpolynom",
-    "tangente",
-    "Taylorpolynom",
-    "Tangente",
     # 📐 SPEZIALFUNKTIONEN
-    "Achsensymmetrie",
-    "Punktsymmetrie",
     "Schmiegparabel",
     "Schmiegkegel",
     "Schmieggerade",
