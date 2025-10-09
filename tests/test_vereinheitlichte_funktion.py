@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion, GebrochenRationaleFunktion
+from schul_mathematik import GanzrationaleFunktion, GebrochenRationaleFunktion
 from schul_analysis.funktion import Funktion
 
 

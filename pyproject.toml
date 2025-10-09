@@ -1,7 +1,7 @@
 [project]
-name = "schul-analysis"
+name = "schul-mathematik"
 version = "0.1.0"
-description = "Python Framework für Schul-Analysis mit Marimo-Integration"
+description = "Python Framework für Schul-Mathematik mit Marimo-Integration"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

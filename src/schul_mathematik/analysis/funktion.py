@@ -857,6 +857,11 @@ class Funktion:
         """Verarbeitet Standard-Eingabe"""
         if isinstance(eingabe, str):
             self.term_sympy = self._parse_string_to_sympy(eingabe)
+        elif isinstance(eingabe, (int, float)):
+            # Konvertiere Zahlen zu SymPy-Objekten
+            import sympy as sp
+
+            self.term_sympy = sp.Number(eingabe)
         else:
             self.term_sympy = eingabe
 

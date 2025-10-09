@@ -8,12 +8,13 @@ Alle Funktionen unterstützen Duck-Typing und funktionieren mit allen
 verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
 """
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
 from .errors import SchulAnalysisError, UngueltigeFunktionError
 from .funktion import Funktion
+from .visualisierung import Graph
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
@@ -1102,65 +1103,332 @@ def Zeige_Analyse(funktion: Funktionstyp) -> str:
 # =============================================================================
 
 
-def Flaeche(funktion: Funktionstyp, a: float, b: float) -> Any:
+def Flaeche(*args, anzeigen: bool = False, **kwargs) -> Any:
     """
-    Berechnet die Fläche zwischen einer Funktion und der x-Achse über dem Intervall [a, b].
+    Berechnet Flächen mit automatischer Erkennung des Aufruftyps und optionaler Visualisierung.
 
-    Dies ist eine pädagogische Klarfunktion, die die vorhandene Integral-Funktionalität
-    für die Flächenberechnung zugänglich macht.
+    Unterstützte Aufrufe:
+    - Flaeche(f, a, b): Fläche zwischen Funktion f und x-Achse über [a, b]
+    - Flaeche(f1, f2, a, b): Fläche zwischen zwei Funktionen über [a, b]
+    - Flaeche(c, a, b): Fläche der konstanten Funktion f(x) = c über [a, b]
+    - Flaeche(c1, c2, a, b): Fläche zwischen zwei konstanten Funktionen
 
-    Args:
-        funktion: Die Funktion, deren Fläche berechnet werden soll
-        a: Untere Integrationsgrenze
-        b: Obere Integrationsgrenze
+    Intelligente Parametererkennung:
+    - Bei 3 Argumenten: Flaeche(funktion, a, b)
+    - Bei 4 Argumenten, wenn die letzten beiden Zahlen sind:
+      * Flaeche(f1, f2, a, b) - wenn erste beiden Funktionen sind
+      * Flaeche(f, c, a, b) - wenn erstes Funktion, zweites Zahl
+      * Flaeche(c, f, a, b) - wenn erstes Zahl, zweites Funktion
+      * Flaeche(c1, c2, a, b) - wenn beide Zahlen
+
+    Parameters:
+    - *args: Variable Argumentliste, wird automatisch analysiert
+    - anzeigen: Ob der Graph direkt angezeigt werden soll (Standard: False)
+    - **kwargs: Zusätzliche Parameter für die Visualisierung
+        - flaeche_farbe: Farbe für Flächenfüllung (Standard: "rgba(0, 100, 255, 0.3)")
+        - titel: Benutzerdefinierter Titel für den Graphen
 
     Returns:
-        Der exakte Wert der Fläche als SymPy-Ausdruck oder numerischer Wert
-
-    Beispiele:
-        >>> f = ErstellePolynom([1, 0, 0])  # x²
-        >>> A = Flaeche(f, 0, 1)            # 1/3 (Fläche von 0 bis 1)
-        >>> A = Flaeche(f, -1, 1)           # 2/3 (Fläche von -1 bis 1)
-
-    Didaktischer Hinweis:
-        Diese Funktion macht das Konzept der Fläche unter einer Kurve
-        für Schüler zugänglich und intuitiv.
-
-    Typ-Sicherheit:
-        Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
+    - Bei anzeigen=False: Plotly-Figure-Objekt
+    - Bei anzeigen=True: Plotly-Figure-Objekt (zeigt den Graphen an)
     """
-    return Integral(funktion, a, b)
+    import sympy as sp
+
+    # Fall 1: 3 Argumente -> Flaeche(f, a, b)
+    if len(args) == 3:
+        funktion, a, b = args
+        zweite_funktion = None
+        modus = "eine_funktion"
+
+        # Berechne den numerischen Wert der Fläche
+        flaechen_wert = Integral(funktion, a, b)
+
+        # Standardparameter für Flächenvisualisierung
+        flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+        titel = kwargs.pop("titel", f"Fläche unter f(x) von {a} bis {b}")
+
+        # Bereich für die Darstellung automatisch erweitern für bessere Sichtbarkeit
+        bereich_erweiterung = (b - a) * 0.2  # 20% Puffer auf jeder Seite
+        x_min = a - bereich_erweiterung
+        x_max = b + bereich_erweiterung
+
+        # Erstelle Visualisierung mit Flächenfüllung
+        fig = Graph(
+            funktion,
+            x_min=x_min,
+            x_max=x_max,
+            flaeche=True,
+            flaeche_grenzen=(a, b),
+            flaeche_farbe=flaeche_farbe,
+            titel=titel,
+            **kwargs,
+        )
+
+    # Fall 2: 4 Argumente -> automatische Erkennung
+    elif len(args) == 4:
+        arg1, arg2, arg3, arg4 = args
+
+        # Prüfe, ob die letzten beiden Argumente Zahlen sind
+        if isinstance(arg3, (int, float)) and isinstance(arg4, (int, float)):
+            a, b = arg3, arg4
+
+            from .funktion import Funktion
+
+            # Fall 2a: Flaeche(f1, f2, a, b) - zwei Funktionen
+            if isinstance(arg1, Funktion) and isinstance(arg2, Funktion):
+                funktion1, funktion2 = arg1, arg2
+                modus = "zwei_funktionen"
+
+                # Berechne numerischen Wert der Fläche zwischen zwei Funktionen
+                try:
+                    # Stelle sicher, dass beide Funktionen die gleiche Variable verwenden
+                    if funktion1._variable_symbol != funktion2._variable_symbol:
+                        term2 = funktion2.term_sympy.subs(
+                            funktion2._variable_symbol, funktion1._variable_symbol
+                        )
+                    else:
+                        term2 = funktion2.term_sympy
+
+                    # Berechne Differenz der Terme
+                    differenz_term = funktion1.term_sympy - term2
+
+                    # Erstelle neue Funktion für die Differenz
+                    differenz_funktion = Funktion(differenz_term)
+
+                    # Berechne numerischen Wert
+                    flaechen_wert = Integral(differenz_funktion, a, b)
+
+                except Exception as e:
+                    raise SchulAnalysisError(
+                        f"Fehler bei der Flächenberechnung zwischen zwei Funktionen: {str(e)}"
+                    )
+
+                # Standardparameter für Flächenvisualisierung
+                flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+                titel = kwargs.pop(
+                    "titel", f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}"
+                )
+
+                # Bereich für die Darstellung automatisch erweitern
+                bereich_erweiterung = (b - a) * 0.2
+                x_min = a - bereich_erweiterung
+                x_max = b + bereich_erweiterung
+
+                # Erstelle Visualisierung mit Flächenfüllung zwischen zwei Funktionen
+                fig = Graph(
+                    funktion1,
+                    funktion2,
+                    x_min=x_min,
+                    x_max=x_max,
+                    flaeche_zwei_funktionen=True,
+                    flaeche_grenzen=(a, b),
+                    flaeche_farbe=flaeche_farbe,
+                    titel=titel,
+                    **kwargs,
+                )
+
+            # Fall 2b: Flaeche(f, c, a, b) - Funktion und Konstante
+            elif isinstance(arg1, Funktion) and isinstance(arg2, (int, float)):
+                funktion = arg1
+                konstante_funktion = Funktion(arg2)
+                modus = "funktion_konstante"
+
+                # Berechne numerischen Wert
+                try:
+                    if funktion._variable_symbol != konstante_funktion._variable_symbol:
+                        term2 = konstante_funktion.term_sympy.subs(
+                            konstante_funktion._variable_symbol,
+                            funktion._variable_symbol,
+                        )
+                    else:
+                        term2 = konstante_funktion.term_sympy
+
+                    differenz_term = funktion.term_sympy - term2
+                    differenz_funktion = Funktion(differenz_term)
+                    flaechen_wert = Integral(differenz_funktion, a, b)
+
+                except Exception as e:
+                    raise SchulAnalysisError(
+                        f"Fehler bei der Flächenberechnung zwischen Funktion und Konstante: {str(e)}"
+                    )
+
+                # Standardparameter für Flächenvisualisierung
+                flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+                titel = kwargs.pop(
+                    "titel", f"Fläche zwischen f(x) und {arg2} von {a} bis {b}"
+                )
+
+                # Bereich für die Darstellung automatisch erweitern
+                bereich_erweiterung = (b - a) * 0.2
+                x_min = a - bereich_erweiterung
+                x_max = b + bereich_erweiterung
+
+                # Erstelle Visualisierung
+                fig = Graph(
+                    funktion,
+                    konstante_funktion,
+                    x_min=x_min,
+                    x_max=x_max,
+                    flaeche_zwei_funktionen=True,
+                    flaeche_grenzen=(a, b),
+                    flaeche_farbe=flaeche_farbe,
+                    titel=titel,
+                    **kwargs,
+                )
+
+            # Fall 2c: Flaeche(c, f, a, b) - Konstante und Funktion
+            elif isinstance(arg1, (int, float)) and isinstance(arg2, Funktion):
+                konstante_funktion = Funktion(arg1)
+                funktion = arg2
+                modus = "konstante_funktion"
+
+                # Berechne numerischen Wert
+                try:
+                    if konstante_funktion._variable_symbol != funktion._variable_symbol:
+                        term2 = funktion.term_sympy.subs(
+                            funktion._variable_symbol,
+                            konstante_funktion._variable_symbol,
+                        )
+                    else:
+                        term2 = funktion.term_sympy
+
+                    differenz_term = konstante_funktion.term_sympy - term2
+                    differenz_funktion = Funktion(differenz_term)
+                    flaechen_wert = Integral(differenz_funktion, a, b)
+
+                except Exception as e:
+                    raise SchulAnalysisError(
+                        f"Fehler bei der Flächenberechnung zwischen Konstante und Funktion: {str(e)}"
+                    )
+
+                # Standardparameter für Flächenvisualisierung
+                flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+                titel = kwargs.pop(
+                    "titel", f"Fläche zwischen {arg1} und f(x) von {a} bis {b}"
+                )
+
+                # Bereich für die Darstellung automatisch erweitern
+                bereich_erweiterung = (b - a) * 0.2
+                x_min = a - bereich_erweiterung
+                x_max = b + bereich_erweiterung
+
+                # Erstelle Visualisierung
+                fig = Graph(
+                    konstante_funktion,
+                    funktion,
+                    x_min=x_min,
+                    x_max=x_max,
+                    flaeche_zwei_funktionen=True,
+                    flaeche_grenzen=(a, b),
+                    flaeche_farbe=flaeche_farbe,
+                    titel=titel,
+                    **kwargs,
+                )
+
+            # Fall 2d: Flaeche(c1, c2, a, b) - zwei Konstanten
+            elif isinstance(arg1, (int, float)) and isinstance(arg2, (int, float)):
+                konstante_funktion1 = Funktion(arg1)
+                konstante_funktion2 = Funktion(arg2)
+                modus = "zwei_konstanten"
+
+                # Berechne numerischen Wert (einfache Rechtecksfläche)
+                flaechen_wert = abs(arg1 - arg2) * (b - a)
+
+                # Standardparameter für Flächenvisualisierung
+                flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+                titel = kwargs.pop(
+                    "titel", f"Fläche zwischen {arg1} und {arg2} von {a} bis {b}"
+                )
+
+                # Bereich für die Darstellung automatisch erweitern
+                bereich_erweiterung = (b - a) * 0.2
+                x_min = a - bereich_erweiterung
+                x_max = b + bereich_erweiterung
+
+                # Erstelle Visualisierung
+                fig = Graph(
+                    konstante_funktion1,
+                    konstante_funktion2,
+                    x_min=x_min,
+                    x_max=x_max,
+                    flaeche_zwei_funktionen=True,
+                    flaeche_grenzen=(a, b),
+                    flaeche_farbe=flaeche_farbe,
+                    titel=titel,
+                    **kwargs,
+                )
+
+            else:
+                raise ValueError(
+                    "Bei 4 Argumenten müssen die letzten beiden Zahlen (a, b) sein"
+                )
+
+        else:
+            raise ValueError(
+                "Bei 4 Argumenten müssen die letzten beiden Zahlen (a, b) sein"
+            )
+
+    else:
+        raise ValueError(
+            f"Ungültige Anzahl an Argumenten: {len(args)}. Erwartet: 3 oder 4"
+        )
+
+    # Zeige den Graphen an, wenn gewünscht
+    if anzeigen:
+        fig.show()
+
+    return fig
 
 
 def FlaecheZweiFunktionen(
-    funktion1: Funktionstyp, funktion2: Funktionstyp, a: float, b: float
+    funktion1: Funktionstyp,
+    funktion2: Funktionstyp,
+    a: float,
+    b: float,
+    anzeigen: bool = False,
+    **kwargs,
 ) -> Any:
     """
-    Berechnet die Fläche zwischen zwei Funktionen über dem Intervall [a, b].
+    Zeigt die Fläche zwischen zwei Funktionen über dem Intervall [a, b] visuell an.
+
+    Diese pädagogische Funktion erstellt eine graphische Darstellung der Fläche zwischen
+    zwei Kurven und zeigt sowohl den numerischen Wert als auch die visuelle Repräsentation.
 
     Args:
-        funktion1: Die obere Funktion
-        funktion2: Die untere Funktion
+        funktion1: Die erste Funktion
+        funktion2: Die zweite Funktion
         a: Untere Integrationsgrenze
         b: Obere Integrationsgrenze
+        anzeigen: Ob der Graph direkt angezeigt werden soll (Standard: True)
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+            - flaeche_farbe: Farbe für Flächenfüllung (Standard: "rgba(0, 100, 255, 0.3)")
+            - titel: Benutzerdefinierter Titel für den Graphen
+            - breite: Breite des Graphen (Standard: 800)
+            - hoehe: Höhe des Graphen (Standard: 600)
 
     Returns:
-        Der exakte Wert der Fläche zwischen den Funktionen als SymPy-Ausdruck
+        Wenn anzeigen=True: Plotly-Figure-Objekt (zeigt den Graphen an)
+        Wenn anzeigen=False: Plotly-Figure-Objekt (kann weiterverarbeitet werden)
+        Zusätzlich wird der numerische Wert im Graphen angezeigt
 
     Beispiele:
         >>> f1 = ErstellePolynom([1, 0, 0])    # x²
         >>> f2 = ErstellePolynom([0, 2])        # 2x
-        >>> A = Flaeche(f1, f2, 0, 2)         # 4/3 (Fläche zwischen Parabel und Gerade)
+        >>> fig = FlaecheZweiFunktionen(f1, f2, 0, 2)  # Zeigt Fläche zwischen Parabel und Gerade
+        >>> fig = FlaecheZweiFunktionen(f1, f2, 0, 2,
+        ...                             flaeche_farbe="rgba(255, 0, 0, 0.3)",
+        ...                             titel="Fläche zwischen x² und 2x")  # Benutzerdefiniert
 
     Didaktischer Hinweis:
-        Visualisiert das Konzept der Fläche zwischen zwei Kurven,
-        das in vielen Anwendungen wichtig ist.
+        Diese Funktion macht das Konzept der Fläche zwischen zwei Kurven durch
+        visuelle Darstellung für Schüler greifbar und intuitiv verständlich.
 
     Technische Hinweis:
-        Berechnet Integral(funktion1 - funktion2, a, b) für die Fläche zwischen den Kurven.
+        Berechnet Integral(funktion1 - funktion2, a, b) für die Fläche zwischen den Kurven
+        und zeigt den Bereich zwischen den Funktionen farbig hervorgehoben.
     """
     try:
-        # Erstelle Differenzfunktion direkt mit SymPy
+        # Berechne zuerst den numerischen Wert der Fläche
         import sympy as sp
 
         # Stelle sicher, dass beide Funktionen die gleiche Variable verwenden
@@ -1179,8 +1447,36 @@ def FlaecheZweiFunktionen(
 
         differenz_funktion = Funktion(differenz_term)
 
-        # Berechne Integral der Differenzfunktion
-        return Integral(differenz_funktion, a, b)
+        # Berechne numerischen Wert
+        flaechen_wert = Integral(differenz_funktion, a, b)
+
+        # Standardparameter für Flächenvisualisierung
+        flaeche_farbe = kwargs.pop("flaeche_farbe", "rgba(0, 100, 255, 0.3)")
+        titel = kwargs.pop("titel", f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}")
+
+        # Bereich für die Darstellung automatisch erweitern für bessere Sichtbarkeit
+        bereich_erweiterung = (b - a) * 0.2  # 20% Puffer auf jeder Seite
+        x_min = a - bereich_erweiterung
+        x_max = b + bereich_erweiterung
+
+        # Erstelle Visualisierung mit Flächenfüllung zwischen zwei Funktionen
+        fig = Graph(
+            funktion1,
+            funktion2,
+            x_min=x_min,
+            x_max=x_max,
+            flaeche_zwei_funktionen=True,
+            flaeche_grenzen=(a, b),
+            flaeche_farbe=flaeche_farbe,
+            titel=titel,
+            **kwargs,
+        )
+
+        # Zeige den Graphen an, wenn gewünscht
+        if anzeigen:
+            fig.show()
+
+        return fig
 
     except Exception as e:
         raise SchulAnalysisError(

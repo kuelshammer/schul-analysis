@@ -9,7 +9,7 @@ import sympy as sp
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from schul_analysis import Funktion
+from schul_mathematik import Funktion
 
 
 def test_polynom_mit_parametern():

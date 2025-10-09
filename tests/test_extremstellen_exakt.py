@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import sympy as sp
 
-from schul_analysis import Extremstellen, Funktion
+from schul_mathematik import Extremstellen, Funktion
 
 
 def test_extremstellen_parametrisiert():

@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion, Graph
+from schul_mathematik import GanzrationaleFunktion, Graph
 
 
 def test_scaling_fix():

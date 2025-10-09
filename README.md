@@ -1,4 +1,4 @@
-# 🔢 Schul-Analysis Framework
+# 🔢 Schul-Mathematik Framework
 
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -6,7 +6,7 @@
 [![Type Safety: ty](https://img.shields.io/badge/type%20safety-ty-000000.svg)](https://github.com/astral-sh/ty)
 [![Tests: pytest](https://img.shields.io/badge/tests-pytest-32d656.svg)](https://pytest.org/)
 
-Ein modernes Python Framework für symbolische Mathematik im Schulunterricht, entwickelt für Lehrer und Schüler mit Fokus auf pädagogische Klarheit und mathematische Exaktheit.
+Ein modernes Python Framework für symbolische Mathematik im Schulunterricht, entwickelt für Lehrer und Schüler mit Fokus auf pädagogische Klarheit und mathematische Exaktheit. Umfasst die drei Kernbereiche Analysis, Stochastik und Analytische Geometrie.
 
 ## ✨ Hauptmerkmale
 

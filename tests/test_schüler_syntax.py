@@ -2,7 +2,7 @@
 Test für schülerfreundliche Funktions-Syntax
 """
 
-from schul_analysis import (
+from schul_mathematik import (
     Ableitung,
     GanzrationaleFunktion,
     Kürzen,

@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import Parameter, ParametrischeFunktion, Variable, a, k, x
+from schul_mathematik import Parameter, ParametrischeFunktion, Variable, a, k, x
 
 
 def test_string_parsing():

@@ -8,7 +8,7 @@ automatische Erkennung von Funktionstypen.
 import pytest
 import sympy as sp
 
-from schul_analysis import (
+from schul_mathematik import (
     Funktion,
     GanzrationaleFunktion,
     QuotientFunktion,

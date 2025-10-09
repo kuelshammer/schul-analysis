@@ -13,7 +13,7 @@ import sympy as sp
 
 sys.path.insert(0, "/Users/max/Python/Schul-Analysis/src")
 
-from schul_analysis import Funktion, assert_gleich, assert_wert_gleich
+from schul_mathematik import Funktion, assert_gleich, assert_wert_gleich
 
 
 class TestArithmetischeOperationen:

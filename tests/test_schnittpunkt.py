@@ -2,7 +2,7 @@
 Test für die neue Schnittpunkt-Funktion
 """
 
-from schul_analysis import (
+from schul_mathematik import (
     GanzrationaleFunktion,
     GebrochenRationaleFunktion,
     Schnittpunkt,

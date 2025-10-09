@@ -13,7 +13,7 @@ import pytest
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from schul_analysis import Ableitung, Extrema, Funktion, Nullstellen
+from schul_mathematik import Ableitung, Extrema, Funktion, Nullstellen
 
 
 class TestMagicFactory:

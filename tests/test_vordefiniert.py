@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, "src")
 
 # Importieren mit vordefinierten Variablen und Parametern
-from schul_analysis import (
+from schul_mathematik import (
     Graph_parametrisiert,
     ParametrischeFunktion,
     a,

@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion
+from schul_mathematik import GanzrationaleFunktion
 
 
 def test_automatische_symbolerkennung():

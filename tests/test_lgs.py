@@ -8,7 +8,7 @@ import traceback
 
 sys.path.insert(0, "src")
 
-from schul_analysis import (
+from schul_mathematik import (
     LGS,
     Ableitung,
     Parameter,

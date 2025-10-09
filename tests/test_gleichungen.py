@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import GanzrationaleFunktion, ParametrischeFunktion, a, x
+from schul_mathematik import GanzrationaleFunktion, ParametrischeFunktion, a, x
 
 
 def test_gleichungsloeser():

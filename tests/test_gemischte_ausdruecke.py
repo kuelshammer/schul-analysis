@@ -7,7 +7,7 @@ automatisch zu erkennen und korrekt zu verarbeiten.
 
 import pytest
 
-from schul_analysis import Funktion
+from schul_mathematik import Funktion
 
 
 class TestGemischteAusdrücke:

@@ -17,29 +17,12 @@ def _():
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-    from schul_analysis import (
-        Ableitung,
-        Ausmultiplizieren,
-        Funktion,
-        Term,
-        Extrempunkte,
-        Wendepunkte,
-        Graph,
-    )
+    import schul_analysis as a
 
     # Zwei einfache Funktionen für erste Experimente
-    f = Funktion("(x+a)^2")
-    g = Funktion("(x-b)^2")
-    return (
-        Ableitung,
-        Ausmultiplizieren,
-        Extrempunkte,
-        Funktion,
-        Graph,
-        Term,
-        f,
-        g,
-    )
+    f = a.Funktion("(x+a)^2")
+    g = a.Funktion("(x-b)^2")
+    return a, f, g
 
 
 @app.cell
@@ -49,59 +32,88 @@ def _(f, g):
 
 
 @app.cell
-def _(Ausmultiplizieren, h):
-    Ausmultiplizieren(h)
+def _(a, h):
+    a.Ausmultiplizieren(h)
     return
 
 
 @app.cell
-def _(Term, h):
-    Term(h)
+def _(a, h):
+    a.Term(h)
     return
 
 
 @app.cell
-def _(Extrempunkte, h):
-    Extrempunkte(h)
+def _(a, h):
+    a.Extrempunkte(h)
     return
 
 
 @app.cell
-def _(Ableitung, h):
-    h1 = Ableitung(h)
+def _(a, h):
+    h1 = a.Ableitung(h)
     return (h1,)
 
 
 @app.cell
-def _(Term, h1):
-    Term(h1)
+def _(a, h1):
+    a.Term(h1)
     return
 
 
 @app.cell
-def _(Funktion):
-    q = Funktion("(x-10)^2")
+def _(a):
+    q = a.Funktion("(x-10)^2")
     return (q,)
 
 
 @app.cell
-def _(Funktion):
-    p = Funktion("9")
+def _(a):
+    p = a.Funktion("9")
     return (p,)
 
 
 @app.cell
-def _(Ausmultiplizieren, Term, q):
-    Ausmultiplizieren(q)
-    Term(q)
-
+def _(a, q):
+    a.Ausmultiplizieren(q)
+    a.Term(q)
 
     return
 
 
 @app.cell
-def _(Graph, p, q):
-    Graph(q,p)
+def _(a, q):
+    a.Integral(q, 2, 6)
+    return
+
+
+@app.cell
+def _(a, p, q):
+    a.FlaecheZweiFunktionen(p, q, 1, 3)
+    return
+
+
+@app.cell
+def _(a, q):
+    a.tangente(q, 3)
+    return
+
+
+@app.cell
+def _(a, q):
+    a.Achsensymmetrie(q)
+    return
+
+
+@app.cell
+def _(a):
+    a.Achsensymmetrie(a.Funktion("x^2"))
+    return
+
+
+@app.cell
+def _(a, q):
+    a.Flaeche(q, 1, 2)
     return
 
 

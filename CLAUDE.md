@@ -1,8 +1,8 @@
-# Schul-Analysis Framework - Entwicklungshandbuch
+# Schul-Mathematik Framework - Entwicklungshandbuch
 
 ## 🎯 Projekt-Überblick
 
-Modernes Python Framework für symbolische Mathematik im Schulunterricht mit Magic Factory Architektur, entwickelt für deutsche Mathematiklehrer und Schüler. Kombiniert pädagogische Exaktheit mit technischer Überlegenheit.
+Modernes Python Framework für symbolische Mathematik im Schulunterricht mit Magic Factory Architektur, entwickelt für deutsche Mathematiklehrer und Schüler. Kombiniert pädagogische Exaktheit mit technischer Überlegenheit. Umfasst drei Kernbereiche: Analysis, Stochastik und Analytische Geometrie.
 
 ### 🎓 **Pädagogische Kernprinzipien**
 
@@ -279,31 +279,47 @@ Alle Ergebnisse entsprechen genau den Anforderungen deutscher Mathematikprüfung
 ## 🏗️ Projektstruktur
 
 ```
-schul-analysis/
-├── src/schul_analysis/          # Source code
-│   ├── __init__.py
-│   ├── basis/                   # Base classes
-│   │   └── __init__.py
-│   ├── ganzrationale/           # Polynomial functions
+schul-mathematik/
+├── src/schul_mathematik/        # Source code
+│   ├── __init__.py              # Haupt-Init mit allen Modulen
+│   ├── analysis/                # Analysis-Modul (Funktionen, Integralrechnung)
 │   │   ├── __init__.py
-│   │   └── funktion.py
-│   ├── exponential/             # Exponential functions
+│   │   ├── api.py               # Wrapper-Funktionen
+│   │   ├── funktion.py          # Basisklasse
+│   │   ├── ganzrationale.py     # Ganzrationale Funktionen
+│   │   ├── exponential.py       # Exponentialfunktionen
+│   │   ├── trigonometrisch.py   # Trigonometrische Funktionen
+│   │   └── visualisierung.py    # Plotly-Visualisierung
+│   ├── stochastik/              # Stochastik-Modul (Wahrscheinlichkeit, Statistik)
 │   │   ├── __init__.py
-│   │   └── funktion.py
-│   └── trigonometrisch/         # Trigonometric functions
+│   │   ├── verteilungen.py      # Verteilungsklassen
+│   │   ├── wrapper.py           # Stochastik-Wrapper
+│   │   └── visualisierung.py   # Statistische Visualisierungen
+│   ├── geometrie/               # Analytische Geometrie (Punkte, Geraden, Ebenen)
+│   │   ├── __init__.py
+│   │   ├── punkte_geraden.py    # Punkte, Geraden, Ebenen
+│   │   ├── abstaende.py         # Abstandsberechnungen
+│   │   └── visualisierung.py    # 3D-Visualisierungen
+│   └── gemeinsam/               # Gemeinsame Basisfunktionalität
 │       ├── __init__.py
-│       └── funktion.py
+│       ├── sympy_types.py       # Gemeinsame Typ-Definitionen
+│       ├── errors.py            # Gemeinsame Fehlerklassen
+│       └── visualisierung.py    # Basis-Visualisierung
 ├── tests/                       # Test files
 │   ├── __init__.py
-│   ├── test_ganzrationale.py
+│   ├── test_analysis.py
+│   ├── test_stochastik.py
+│   ├── test_geometrie.py
 │   └── fixtures/
 ├── docs/                        # Documentation
 │   ├── conf.py
 │   └── source/
 ├── examples/                    # Example notebooks
-│   ├── perfekte_parabel_plotly.py
-│   └── grundlagen.py
+│   ├── analysis_beispiele.py
+│   ├── stochastik_beispiele.py
+│   └── geometrie_beispiele.py
 ├── notebooks/                   # Marimo notebooks
+├── Statistik_mit_Sympy.md       # Analyse der SymPy-Statistikfunktionalität
 ├── .gitignore
 ├── pyproject.toml
 ├── README.md
