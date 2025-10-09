@@ -1380,6 +1380,78 @@ def Flaeche(*args, anzeigen: bool = False, **kwargs) -> Any:
     return fig
 
 
+def Tangente(funktion: Funktionstyp, stelle: float) -> GanzrationaleFunktion:
+    """
+    Berechnet die Tangente an eine Funktion an einer gegebenen Stelle.
+
+    Dies ist ein Spezialfall des Taylorpolynoms 1. Grades.
+
+    Args:
+        funktion: Die Funktion, an der die Tangente berechnet werden soll
+        stelle: Die Stelle, an der die Tangente berührt
+
+    Returns:
+        GanzrationaleFunktion: Die Tangente als Funktion
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0])  # x²
+        >>> t = Tangente(f, 1)             # Tangente bei x=1
+        >>> print(t.term)                   # 2*x - 1
+        >>> print(t(0))                     # -1 (Achsenabschnitt)
+
+    Didaktischer Hinweis:
+        Die Tangente ist die beste lineare Näherung an eine Funktion an einer Stelle.
+        Sie berührt die Funktion und hat die gleiche Steigung wie die Funktion an dieser Stelle.
+    """
+    from .taylor import tangente
+
+    try:
+        return tangente(funktion, stelle)
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Tangentenberechnung: {str(e)}\n"
+            "Stelle sicher, dass die Funktion an dieser Stelle definiert und differenzierbar ist."
+        )
+
+
+def Taylorpolynom(
+    funktion: Funktionstyp, grad: int, entwicklungspunkt: float = 0
+) -> GanzrationaleFunktion:
+    """
+    Berechnet das Taylorpolynom für eine Funktion.
+
+    Args:
+        funktion: Die zu approximierende Funktion
+        grad: Grad des Taylorpolynoms
+        entwicklungspunkt: Entwicklungspunkt (Standard: 0 für MacLaurin-Reihe)
+
+    Returns:
+        GanzrationaleFunktion: Das Taylorpolynom als Funktion
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, 0, 0])  # x²
+        >>> t = Taylorpolynom(f, grad=2)     # Taylorpolynom 2. Grades um x=0
+        >>> print(t.term)                   # x^2
+
+        >>> g = Funktion("sin(x)")
+        >>> t = Taylorpolynom(g, grad=3)     # x - x³/6 (Approximation von sin(x))
+
+    Didaktischer Hinweis:
+        Taylorpolynome nähern Funktionen durch Polynome an.
+        Je höher der Grad, desto besser die Näherung (in der Nähe des Entwicklungspunkts).
+    """
+    from .taylor import taylorpolynom
+
+    try:
+        return taylorpolynom(funktion, grad, entwicklungspunkt)
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Taylorpolynom-Berechnung: {str(e)}\n"
+            "Stelle sicher, dass die Funktion am Entwicklungspunkt definiert und"
+            "die angeforderten Ableitungen existieren."
+        )
+
+
 def FlaecheZweiFunktionen(
     funktion1: Funktionstyp,
     funktion2: Funktionstyp,
@@ -1519,6 +1591,9 @@ __all__ = [
     "SummeFunktion",
     "KompositionFunktion",
     "LGS",
+    # Advanced Analysis Functions
+    "Tangente",
+    "Taylorpolynom",
     # Type-Hints
     "Funktionstyp",
 ]

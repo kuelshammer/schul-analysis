@@ -130,6 +130,9 @@ def taylorpolynom(
             funktion_sympy, variable, entwicklungspunkt, grad + 1
         ).removeO()
 
+        # Expandiere den Ausdruck, um die Taylor-Form beizubehalten
+        taylor_expr = sp.expand(taylor_expr)
+
         # Konvertiere zu GanzrationaleFunktion
         return GanzrationaleFunktion(taylor_expr)
 

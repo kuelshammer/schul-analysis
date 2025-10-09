@@ -106,6 +106,8 @@ __all__ = [
     # 📈 TAYLOR-FUNKTIONEN
     "taylorpolynom",
     "tangente",
+    "Taylorpolynom",
+    "Tangente",
     # 📐 SPEZIALFUNKTIONEN
     "Achsensymmetrie",
     "Punktsymmetrie",

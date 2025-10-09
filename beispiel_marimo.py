@@ -17,103 +17,23 @@ def _():
 
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-    import schul_analysis as a
-
-    # Zwei einfache Funktionen für erste Experimente
-    f = a.Funktion("(x+a)^2")
-    g = a.Funktion("(x-b)^2")
-    return a, f, g
-
-
-@app.cell
-def _(f, g):
-    h = f * g
-    return (h,)
+    from schul_mathematik.analysis.api import (
+           Nullstellen, Flaeche, Zeichne,
+           Ableitung, Integral, Extrema, Wendepunkte,
+           Schnittpunkte, Funktion, Tangente, Taylorpolynom
+       )
+    return Funktion, Taylorpolynom
 
 
 @app.cell
-def _(a, h):
-    a.Ausmultiplizieren(h)
-    return
+def _(Funktion):
+    f = Funktion("sin(x)")
+    return (f,)
 
 
 @app.cell
-def _(a, h):
-    a.Term(h)
-    return
-
-
-@app.cell
-def _(a, h):
-    a.Extrempunkte(h)
-    return
-
-
-@app.cell
-def _(a, h):
-    h1 = a.Ableitung(h)
-    return (h1,)
-
-
-@app.cell
-def _(a, h1):
-    a.Term(h1)
-    return
-
-
-@app.cell
-def _(a):
-    q = a.Funktion("(x-10)^2")
-    return (q,)
-
-
-@app.cell
-def _(a):
-    p = a.Funktion("9")
-    return (p,)
-
-
-@app.cell
-def _(a, q):
-    a.Ausmultiplizieren(q)
-    a.Term(q)
-
-    return
-
-
-@app.cell
-def _(a, q):
-    a.Integral(q, 2, 6)
-    return
-
-
-@app.cell
-def _(a, p, q):
-    a.FlaecheZweiFunktionen(p, q, 1, 3)
-    return
-
-
-@app.cell
-def _(a, q):
-    a.tangente(q, 3)
-    return
-
-
-@app.cell
-def _(a, q):
-    a.Achsensymmetrie(q)
-    return
-
-
-@app.cell
-def _(a):
-    a.Achsensymmetrie(a.Funktion("x^2"))
-    return
-
-
-@app.cell
-def _(a, q):
-    a.Flaeche(q, 1, 2)
+def _(Taylorpolynom, f):
+    Taylorpolynom(f, 1, 3)
     return
 
 
