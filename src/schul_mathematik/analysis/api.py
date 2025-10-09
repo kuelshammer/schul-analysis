@@ -11,6 +11,7 @@ verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
 from typing import Any, Optional
 
 import numpy as np
+import sympy as sp
 
 from .errors import SchulAnalysisError, UngueltigeFunktionError
 from .funktion import Funktion
@@ -634,7 +635,64 @@ def Sattelpunkte(funktion: Funktionstyp) -> SattelpunkteListe:
         raise SchulAnalysisError(f"Fehler bei der Sattelpunkte-Berechnung: {str(e)}")
 
 
-def Achsensymmetrie(funktion: Funktionstyp) -> bool:
+def Achsensymmetrie(funktion: Funktionstyp) -> float | sp.Basic | None:
+    """
+    Bestimmt die Achsensymmetrie einer Funktion.
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        x-Koordinate der Symmetrieachse, wenn die Funktion achsensymmetrisch ist, sonst None
+        Für x² wird 0 zurückgegeben (Symmetrie zur y-Achse)
+        Für (x-2)² wird 2 zurückgegeben (Symmetrie zur Geraden x=2)
+
+    Beispiele:
+        >>> f = Funktion("x^2")      # x²
+        >>> sym = Achsensymmetrie(f)  # 0 (Symmetrie zur y-Achse)
+        >>> g = Funktion("(x-2)^2")  # (x-2)²
+        >>> sym = Achsensymmetrie(g)  # 2 (Symmetrie zur Geraden x=2)
+        >>> h = Funktion("x^3")      # x³
+        >>> sym = Achsensymmetrie(h)  # None (nicht achsensymmetrisch)
+    """
+    from .symmetrie import Achsensymmetrie as SymmetrieCheck
+
+    try:
+        return SymmetrieCheck(funktion)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Achsensymmetrie-Bestimmung: {str(e)}")
+
+
+def Punktsymmetrie(
+    funktion: Funktionstyp,
+) -> tuple[float | sp.Basic, float | sp.Basic] | None:
+    """
+    Bestimmt die Punktsymmetrie einer Funktion.
+
+    Args:
+        funktion: Eine beliebige Funktion
+
+    Returns:
+        Tupel (x_s, y_s) des Symmetripunkts, wenn die Funktion punktsymmetrisch ist, sonst None
+        Für x³ wird (0, 0) zurückgegeben (Symmetrie zum Ursprung)
+
+    Beispiele:
+        >>> f = Funktion("x^3")      # x³
+        >>> sym = Punktsymmetrie(f)  # (0, 0) (Symmetrie zum Ursprung)
+        >>> g = Funktion("(x-1)^3 + 2")  # (x-1)³ + 2
+        >>> sym = Punktsymmetrie(g)  # (1, 2) (Symmetrie zum Punkt (1, 2))
+        >>> h = Funktion("x^2")      # x²
+        >>> sym = Punktsymmetrie(h)  # None (nicht punktsymmetrisch)
+    """
+    from .symmetrie import Punktsymmetrie as SymmetrieCheck
+
+    try:
+        return SymmetrieCheck(funktion)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Punktsymmetrie-Bestimmung: {str(e)}")
+
+
+def HatAchsensymmetrie(funktion: Funktionstyp) -> bool:
     """
     Prüft, ob eine Funktion achsensymmetrisch ist.
 
@@ -646,17 +704,14 @@ def Achsensymmetrie(funktion: Funktionstyp) -> bool:
 
     Beispiele:
         >>> f = Funktion("x^2")      # x²
-        >>> sym = Achsensymmetrie(f)  # True
+        >>> sym = HatAchsensymmetrie(f)  # True
+        >>> g = Funktion("x^3")      # x³
+        >>> sym = HatAchsensymmetrie(g)  # False
     """
-    from .symmetrie import Achsensymmetrie as SymmetrieCheck
-
-    try:
-        return SymmetrieCheck(funktion)
-    except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Achsensymmetrie-Prüfung: {str(e)}")
+    return Achsensymmetrie(funktion) is not None
 
 
-def Punktsymmetrie(funktion: Funktionstyp) -> bool:
+def HatPunktsymmetrie(funktion: Funktionstyp) -> bool:
     """
     Prüft, ob eine Funktion punktsymmetrisch ist.
 
@@ -668,14 +723,11 @@ def Punktsymmetrie(funktion: Funktionstyp) -> bool:
 
     Beispiele:
         >>> f = Funktion("x^3")      # x³
-        >>> sym = Punktsymmetrie(f)  # True
+        >>> sym = HatPunktsymmetrie(f)  # True
+        >>> g = Funktion("x^2")      # x²
+        >>> sym = HatPunktsymmetrie(g)  # False
     """
-    from .symmetrie import Punktsymmetrie as SymmetrieCheck
-
-    try:
-        return SymmetrieCheck(funktion)
-    except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Punktsymmetrie-Prüfung: {str(e)}")
+    return Punktsymmetrie(funktion) is not None
 
 
 # Für Abwärtskompatibilität
@@ -693,10 +745,20 @@ def Symmetrie(funktion: Funktionstyp) -> str:
         >>> f = Funktion("x^2")      # x²
         >>> sym = Symmetrie(f)       # "Achsensymmetrisch zur y-Achse"
     """
-    if Achsensymmetrie(funktion):
-        return "Achsensymmetrisch zur y-Achse"
-    elif Punktsymmetrie(funktion):
-        return "Punktsymmetrisch zum Ursprung"
+    achsensymmetrie_wert = Achsensymmetrie(funktion)
+    punktsymmetrie_wert = Punktsymmetrie(funktion)
+
+    if achsensymmetrie_wert is not None:
+        if achsensymmetrie_wert == 0:
+            return "Achsensymmetrisch zur y-Achse"
+        else:
+            return f"Achsensymmetrisch zur Geraden x={achsensymmetrie_wert}"
+    elif punktsymmetrie_wert is not None:
+        x_s, y_s = punktsymmetrie_wert
+        if x_s == 0 and y_s == 0:
+            return "Punktsymmetrisch zum Ursprung"
+        else:
+            return f"Punktsymmetrisch zum Punkt ({x_s}, {y_s})"
     else:
         return "Keine einfache Symmetrie"
 
@@ -1236,6 +1298,8 @@ __all__ = [
     # 🔍 SYMMETRIE-FUNKTIONEN
     "Achsensymmetrie",
     "Punktsymmetrie",
+    "HatAchsensymmetrie",
+    "HatPunktsymmetrie",
     "Symmetrie",  # Für Abwärtskompatibilität
     # 📊 VISUALISIERUNG
     "Graph",
