@@ -273,7 +273,7 @@ class ApproximationsFehler(NullstellenBerechnungsFehler):
 
 def handle_schul_analysis_error(error: Exception) -> str:
     """
-    Wandelt任何异常为用户友好的错误消息
+    Wandelt jede Exception in eine benutzerfreundliche Fehlermeldung um
 
     Args:
         error: Die aufgetretene Exception

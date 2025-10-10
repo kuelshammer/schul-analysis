@@ -2056,9 +2056,14 @@ class Funktion(BasisFunktion):
                     # Für komplexe symbolische Fälle
                     return ExtremumTyp.SATTELPUNKT
 
-        except Exception:
-            # Bei Fehlern Sattelpunkt als sichere Wahl
+        except (TypeError, ValueError, AttributeError) as e:
+            # Bei erwarteten Fehlern Sattelpunkt als sichere Wahl
+            logging.warning(f"Fehler bei Extremtyp-Bestimmung: {e}")
             return ExtremumTyp.SATTELPUNKT
+        except Exception as e:
+            # Bei unerwarteten Fehlern - weitergeben
+            logging.error(f"Unerwarteter Fehler bei Extremtyp-Bestimmung: {e}")
+            raise
 
     def _bestimme_extremtyp_hoere_ableitungen(self, x_wert) -> ExtremumTyp:
         """
