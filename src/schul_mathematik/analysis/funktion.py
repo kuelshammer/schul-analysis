@@ -5,6 +5,7 @@ Dies ist die zentrale, echte unified Klasse - keine Wrapper-Logik mehr!
 Alle spezialisierten Klassen erben von dieser Basis-Klasse.
 """
 
+import logging
 from typing import Any, Union
 
 import sympy as sp
@@ -1222,6 +1223,14 @@ class Funktion(BasisFunktion):
         Returns:
             Neue Funktion mit der abgeleiteten Funktion als exakter SymPy-Ausdruck
         """
+        # Prüfe Cache für diese Ableitungsordnung
+        cache_key = (ordnung, id(self))
+        if hasattr(self, "_ableitung_cache") and cache_key in self._ableitung_cache:
+            logging.debug(f"Cache-Hit für Ableitung {ordnung} von {self.term()}")
+            return self._ableitung_cache[cache_key]
+
+        logging.debug(f"Berechne Ableitung {ordnung} für {self.term()}")
+
         abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
 
         # Validiere das Ergebnis
@@ -1260,6 +1269,24 @@ class Funktion(BasisFunktion):
                 abgeleitete_funktion.name = "f'''"
             else:
                 abgeleitete_funktion.name = f"f^{{{ordnung}}}"
+
+        # Initialisiere Cache wenn nicht vorhanden
+        if not hasattr(self, "_ableitung_cache"):
+            self._ableitung_cache = {}
+            # Begrenze Cache-Größe (max 10 Einträge)
+            self._ableitung_cache_max_size = 10
+
+        # Speichere im Cache mit LRU-Logik
+        if len(self._ableitung_cache) >= self._ableitung_cache_max_size:
+            # Entferne ältesten Eintrag (einfache LRU-Implementierung)
+            oldest_key = next(iter(self._ableitung_cache))
+            del self._ableitung_cache[oldest_key]
+            logging.debug(f"Cache voll, entferne ältesten Eintrag: {oldest_key}")
+
+        self._ableitung_cache[cache_key] = abgeleitete_funktion
+        logging.debug(
+            f"Cache-Miss für Ableitung {ordnung}, gespeichert unter {cache_key}. Cache-Größe: {len(self._ableitung_cache)}"
+        )
 
         return abgeleitete_funktion
 
@@ -1873,9 +1900,29 @@ class Funktion(BasisFunktion):
                 # Nicht-parametrische Funktionen: Nutze unser starkes Framework
                 return self._extremstellen_mit_framework()
 
-        except Exception:
-            # Bei Fehlern: Versuche parametrischen Fallback als letzte Option
-            return self._extremstellen_parametrisch_fallback()
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Eingaben oder Attributen
+            logging.warning(
+                f"Erwarteter Fehler bei Extremstellenberechnung für {self.term()}: {e}"
+            )
+            # Fallback auf parametrische Methode versuchen
+            try:
+                return self._extremstellen_parametrisch_fallback()
+            except Exception as fallback_error:
+                logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
+                return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei Extremstellenberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei Extremstellenberechnung für {self.term()}: {e}"
+            )
+            raise
 
     def _extremstellen_mit_framework(self) -> list[Extremum]:
         """
@@ -1889,44 +1936,75 @@ class Funktion(BasisFunktion):
         """
         try:
             # 1. Berechne erste Ableitung
+            logging.debug(f"Berechne erste Ableitung für {self.term()}")
             f_strich = self.ableitung(ordnung=1)
 
             # 2. Nutze unser starkes nullstellen()-Framework
+            logging.debug(
+                f"Verwende Nullstellen-Framework für Ableitung {f_strich.term()}"
+            )
             kritische_punkte = f_strich.nullstellen()
+
+            if not kritische_punkte:
+                logging.debug(f"Keine kritischen Punkte für {self.term()} gefunden")
+                return []
 
             # 3. Analysiere jede kritische Stelle
             extrema = []
             for kritischer_punkt in kritische_punkte:
-                # Berechne y-Wert
                 try:
+                    # Berechne y-Wert
                     y_wert = self.wert(kritischer_punkt.x)
-                except Exception:
-                    # Bei Berechnungsfehlern des y-Wertes überspringen
-                    continue
 
-                # Bestimme Extremtyp basierend auf Vielfachheit
-                if kritischer_punkt.multiplicitaet % 2 == 1:
-                    # Ungerade Vielfachheit: Normales Extremum
-                    # Nutze zweite Ableitung für Typ-Bestimmung
-                    typ = self._bestimme_extremtyp(kritischer_punkt.x)
-                else:
-                    # Gerade Vielfachheit: Sattelpunkt
-                    typ = ExtremumTyp.SATTELPUNKT
+                    # Bestimme Extremtyp basierend auf Vielfachheit
+                    if kritischer_punkt.multiplicitaet % 2 == 1:
+                        # Ungerade Vielfachheit: Normales Extremum
+                        # Nutze zweite Ableitung für Typ-Bestimmung
+                        typ = self._bestimme_extremtyp(kritischer_punkt.x)
+                    else:
+                        # Gerade Vielfachheit: Sattelpunkt
+                        typ = ExtremumTyp.SATTELPUNKT
 
-                extrema.append(
-                    Extremum(
-                        x=kritischer_punkt.x,
-                        y=y_wert,
-                        typ=typ,
-                        exakt=kritischer_punkt.exakt,
+                    extrema.append(
+                        Extremum(
+                            x=kritischer_punkt.x,
+                            y=y_wert,
+                            typ=typ,
+                            exakt=kritischer_punkt.exakt,
+                        )
                     )
-                )
+
+                except (TypeError, ValueError, AttributeError) as e:
+                    logging.warning(
+                        f"Fehler bei Verarbeitung von kritischem Punkt {kritischer_punkt}: {e}"
+                    )
+                    continue
+                except Exception as e:
+                    logging.error(
+                        f"Unerwarteter Fehler bei Verarbeitung von kritischem Punkt {kritischer_punkt}: {e}"
+                    )
+                    continue
 
             return extrema
 
-        except Exception:
-            # Bei Fehlern leere Liste zurückgeben
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Eingaben oder Attributen
+            logging.warning(
+                f"Erwarteter Fehler bei Framework-Extremstellenberechnung für {self.term()}: {e}"
+            )
             return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei Framework-Extremstellenberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei Framework-Extremstellenberechnung für {self.term()}: {e}"
+            )
+            raise
 
     def _bestimme_extremtyp(self, x_wert) -> ExtremumTyp:
         """
@@ -1939,24 +2017,40 @@ class Funktion(BasisFunktion):
             ExtremumTyp: MINIMUM, MAXIMUM oder SATTELPUNKT
         """
         try:
+            logging.debug(
+                f"Bestimme Extremtyp für x={x_wert} bei Funktion {self.term()}"
+            )
             f_doppelstrich = self.ableitung(ordnung=2)
             zweite_ableitung_wert = f_doppelstrich.wert(x_wert)
 
             # Für numerische Werte
             if isinstance(zweite_ableitung_wert, (int, float)):
                 if zweite_ableitung_wert > 0:
+                    logging.debug(
+                        f"Zweite Ableitung = {zweite_ableitung_wert} > 0 → Minimum"
+                    )
                     return ExtremumTyp.MINIMUM
                 elif zweite_ableitung_wert < 0:
+                    logging.debug(
+                        f"Zweite Ableitung = {zweite_ableitung_wert} < 0 → Maximum"
+                    )
                     return ExtremumTyp.MAXIMUM
                 else:
                     # Zweite Ableitung = 0 → höhere Ableitungen prüfen
+                    logging.debug(f"Zweite Ableitung = 0 → prüfe höhere Ableitungen")
                     return self._bestimme_extremtyp_hoere_ableitungen(x_wert)
             else:
                 # Symbolische Ausdrücke: Vereinfachen und analysieren
                 vereinfacht = sp.simplify(zweite_ableitung_wert)
                 if hasattr(vereinfacht, "is_positive") and vereinfacht.is_positive:
+                    logging.debug(
+                        f"Symbolische zweite Ableitung {vereinfacht} > 0 → Minimum"
+                    )
                     return ExtremumTyp.MINIMUM
                 elif hasattr(vereinfacht, "is_negative") and vereinfacht.is_negative:
+                    logging.debug(
+                        f"Symbolische zweite Ableitung {vereinfacht} < 0 → Maximum"
+                    )
                     return ExtremumTyp.MAXIMUM
                 else:
                     # Für komplexe symbolische Fälle
@@ -1995,7 +2089,13 @@ class Funktion(BasisFunktion):
             # Wenn alle Ableitungen bis 6. Ordnung = 0, Sattelpunkt
             return ExtremumTyp.SATTELPUNKT
 
-        except Exception:
+        except (TypeError, ValueError, AttributeError) as e:
+            logging.warning(f"Fehler bei Extremtyp-Bestimmung für x={x_wert}: {e}")
+            return ExtremumTyp.SATTELPUNKT
+        except Exception as e:
+            logging.error(
+                f"Unerwarteter Fehler bei Extremtyp-Bestimmung für x={x_wert}: {e}"
+            )
             return ExtremumTyp.SATTELPUNKT
 
     def _extremstellen_parametrisch_fallback(self) -> list[Extremum]:
@@ -2029,15 +2129,38 @@ class Funktion(BasisFunktion):
                     typ = self._bestimme_extremtyp(punkt)
 
                     extrema.append(Extremum(x=punkt, y=y_wert, typ=typ, exakt=True))
-                except Exception:
-                    # Bei Fehlern bei der Berechnung des y-Wertes überspringen
+                except (TypeError, ValueError, ZeroDivisionError) as e:
+                    # Erwartete Fehler bei der Berechnung des y-Wertes
+                    logging.warning(
+                        f"Überspringe kritischen Punkt {punkt} aufgrund von {type(e).__name__}: {e}"
+                    )
+                    continue
+                except Exception as e:
+                    logging.error(
+                        f"Unerwarteter Fehler bei Verarbeitung von Punkt {punkt}: {e}"
+                    )
                     continue
 
             return extrema
 
-        except Exception:
-            # Bei Fehlern leere Liste zurückgeben
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Funktionseigenschaften
+            logging.warning(
+                f"Erwarteter Fehler bei parametrischer Extremstellenberechnung für {self.term()}: {e}"
+            )
             return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei parametrischer Extremstellenberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei parametrischer Extremstellenberechnung für {self.term()}: {e}"
+            )
+            raise
 
     def Extremstellen(self) -> list[Extremum]:
         """

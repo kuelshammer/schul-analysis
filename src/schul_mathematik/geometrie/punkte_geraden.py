@@ -5,7 +5,6 @@ Grundlegende Klassen für Vektoren, Punkte, Geraden und Ebenen
 mit Operationen und Berechnungen im 2D und 3D Raum
 """
 
-
 import sympy as sp
 from sympy import Matrix, solve, symbols
 

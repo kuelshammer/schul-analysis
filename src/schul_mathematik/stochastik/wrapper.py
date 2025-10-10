@@ -4,16 +4,13 @@ Wrapper-Funktionen für das Stochastik-Modul im deutschen Stil
 Bieten eine intuitive, unterrichtsnahe Syntax für statistische Berechnungen
 """
 
-
 import sympy as sp
 from sympy import stats
 
 from ..gemeinsam import *
 
 
-def BinomialPDF(
-    n: int | sp.Expr, p: float | sp.Expr, k: int | sp.Expr
-) -> sp.Expr:
+def BinomialPDF(n: int | sp.Expr, p: float | sp.Expr, k: int | sp.Expr) -> sp.Expr:
     """Berechnet P(X=k) für Binomialverteilung
 
     Args:
@@ -28,9 +25,7 @@ def BinomialPDF(
     return stats.density(X)(k)
 
 
-def BinomialCDF(
-    n: int | sp.Expr, p: float | sp.Expr, k: int | sp.Expr
-) -> sp.Expr:
+def BinomialCDF(n: int | sp.Expr, p: float | sp.Expr, k: int | sp.Expr) -> sp.Expr:
     """Berechnet P(X≤k) für Binomialverteilung
 
     Args:
@@ -125,22 +120,16 @@ def StandardnormalCDF(x: float | sp.Expr) -> sp.Expr:
 
 
 # Komfort-Funktionen für häufige Berechnungen
-def Sigma1Bereich(
-    mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1
-) -> sp.Expr:
+def Sigma1Bereich(mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1) -> sp.Expr:
     """Berechnet P(μ-σ ≤ X ≤ μ+σ) für Normalverteilung (ca. 68%)"""
     return NormalIntervall(mu, sigma, mu - sigma, mu + sigma)
 
 
-def Sigma2Bereich(
-    mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1
-) -> sp.Expr:
+def Sigma2Bereich(mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1) -> sp.Expr:
     """Berechnet P(μ-2σ ≤ X ≤ μ+2σ) für Normalverteilung (ca. 95%)"""
     return NormalIntervall(mu, sigma, mu - 2 * sigma, mu + 2 * sigma)
 
 
-def Sigma3Bereich(
-    mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1
-) -> sp.Expr:
+def Sigma3Bereich(mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1) -> sp.Expr:
     """Berechnet P(μ-3σ ≤ X ≤ μ+3σ) für Normalverteilung (ca. 99.7%)"""
     return NormalIntervall(mu, sigma, mu - 3 * sigma, mu + 3 * sigma)

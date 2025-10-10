@@ -8,7 +8,6 @@ import sys
 sys.path.insert(0, "src")
 
 
-
 def test_lgs_grundlagen():
     """Test 1: Grundlegende LGS-Funktionalität"""
     print("=== Test 1: Grundlegende LGS-Funktionalität ===")

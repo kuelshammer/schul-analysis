@@ -4,7 +4,6 @@ Verteilungsklassen für das Stochastik-Modul
 Basierend auf der Analyse von SymPy's statistischer Funktionalität
 """
 
-
 import sympy as sp
 from sympy import stats
 
@@ -72,9 +71,7 @@ class Binomialverteilung(StatistischeVerteilung):
 class Normalverteilung(StatistischeVerteilung):
     """Normalverteilung für Schul-Mathematik"""
 
-    def __init__(
-        self, name: str, mu: float | sp.Expr, sigma: float | sp.Expr
-    ):
+    def __init__(self, name: str, mu: float | sp.Expr, sigma: float | sp.Expr):
         super().__init__(name, "Normal", {"μ": mu, "σ": sigma})
         self.mu = mu
         self.sigma = sigma
