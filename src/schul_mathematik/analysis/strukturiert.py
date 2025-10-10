@@ -217,7 +217,7 @@ class ProduktFunktion(StrukturierteFunktion):
         return f"Produkt({', '.join(str(f) for f in self.faktoren)})"
 
     def nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet Nullstellen unter Verwendung des Nullproduktsatzes.
@@ -447,7 +447,7 @@ class SummeFunktion(StrukturierteFunktion):
         return self._summanden[1] if len(self._summanden) > 1 else None
 
     def nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet Nullstellen für Summenfunktionen mit verbessertem Ansatz.
@@ -708,7 +708,7 @@ class QuotientFunktion(StrukturierteFunktion):
 
     @preserve_exact_types
     def nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen der Quotientenfunktion.
@@ -811,7 +811,7 @@ class KompositionFunktion(StrukturierteFunktion):
 
     @preserve_exact_types
     def nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen der Kompositionsfunktion.

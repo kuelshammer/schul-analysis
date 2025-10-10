@@ -191,7 +191,7 @@ class GebrochenRationaleFunktion(Funktion):
 
     @preserve_exact_types
     def nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen der gebrochen-rationalen Funktion.

@@ -81,7 +81,7 @@ class BasisFunktion(ABC):
 
     @abstractmethod
     def nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen der Funktion.
@@ -97,7 +97,7 @@ class BasisFunktion(ABC):
 
     @abstractmethod
     def extrema(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Extremstellen der Funktion.
@@ -113,7 +113,7 @@ class BasisFunktion(ABC):
 
     @abstractmethod
     def wendepunkte(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Wendepunkte der Funktion.
@@ -232,7 +232,7 @@ class BasisFunktion(ABC):
         Returns:
             Gecachtes Ergebnis oder None
         """
-        return self._cache.get(sluessel)
+        return self._cache.get(schluessel)
 
     def _im_cache_speichern(self, schluessel: str, ergebnis: Any) -> None:
         """
@@ -242,7 +242,7 @@ class BasisFunktion(ABC):
             schluessel: Cache-Schlüssel
             ergebnis: Zu speicherndes Ergebnis
         """
-        self._cache[sluessel] = ergebnis
+        self._cache[schluessel] = ergebnis
 
     def _cache_leeren(self) -> None:
         """Leert den gesamten Cache."""

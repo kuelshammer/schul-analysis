@@ -64,7 +64,7 @@ Ableiten = Ableitung
 Derivative = Ableitung
 
 # Abwärtskompatibilitäts-Aliase
-Extrema = Extremstellen  # Für alte Tests und Dokumentation
+Extrema = Extremstellen  # type: ignore  # Für alte Tests und Dokumentation
 
 __all__ = [
     # 🔥 KERN-ANALYSE-FUNKTIONEN (Haupt-API für Schüler)

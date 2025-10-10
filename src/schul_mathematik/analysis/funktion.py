@@ -75,15 +75,15 @@ def _faktorisiere_parameter_koeffizienten(
         return expr
 
     try:
-        # Als Polynom behandeln
-        poly = expr.as_poly(x_symbol)
+        # Als Polynom behandeln - Korrekte SymPy API verwenden
+        poly = sp.poly(expr, x_symbol)
         if poly is None:
             return expr
 
         # Koeffizienten für jeden Term extrahieren und parameter-faktorisieren
         optimierte_terme = []
         for i in range(poly.degree(), -1, -1):
-            coeff = poly.coeff_monomial(x_symbol**i)
+            coeff = poly.coeff_monomial(sp.Pow(x_symbol, i))
 
             if coeff != 0:
                 # Nur den Koeffizienten parameter-faktorisieren
@@ -107,16 +107,16 @@ def _faktorisiere_parameter_koeffizienten(
                     if coeff == 1:
                         optimierte_terme.append(x_symbol)
                     elif coeff == -1:
-                        optimierte_terme.append(-x_symbol)
+                        optimierte_terme.append(sp.S.NegativeOne * x_symbol)
                     else:
                         optimierte_terme.append(coeff * x_symbol)
                 else:
                     if coeff == 1:
-                        optimierte_terme.append(x_symbol**i)
+                        optimierte_terme.append(sp.Pow(x_symbol, i))
                     elif coeff == -1:
-                        optimierte_terme.append(-(x_symbol**i))
+                        optimierte_terme.append(sp.S.NegativeOne * sp.Pow(x_symbol, i))
                     else:
-                        optimierte_terme.append(coeff * x_symbol**i)
+                        optimierte_terme.append(coeff * sp.Pow(x_symbol, i))
 
         # Terme in der richtigen Reihenfolge zusammenfügen (höchste Potenz zuerst)
         # Erzwinge die korrekte Sortierung durch explizite Addition in der richtigen Reihenfolge
@@ -429,8 +429,8 @@ def _formatiere_polynom_geordnet(
         return str(expr).replace("**", "^")
 
     try:
-        # Als Polynom behandeln
-        poly = expr.as_poly(variable)
+        # Als Polynom behandeln - Korrekte SymPy API verwenden
+        poly = sp.poly(expr, variable)
         if poly is None:
             return str(expr).replace("**", "^")
 
@@ -621,7 +621,7 @@ def _intelligente_vereinfachung(
     if hat_exp_trigo:
         # Für Funktionen mit exp/trigo: ausklammern und Hauptvariable sammeln
         expr = sp.together(expr)  # Rationale Terme zusammenfassen
-        expr = expr.expand()  # Leichtes Ausmultiplizieren
+        expr = sp.expand(expr)  # Leichtes Ausmultiplizieren
         expr = sp.collect(expr, variable)  # Nach Hauptvariablen-Potenzen sammeln
 
         # Zusätzliche Vereinfachung für exponentielle Ausdrücke
@@ -630,21 +630,21 @@ def _intelligente_vereinfachung(
         # Strategien für reine Polynome basierend auf Kontext
         if kontext == "term":
             # Für Term-Darstellung: vollständig ausmultiplizieren, sammeln und Parameter faktorisieren
-            expr = expr.expand()  # Vollständig ausmultiplizieren
+            expr = sp.expand(expr)  # Vollständig ausmultiplizieren
             expr = sp.collect(expr, variable)  # Nach Potenzen sammeln
             # Zusätzlich: Parameter in Koeffizienten faktorisieren
             expr = _faktorisiere_parameter_koeffizienten(expr, parameter_liste)
 
         elif kontext == "ableitung":
             # Für Ableitungen: moderate Vereinfachung mit Parameter-Faktorisierung
-            expr = expr.expand(mul=False)  # Nicht komplett ausmultiplizieren
+            expr = sp.expand(expr, mul=False)  # Nicht komplett ausmultiplizieren
             expr = sp.collect(expr, variable)  # Nach Potenzen sammeln
             # Parameter in Koeffizienten faktorisieren (aber nicht x-Terme)
             expr = _faktorisiere_parameter_koeffizienten(expr, parameter_liste)
 
         elif kontext == "wert":
             # Für Funktionswerte: optimale Vereinfachung
-            expr = expr.expand()
+            expr = sp.expand(expr)
             expr = sp.collect(expr, variable)
 
             # Parameter sammeln und vereinfachen
@@ -659,7 +659,7 @@ def _intelligente_vereinfachung(
 
         else:  # "standard"
             # Standard: gemäßigtes Vorgehen
-            expr = expr.expand(mul=False)
+            expr = sp.expand(expr, mul=False)
             expr = sp.collect(expr, variable)
             # Leichte Parameter-Faktorisierung
             expr = _faktorisiere_parameter_koeffizienten(expr, parameter_liste)
@@ -923,8 +923,12 @@ class Funktion(BasisFunktion):
             for factor in expr.args:
                 if factor.has(exp):
                     has_exp = True
-                elif factor.is_polynomial(self._variable_symbol):
-                    has_poly = True
+                elif hasattr(factor, "is_polynomial"):
+                    try:
+                        if factor.is_polynomial(self._variable_symbol):  # type: ignore
+                            has_poly = True
+                    except Exception:
+                        pass
 
             return has_exp and has_poly
 
@@ -1097,7 +1101,7 @@ class Funktion(BasisFunktion):
 
     def wert(self, x_wert):
         """
-        Berechnet den Funktionswert an einer Stelle.
+        Berechnet den Funktionswert an einer Stelle mit Caching für Performance.
 
         Gibt symbolische Ergebnisse zurück, wenn die Funktion noch Parameter enthält.
 
@@ -1113,6 +1117,15 @@ class Funktion(BasisFunktion):
             >>> f2 = f.setze_parameter(a=3)
             >>> f2.wert(4)        # 48 + 4*b + c
         """
+        # Erstelle Cache-Schlüssel für den x-Wert
+        cache_key = (x_wert, id(self))
+
+        # Prüfe Cache für diesen x-Wert
+        if hasattr(self, "_wert_cache") and cache_key in self._wert_cache:
+            return self._wert_cache[cache_key]
+
+        logging.debug(f"Berechne f({x_wert}) für {self.term()}")
+
         try:
             # Substituiere den x-Wert
             ergebnis = self.term_sympy.subs(self._variable_symbol, x_wert)
@@ -1130,10 +1143,27 @@ class Funktion(BasisFunktion):
             # Prüfe, ob das Ergebnis noch Parameter enthält
             if ergebnis.free_symbols - {self._variable_symbol}:
                 # Symbolisches Ergebnis zurückgeben (mit Parameter)
-                return ergebnis
+                final_ergebnis = ergebnis
             else:
                 # Numerisches Ergebnis zurückgeben
-                return ergebnis
+                final_ergebnis = ergebnis
+
+            # Speichere im Cache
+            if not hasattr(self, "_wert_cache"):
+                self._wert_cache = {}
+                self._wert_cache_max_size = 100  # Größerer Cache für Funktionswerte
+
+            if len(self._wert_cache) >= self._wert_cache_max_size:
+                # Entferne die ältesten 25% der Einträge
+                keys_to_remove = list(self._wert_cache.keys())[
+                    : max(1, self._wert_cache_max_size // 4)
+                ]
+                for key in keys_to_remove:
+                    del self._wert_cache[key]
+
+            self._wert_cache[cache_key] = final_ergebnis
+
+            return final_ergebnis
 
         except Exception as e:
             # Pädagogische Fehlermeldungen
@@ -1202,6 +1232,9 @@ class Funktion(BasisFunktion):
             # Führe die Substitution durch
             new_expr = self.term_sympy.subs(kwargs)
 
+            # Leere Caches für die neue Funktion (wird in Konstruktor neu initialisiert)
+            self._cache_leeren()
+
             # Erstelle neue Funktion mit dem substituierten Ausdruck
             neue_funktion = Funktion(new_expr)
 
@@ -1218,6 +1251,30 @@ class Funktion(BasisFunktion):
                     "Bitte überprüfe, ob alle Parameter korrekt angegeben wurden."
                 )
 
+    def _cache_leeren(self) -> None:
+        """
+        Leert alle Caches für Speicheroptimierung.
+        Wird aufgerufen, wenn sich die Funktion ändert.
+        """
+        caches_to_clear = [
+            "_ableitung_cache",
+            "_wert_cache",
+            "_extremstellen_cache",
+            "_nullstellen_cache",
+        ]
+
+        for cache_name in caches_to_clear:
+            if hasattr(self, cache_name):
+                cache = getattr(self, cache_name)
+                if isinstance(cache, dict):
+                    cache.clear()
+                    logging.debug(f"Cache {cache_name} geleert")
+
+        # Auch Cache-Metriken zurücksetzen
+        if hasattr(self, "_ableitung_cache_hits"):
+            self._ableitung_cache_hits = 0
+            self._ableitung_cache_misses = 0
+
     @preserve_exact_types
     def ableitung(self, ordnung: int = 1) -> "Funktion":
         """
@@ -1232,7 +1289,11 @@ class Funktion(BasisFunktion):
         # Prüfe Cache für diese Ableitungsordnung
         cache_key = (ordnung, id(self))
         if hasattr(self, "_ableitung_cache") and cache_key in self._ableitung_cache:
-            logging.debug(f"Cache-Hit für Ableitung {ordnung} von {self.term()}")
+            self._ableitung_cache_hits += 1
+            logging.debug(
+                f"Cache-Hit für Ableitung {ordnung} von {self.term()}. "
+                f"Hit-Rate: {self._cache_hit_rate():.1%}"
+            )
             return self._ableitung_cache[cache_key]
 
         logging.debug(f"Berechne Ableitung {ordnung} für {self.term()}")
@@ -1279,22 +1340,51 @@ class Funktion(BasisFunktion):
         # Initialisiere Cache wenn nicht vorhanden
         if not hasattr(self, "_ableitung_cache"):
             self._ableitung_cache = {}
-            # Begrenze Cache-Größe (max 10 Einträge)
-            self._ableitung_cache_max_size = 10
+            # Erhöhe Cache-Größe für bessere Performance (max 50 Einträge)
+            self._ableitung_cache_max_size = 50
+            # Füge Cache-Hits und Misses für Performance-Monitoring hinzu
+            self._ableitung_cache_hits = 0
+            self._ableitung_cache_misses = 0
 
-        # Speichere im Cache mit LRU-Logik
+        # Speichere im Cache mit verbesserter LRU-Logik
         if len(self._ableitung_cache) >= self._ableitung_cache_max_size:
-            # Entferne ältesten Eintrag (einfache LRU-Implementierung)
-            oldest_key = next(iter(self._ableitung_cache))
-            del self._ableitung_cache[oldest_key]
-            logging.debug(f"Cache voll, entferne ältesten Eintrag: {oldest_key}")
+            # Entferne die ältesten 20% der Einträge für bessere Performance
+            keys_to_remove = list(self._ableitung_cache.keys())[
+                : max(1, self._ableitung_cache_max_size // 5)
+            ]
+            for key in keys_to_remove:
+                del self._ableitung_cache[key]
+            logging.debug(
+                f"Cache voll, entferne {len(keys_to_remove)} älteste Einträge"
+            )
 
         self._ableitung_cache[cache_key] = abgeleitete_funktion
+        self._ableitung_cache_misses += 1
         logging.debug(
-            f"Cache-Miss für Ableitung {ordnung}, gespeichert unter {cache_key}. Cache-Größe: {len(self._ableitung_cache)}"
+            f"Cache-Miss für Ableitung {ordnung}, gespeichert unter {cache_key}. "
+            f"Cache-Größe: {len(self._ableitung_cache)}, "
+            f"Hit-Rate: {self._cache_hit_rate():.1%}"
         )
 
         return abgeleitete_funktion
+
+    def _cache_hit_rate(self) -> float:
+        """
+        Berechnet die Cache-Hit-Rate für Performance-Monitoring.
+
+        Returns:
+            Hit-Rate als Wert zwischen 0.0 und 1.0
+        """
+        if not hasattr(self, "_ableitung_cache_hits"):
+            return 0.0
+
+        total = getattr(self, "_ableitung_cache_hits", 0) + getattr(
+            self, "_ableitung_cache_misses", 0
+        )
+        if total == 0:
+            return 0.0
+
+        return self._ableitung_cache_hits / total
 
     def Ableitung(self, ordnung: int = 1) -> "Funktion":
         """
@@ -1334,9 +1424,35 @@ class Funktion(BasisFunktion):
         """Berechnet das Integral (Alias für integral)"""
         return self.integral(ordnung)
 
+    @property
+    def nullstellen(self) -> ExactNullstellenListe:
+        """
+        Berechnet die Nullstellen mit exakten SymPy-Ergebnissen (Standard-Property).
+
+        Returns:
+            ExactNullstellenListe: Liste der Nullstellen mit exakten Werten
+
+        Examples:
+            >>> f = Funktion("x^2 - 4")
+            >>> f.nullstellen  # [2, -2]
+        """
+        # Prüfe Cache für Nullstellen
+        if hasattr(self, "_nullstellen_cache") and self._nullstellen_cache is not None:
+            return self._nullstellen_cache
+
+        # Berechne Nullstellen und speichere im Cache
+        ergebnis = self._berechne_nullstellen(real=True, runden=None)
+
+        if not hasattr(self, "_nullstellen_cache"):
+            self._nullstellen_cache = None
+
+        self._nullstellen_cache = ergebnis
+
+        return ergebnis
+
     @preserve_exact_types
-    def nullstellen(
-        self, real: bool = True, runden: int = None
+    def _berechne_nullstellen(
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen mit exakten SymPy-Ergebnissen.
@@ -1405,7 +1521,7 @@ class Funktion(BasisFunktion):
             ) from e
 
     def Nullstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen mit exakten SymPy-Ergebnissen (Alias für nullstellen).
@@ -1419,8 +1535,22 @@ class Funktion(BasisFunktion):
         """
         return self.nullstellen(real=real, runden=runden)
 
-    def nullstellen_mit_wiederholungen(
-        self, real: bool = True, runden: int = None
+    @property
+    def nullstellen_mit_wiederholungen(self) -> list:
+        """
+        Berechnet die Nullstellen mit Wiederholungen gemäß Vielfachheit (Standard-Property).
+
+        Returns:
+            list: Liste der Nullstellen mit Wiederholungen
+
+        Examples:
+            >>> f = Funktion("(x-2)^2")
+            >>> f.nullstellen_mit_wiederholungen  # [2, 2]
+        """
+        return self._berechne_nullstellen_mit_wiederholungen(real=True, runden=None)
+
+    def _berechne_nullstellen_mit_wiederholungen(
+        self, real: bool = True, runden: int | None = None
     ) -> list:
         """
         Berechnet die Nullstellen mit Wiederholungen gemäß Vielfachheit.
@@ -1479,7 +1609,7 @@ class Funktion(BasisFunktion):
             except Exception as fallback_error:
                 logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
                 return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei Nullstellenberechnung für {self.term()}: {e}"
@@ -1907,7 +2037,7 @@ class Funktion(BasisFunktion):
             return []
 
     def NullstellenMitWiederholungen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list:
         """
         Berechnet die Nullstellen mit Wiederholungen gemäß Vielfachheit (Alias).
@@ -1993,7 +2123,7 @@ class Funktion(BasisFunktion):
                             if abs(approx - round(approx)) < 1e-10:
                                 vereinfachte_lösungen.append(
                                     Nullstelle(
-                                        x=sp.Integer(round(approx)),
+                                        x=sp.Expr(sp.Integer(round(approx))),  # type: ignore
                                         multiplicitaet=nullstelle.multiplicitaet,
                                         exakt=True,
                                     )
@@ -2199,7 +2329,7 @@ class Funktion(BasisFunktion):
         return eindeutig
 
     def extremstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Extremstellen der Funktion.
@@ -2319,13 +2449,13 @@ class Funktion(BasisFunktion):
             return []
 
     def Extremstellen(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list[tuple[Any, Any, str]]:
         """Berechnet die Extremstellen (Alias für extremstellen)"""
         return self.extremstellen(real=real, runden=runden)
 
     def extrema(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Extremstellen der Funktion (Alias für extremstellen).
@@ -2377,7 +2507,7 @@ class Funktion(BasisFunktion):
             except Exception as fallback_error:
                 logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
                 return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei Extremstellenberechnung für {self.term()}: {e}"
@@ -2458,7 +2588,7 @@ class Funktion(BasisFunktion):
                 f"Erwarteter Fehler bei Framework-Extremstellenberechnung für {self.term()}: {e}"
             )
             return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei Framework-Extremstellenberechnung für {self.term()}: {e}"
@@ -2619,7 +2749,7 @@ class Funktion(BasisFunktion):
                 f"Erwarteter Fehler bei parametrischer Extremstellenberechnung für {self.term()}: {e}"
             )
             return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei parametrischer Extremstellenberechnung für {self.term()}: {e}"
@@ -2773,7 +2903,9 @@ class Funktion(BasisFunktion):
             logging.debug(f"Versuche Polynom-Methode für {f_strich.term()}")
 
             # Prüfe, ob es sich um ein Polynom handelt
-            if not f_strich.term_sympy.is_polynomial(f_strich._variable_symbol):
+            if not hasattr(
+                f_strich.term_sympy, "is_polynomial"
+            ) or not f_strich.term_sympy.is_polynomial(f_strich._variable_symbol):  # type: ignore
                 logging.debug("Kein Polynom - Methode nicht anwendbar")
                 return []
 
@@ -2972,7 +3104,7 @@ class Funktion(BasisFunktion):
         return extrempunkte
 
     def wendepunkte(
-        self, real: bool = True, runden: int = None
+        self, real: bool = True, runden: int | None = None
     ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Wendepunkte der Funktion.
@@ -3096,7 +3228,7 @@ class Funktion(BasisFunktion):
             except Exception as fallback_error:
                 logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
                 return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei Wendestellenberechnung für {self.term()}: {e}"
@@ -3180,7 +3312,7 @@ class Funktion(BasisFunktion):
                 f"Erwarteter Fehler bei Framework-Wendepunkteberechnung für {self.term()}: {e}"
             )
             return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei Framework-Wendepunkteberechnung für {self.term()}: {e}"
@@ -3244,7 +3376,7 @@ class Funktion(BasisFunktion):
                         wendestellen.append(
                             Wendestelle(
                                 x=punkt,
-                                typ=WendepunktTyp.WENDELPUNKT,
+                                typ=WendepunktTyp("Wendepunkt"),
                                 exakt=True,
                             )
                         )
@@ -3266,7 +3398,7 @@ class Funktion(BasisFunktion):
                 f"Erwarteter Fehler bei parametrischer Wendestellenberechnung für {self.term()}: {e}"
             )
             return []
-        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+        except (sp.SympifyError, Exception) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
                 f"SymPy-Fehler bei parametrischer Wendestellenberechnung für {self.term()}: {e}"
@@ -3418,7 +3550,9 @@ class Funktion(BasisFunktion):
             logging.debug(f"Versuche Polynom-Methode für {f2.term()}")
 
             # Prüfe, ob es sich um ein Polynom handelt
-            if not f2.term_sympy.is_polynomial(f2._variable_symbol):
+            if not hasattr(
+                f2.term_sympy, "is_polynomial"
+            ) or not f2.term_sympy.is_polynomial(f2._variable_symbol):  # type: ignore
                 logging.debug("Kein Polynom - Methode nicht anwendbar")
                 return []
 
@@ -3580,7 +3714,7 @@ class Funktion(BasisFunktion):
                         wendestellen.append(
                             Wendestelle(
                                 x=lösung,
-                                typ=WendepunktTyp.WENDELPUNKT,
+                                typ=WendepunktTyp("Wendepunkt"),
                                 exakt=True,
                             )
                         )
@@ -3816,10 +3950,6 @@ class Funktion(BasisFunktion):
         # die bereits in extremstellen berechnet werden
         return self.extremstellen
 
-    def StationaereStellen(self) -> list[tuple[Any, str]]:
-        """Berechnet die stationären Stellen (Alias für stationaere_stellen)"""
-        return self.stationaere_stellen
-
     @property
     def sattelpunkte(self) -> list[tuple[Any, Any, str]]:
         """
@@ -4014,7 +4144,7 @@ class Funktion(BasisFunktion):
 
         # Prüfe Grad (muss 1 sein)
         try:
-            grad = self.term_sympy.as_poly(self._variable_symbol).degree()
+            grad = sp.poly(self.term_sympy, self._variable_symbol).degree()
             return grad == 1
         except Exception:
             return False
@@ -4025,7 +4155,7 @@ class Funktion(BasisFunktion):
             return False
 
         try:
-            grad = self.term_sympy.as_poly(self._variable_symbol).degree()
+            grad = sp.poly(self.term_sympy, self._variable_symbol).degree()
             return grad == 2
         except Exception:
             return False
@@ -4036,7 +4166,7 @@ class Funktion(BasisFunktion):
             return False
 
         try:
-            grad = self.term_sympy.as_poly(self._variable_symbol).degree()
+            grad = sp.poly(self.term_sympy, self._variable_symbol).degree()
             return grad == 3
         except Exception:
             return False
@@ -4047,7 +4177,7 @@ class Funktion(BasisFunktion):
             return 0
 
         try:
-            return self.term_sympy.as_poly(self._variable_symbol).degree()
+            return sp.poly(self.term_sympy, self._variable_symbol).degree()
         except Exception:
             return 0
 
@@ -4568,3 +4698,78 @@ def erstelle_funktion_automatisch(
     """
     # Delegiere an die Magie des Konstruktors
     return Funktion(eingabe, nenner)
+
+
+# =============================================================================
+# STATISCHE ERKENNUNGSFUNKTIONEN
+# =============================================================================
+
+
+def _ist_exponential_funktion_static(eingabe: str | sp.Basic | Funktion) -> bool:
+    """
+    Statische Erkennung von Exponentialfunktionen für die automatische Klassifizierung.
+
+    Args:
+        eingabe: Zu prüfender Ausdruck als String, SymPy-Basic oder Funktion
+
+    Returns:
+        bool: True wenn es eine Exponentialfunktion ist, False sonst
+
+    Examples:
+        >>> _ist_exponential_funktion_static("exp(x)")
+        True
+        >>> _ist_exponential_funktion_static("e^x")
+        True
+        >>> _ist_exponential_funktion_static("x^2 + 1")
+        False
+    """
+    try:
+        # Konvertiere zu String für Mustererkennung
+        if isinstance(eingabe, Funktion):
+            term_str = str(eingabe.term_sympy)
+        elif isinstance(eingabe, sp.Basic):
+            term_str = str(eingabe)
+        else:
+            term_str = str(eingabe).lower()
+
+        # Prüfe auf exp() Muster
+        import re
+
+        # exp(x), exp(2x), etc.
+        if re.search(r"exp\s*\([^)]+\)", term_str, re.IGNORECASE):
+            return True
+
+        # e^x, e^(2x), E^x, etc.
+        if re.search(r"[eE]\s*\^\s*[^+\-*/]+", term_str):
+            return True
+
+        # exp**x (manchmal so dargestellt)
+        if re.search(r"exp\s*\*\*\s*[^+\-*/]+", term_str, re.IGNORECASE):
+            return True
+
+        # Prüfe SymPy-spezifische Darstellungen
+        if hasattr(eingabe, "term_sympy"):
+            expr = eingabe.term_sympy
+        elif isinstance(eingabe, sp.Basic):
+            expr = eingabe
+        else:
+            return False
+
+        # Prüfe auf exp-Funktionen im SymPy-Ausdruck
+        if isinstance(expr, sp.Basic) and expr.has(sp.exp):
+            return True
+
+        # Prüfe auf spezielle Konstanten * Variable
+        if isinstance(expr, sp.Basic):
+            for atom in expr.atoms(sp.Symbol, sp.Function):
+                if str(atom) == "E" and any(
+                    str(arg).startswith("x")
+                    for arg in expr.args
+                    if hasattr(arg, "startswith")
+                ):
+                    return True
+
+    except Exception:
+        pass
+
+    return False

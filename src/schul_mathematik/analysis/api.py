@@ -13,6 +13,7 @@ from typing import Any
 import sympy as sp
 
 from .errors import SchulAnalysisError, UngueltigeFunktionError
+from .visualisierung_errors import DatenpunktBerechnungsError
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
@@ -979,7 +980,8 @@ def Graph(
         aspect_ratio = kwargs.pop("aspect_ratio", "auto")
         if aspect_ratio != "auto":
             controller = AspectRatioController()
-            ratio_kwargs = controller.konfiguriere_aspect_ratio(aspect_ratio)
+            # Use the correct method name - create aspect ratio configuration
+            ratio_kwargs = controller.create_mathematical_aspect_config()
             kwargs.update(ratio_kwargs)
 
         # Wenn mehrere Funktionen übergeben wurden
@@ -1025,9 +1027,9 @@ def _zeichne_einzelne_funktion(
     elif callable(funktion):
         # Normale Python-Funktion
         try:
-            from .visualisierung import zeige_funktion
+            from .visualisierung import Graph
 
-            return zeige_funktion(funktion, x_bereich, **kwargs)
+            return Graph(funktion, x_min=x_bereich[0], x_max=x_bereich[1], **kwargs)
         except Exception as e:
             raise DatenpunktBerechnungsError(
                 f"Kann Datenpunkte für Funktion {getattr(funktion, '__name__', 'anonymous')} nicht berechnen: {str(e)}"
@@ -1525,7 +1527,7 @@ def FlaecheZweiFunktionen(
 
 
 def ZeichneBinomialverteilung(
-    n: int, p: float, k_max: int = None, farbe: str = "blue", **kwargs
+    n: int, p: float, k_max: int | None = None, farbe: str = "blue", **kwargs
 ) -> Any:
     """
     Zeichnet die Binomialverteilung.
@@ -1608,7 +1610,7 @@ def ZeichneNormalverteilungsVergleich(
     sigma1: float,
     mu2: float,
     sigma2: float,
-    x_bereich: tuple = None,
+    x_bereich: tuple | None = None,
     farbe1: str = "blue",
     farbe2: str = "red",
     **kwargs,

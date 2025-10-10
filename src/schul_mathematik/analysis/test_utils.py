@@ -52,7 +52,13 @@ def assert_gleich(
         expr2 = _konvertiere_zu_sympy(ausdruck2, variable)
 
         # Berechne die Differenz und vereinfache
-        differenz = sp.simplify(expr1 - expr2)  # type: ignore
+        differenz = expr1 - expr2
+
+        # Spezialisierte Vereinfachung für trigonometrische Ausdrücke
+        if differenz.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+            differenz = sp.trigsimp(differenz)
+        else:
+            differenz = sp.simplify(differenz)  # type: ignore
 
         # Prüfe, ob die Differenz Null ist
         if differenz != 0:

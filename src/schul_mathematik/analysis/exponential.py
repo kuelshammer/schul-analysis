@@ -48,7 +48,7 @@ class ExponentialFunktion(Funktion):
             for base in [expr.base]
         )
 
-    def nullstellen(self, real: bool = True, runden: int = None) -> list:
+    def nullstellen(self, real: bool = True, runden: int | None = None) -> list:
         """
         Berechnet die Nullstellen der exponentialfunktion.
         Exponentialfunktionen haben keine reellen Nullstellen.
@@ -62,7 +62,7 @@ class ExponentialFunktion(Funktion):
         """
         return []
 
-    def extrema(self, real: bool = True, runden: int = None) -> list:
+    def extrema(self, real: bool = True, runden: int | None = None) -> list:
         """
         Berechnet die Extremstellen der exponentialfunktion.
         Reine Exponentialfunktionen haben keine Extremstellen.
@@ -76,7 +76,7 @@ class ExponentialFunktion(Funktion):
         """
         return []
 
-    def wendepunkte(self, real: bool = True, runden: int = None) -> list:
+    def wendepunkte(self, real: bool = True, runden: int | None = None) -> list:
         """
         Berechnet die Wendepunkte der exponentialfunktion.
         Reine Exponentialfunktionen haben keine Wendepunkte.

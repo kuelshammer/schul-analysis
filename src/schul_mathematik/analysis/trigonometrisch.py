@@ -104,7 +104,7 @@ class TrigonometrischeFunktion(Funktion):
         """Gibt den Term als LaTeX-String zurück."""
         return latex(self.term_sympy)
 
-    def extrema(self, real: bool = True, runden: int = None) -> list:
+    def extrema(self, real: bool = True, runden: int | None = None) -> list:
         """
         Berechnet die Extremstellen der trigonometrischen Funktion.
         Für trigonometrische Funktionen ist dies eine komplexe Berechnung.
@@ -120,7 +120,7 @@ class TrigonometrischeFunktion(Funktion):
         # Dies ist eine komplexe Berechnung, die für den Schulgebrauch vereinfacht wird
         return []
 
-    def wendepunkte(self, real: bool = True, runden: int = None) -> list:
+    def wendepunkte(self, real: bool = True, runden: int | None = None) -> list:
         """
         Berechnet die Wendepunkte der trigonometrischen Funktion.
         Für trigonometrische Funktionen ist dies eine komplexe Berechnung.
