@@ -11,7 +11,7 @@ import logging
 
 # Import the Funktion class and related components
 from schul_mathematik.analysis.funktion import Funktion, ExtremumTyp
-from schul_mathematik.analysis.sympy_types import Extremum
+from schul_mathematik.analysis.sympy_types import Extremstelle
 
 
 class TestExtremstellenExceptionHandling:
@@ -132,13 +132,13 @@ class TestExtremstellenExceptionHandling:
                 f = Funktion(expr)
                 result = f.extremstellen_optimiert()
                 assert isinstance(result, list)
-                # Alle Extremum-Objekte sollten korrekte Typen haben
-                for extremum in result:
-                    assert isinstance(extremum, Extremum)
-                    assert hasattr(extremum, "x")
-                    assert hasattr(extremum, "y")
-                    assert hasattr(extremum, "typ")
-                    assert extremum.typ in ExtremumTyp
+                # Alle Extremstellen-Objekte sollten korrekte Typen haben
+                for extremstelle in result:
+                    assert isinstance(extremstelle, Extremstelle)
+                    assert hasattr(extremstelle, "x")
+                    assert hasattr(extremstelle, "y")
+                    assert hasattr(extremstelle, "typ")
+                    assert extremstelle.typ in ExtremumTyp
             except Exception as e:
                 # Unerwartete Exceptions sollten den Test nicht scheitern lassen,
                 # aber protokolliert werden

@@ -26,9 +26,11 @@ from .symbolic import _Parameter, _Variable
 from .sympy_types import (
     VALIDATION_EXACT,
     ExactNullstellenListe,
-    Extremum,
+    Extremstelle,
+    Extrempunkt,
     ExtremumTyp,
-    ExtremaListe,
+    ExtremstellenListe,
+    ExtrempunkteListe,
     Nullstelle,
     Schnittpunkt,
     SchnittpunkteListe,
@@ -1443,6 +1445,120 @@ class Funktion(BasisFunktion):
 
         return ergebnis
 
+    def nullstellen_optimiert(self) -> ExactNullstellenListe:
+        """
+        Berechnet Nullstellen mit optimierter Hybrid-Strategie und Framework-Integration.
+
+        Diese Methode verwendet eine verbesserte Hybrid-Strategie:
+        - Für nicht-parametrische Funktionen: Framework mit Caching und Fehlerbehandlung
+        - Für parametrische Funktionen: Direkter solve()-Ansatz mit Fallback
+
+        Returns:
+            Liste der optimierten Nullstellen als strukturierte Nullstelle-Objekte
+        """
+        try:
+            logging.debug(f"Starte nullstellen_optimiert() für {self.term()}")
+
+            # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
+            if self.parameter:
+                logging.debug(f"Parametrische Funktion erkannt: {self.parameter}")
+                return self._nullstellen_parametrisch_fallback()
+            else:
+                logging.debug("Nicht-parametrische Funktion - verwende Framework")
+                return self._nullstellen_mit_framework()
+
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Eingaben oder Attributen
+            logging.warning(
+                f"Erwarteter Fehler bei Nullstellenberechnung für {self.term()}: {e}"
+            )
+            # Fallback auf parametrische Methode versuchen
+            try:
+                return self._nullstellen_parametrisch_fallback()
+            except Exception as fallback_error:
+                logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
+                return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei Nullstellenberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei Nullstellenberechnung für {self.term()}: {e}"
+            )
+            raise
+
+    def _nullstellen_mit_framework(self) -> ExactNullstellenListe:
+        """
+        Berechnet Nullstellen unter Verwendung des optimierten Frameworks.
+
+        Diese Methode wird für nicht-parametrische Funktionen verwendet und
+        nutzt die volle Power unserer bestehenden nullstellen()-Implementierung.
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        try:
+            # Nutze unsere bewährte nullstellen()-Implementierung
+            logging.debug(
+                f"Verwende bestehendes nullstellen()-Framework für {self.term()}"
+            )
+            return self.nullstellen()
+        except Exception as e:
+            logging.error(f"Fehler bei Framework-Nullstellenberechnung: {e}")
+            raise
+
+    def _nullstellen_parametrisch_fallback(self) -> ExactNullstellenListe:
+        """
+        Fallback-Methode für parametrische Funktionen mit direkter solve()-Nutzung.
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        try:
+            logging.debug(f"Verwende parametrischen Fallback für {self.term()}")
+
+            # Verwende solve() direkt für parametrische Funktionen
+            import sympy as sp
+
+            lösungen = sp.solve(self.term_sympy, self._variable_symbol)
+            lösungen = [sp.together(l) for l in lösungen if l.is_real]
+
+            if not lösungen:
+                return []
+
+            # Konvertiere zu Nullstelle-Objekten
+            nullstellen = []
+            for lösung in lösungen:
+                try:
+                    # Berechne Vielfachheit
+                    vielfachheit = self._berechne_vielfachheit(lösung)
+
+                    nullstellen.append(
+                        Nullstelle(
+                            x=lösung,
+                            multiplicitaet=vielfachheit,
+                            exakt=True,
+                        )
+                    )
+                except Exception as e:
+                    logging.warning(f"Fehler bei Verarbeitung von Lösung {lösung}: {e}")
+                    continue
+
+            return nullstellen
+
+        except (TypeError, ValueError, AttributeError, ZeroDivisionError) as e:
+            logging.warning(f"Fehler bei parametrischer Nullstellenberechnung: {e}")
+            return []
+        except Exception as e:
+            logging.error(
+                f"Unerwarteter Fehler bei parametrischer Nullstellenberechnung: {e}"
+            )
+            raise
+
     def NullstellenMitWiederholungen(
         self, real: bool = True, runden: int = None
     ) -> list:
@@ -1876,7 +1992,7 @@ class Funktion(BasisFunktion):
         """
         return self.extremstellen(real=real, runden=runden)
 
-    def extremstellen_optimiert(self) -> list[Extremum]:
+    def extremstellen_optimiert(self) -> list[Extremstelle]:
         """
         Berechnet Extremstellen unter Nutzung des Nullstellen-Frameworks.
 
@@ -1886,13 +2002,13 @@ class Funktion(BasisFunktion):
         wird ein Fallback verwendet, der direkt sympy.solve() nutzt.
 
         Returns:
-            Liste von Extremum-Objekten mit vollständigen Informationen
+            Liste von Extremstelle-Objekten mit vollständigen Informationen
 
         Examples:
             >>> f = Funktion("x^3 - 3x^2 + 4")
             >>> extrema = f.extremstellen_optimiert()
-            # Erwartet: [Extremum(x=0, y=4, typ=ExtremumTyp.MAXIMUM),
-            #            Extremum(x=2, y=0, typ=ExtremumTyp.MINIMUM)]
+            # Erwartet: [Extremstelle(x=0, typ=ExtremumTyp.MAXIMUM),
+            #            Extremstelle(x=2, typ=ExtremumTyp.MINIMUM)]
         """
         try:
             # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
@@ -1927,7 +2043,7 @@ class Funktion(BasisFunktion):
             )
             raise
 
-    def _extremstellen_mit_framework(self) -> list[Extremum]:
+    def _extremstellen_mit_framework(self) -> list[Extremstelle]:
         """
         Interne Methode: Berechnet Extremstellen mit dem Nullstellen-Framework.
 
@@ -1935,7 +2051,7 @@ class Funktion(BasisFunktion):
         nutzt die volle Power unseres verbesserten Nullstellen-Frameworks.
 
         Returns:
-            Liste von Extremum-Objekten
+            Liste von Extremstelle-Objekten
         """
         try:
             # 1. Berechne erste Ableitung
@@ -1969,9 +2085,8 @@ class Funktion(BasisFunktion):
                         typ = ExtremumTyp.SATTELPUNKT
 
                     extrema.append(
-                        Extremum(
+                        Extremstelle(
                             x=kritischer_punkt.x,
-                            y=y_wert,
                             typ=typ,
                             exakt=kritischer_punkt.exakt,
                         )
@@ -2106,7 +2221,7 @@ class Funktion(BasisFunktion):
             )
             return ExtremumTyp.SATTELPUNKT
 
-    def _extremstellen_parametrisch_fallback(self) -> list[Extremum]:
+    def _extremstellen_parametrisch_fallback(self) -> list[Extremstelle]:
         """
         Fallback-Methode für parametrische Funktionen.
 
@@ -2136,7 +2251,7 @@ class Funktion(BasisFunktion):
                     # Bestimme Extremtyp
                     typ = self._bestimme_extremtyp(punkt)
 
-                    extrema.append(Extremum(x=punkt, y=y_wert, typ=typ, exakt=True))
+                    extrema.append(Extremstelle(x=punkt, typ=typ, exakt=True))
                 except (TypeError, ValueError, ZeroDivisionError) as e:
                     # Erwartete Fehler bei der Berechnung des y-Wertes
                     logging.warning(
@@ -2170,12 +2285,12 @@ class Funktion(BasisFunktion):
             )
             raise
 
-    def Extremstellen(self) -> list[Extremum]:
+    def Extremstellen(self) -> list[Extremstelle]:
         """
         Berechnet die Extremstellen (neue strukturierte Methode).
 
         Returns:
-            Liste von Extremum-Objekten mit vollständigen Informationen
+            Liste von Extremstelle-Objekten mit vollständigen Informationen
         """
         return self.extremstellen_optimiert()
 
@@ -2187,6 +2302,34 @@ class Funktion(BasisFunktion):
             Liste von Extremum-Objekten
         """
         return self.extremstellen_optimiert()
+
+    def extrempunkte_optimiert(self) -> list[Extrempunkt]:
+        """
+        Berechnet Extrempunkte ((x,y)-Koordinaten) unter Nutzung des Nullstellen-Frameworks.
+
+        Diese Methode erweitert extremstellen_optimiert() um y-Koordinaten
+        und gibt vollständige Punkte zurück.
+
+        Returns:
+            Liste von Extrempunkt-Objekten mit (x,y)-Koordinaten
+        """
+        # Hole Extremstellen (x-Koordinaten)
+        extremstellen = self.extremstellen_optimiert()
+
+        # Konvertiere zu Extrempunkten mit y-Koordinaten
+        extrempunkte = []
+        for extremstelle in extremstellen:
+            y_wert = self.wert(extremstelle.x)
+            extrempunkte.append(
+                Extrempunkt(
+                    x=extremstelle.x,
+                    y=y_wert,
+                    typ=extremstelle.typ,
+                    exakt=extremstelle.exakt,
+                )
+            )
+
+        return extrempunkte
 
     def wendepunkte(
         self, real: bool = True, runden: int = None

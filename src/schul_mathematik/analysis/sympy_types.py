@@ -6,7 +6,7 @@ mit Fokus auf Typsicherheit, pädagogische Klarheit und deutsche Fachsprache.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import (
     Any,
@@ -141,8 +141,20 @@ class Nullstelle:
 
 
 @dataclass(frozen=True)
-class Extremum:
-    """Präzise Typisierung für Extremstellen mit vollständigen Informationen."""
+class Extremstelle:
+    """Präzise Typisierung für Extremstellen (x-Koordinaten) mit vollständigen Informationen."""
+
+    x: T_Expr  # x-Koordinate der Extremstelle
+    typ: ExtremumTyp  # Art des Extremums
+    exakt: bool = True  # Ob exakt berechnet wurde
+
+    def __str__(self) -> str:
+        return f"{self.typ.value} bei x = {self.x}"
+
+
+@dataclass(frozen=True)
+class Extrempunkt:
+    """Präzise Typisierung für Extrempunkte ((x,y)-Koordinaten) mit vollständigen Informationen."""
 
     x: T_Expr  # x-Koordinate
     y: T_Expr  # y-Koordinate
@@ -151,6 +163,18 @@ class Extremum:
 
     def __str__(self) -> str:
         return f"{self.typ.value} bei P({self.x}|{self.y})"
+
+
+@dataclass(frozen=True)
+class Wendestelle:
+    """Präzise Typisierung für Wendestellen (x-Koordinaten) mit vollständigen Informationen."""
+
+    x: T_Expr  # x-Koordinate der Wendestelle
+    typ: WendepunktTyp = field(default_factory=lambda: WendepunktTyp.WENDELPUNKT)
+    exakt: bool = True  # Ob exakt berechnet wurde
+
+    def __str__(self) -> str:
+        return f"{self.typ.value} bei x = {self.x}"
 
 
 @dataclass(frozen=True)
@@ -180,14 +204,27 @@ class StationaereStelle:
 
 @dataclass(frozen=True)
 class Sattelpunkt:
-    """Präzise Typisierung für Sattelpunkte mit vollständigen Informationen."""
+    """Präzise Typisierung für Sattelpunkte mit vollständiger Klassifizierung.
+
+    Ein Sattelpunkt kann sowohl ein Extremum als auch ein Wendepunkt sein
+    oder beides gleichzeitig (z.B. bei f(x) = x^3).
+    """
 
     x: T_Expr  # x-Koordinate
     y: T_Expr  # y-Koordinate
+    ist_extremum: bool = True  # Ist es auch ein Extremum?
+    ist_wendepunkt: bool = True  # Ist es auch ein Wendepunkt?
     exakt: bool = True  # Ob exakt berechnet wurde
 
     def __str__(self) -> str:
-        return f"Sattelpunkt bei P({self.x}|{self.y})"
+        typen = []
+        if self.ist_extremum:
+            typen.append("Extremum")
+        if self.ist_wendepunkt:
+            typen.append("Wendepunkt")
+
+        typ_beschreibung = " und ".join(typen)
+        return f"Sattelpunkt ({typ_beschreibung}) bei P({self.x}|{self.y})"
 
 
 @dataclass(frozen=True)
@@ -247,7 +284,8 @@ class IntegralResult:
 
 # Präzise Listen-Typen statt list[Any]
 ExactNullstellenListe = list[Nullstelle]
-ExtremaListe = list[Extremum]
+ExtremstellenListe = list[Extremstelle]
+ExtrempunkteListe = list[Extrempunkt]
 WendepunkteListe = list[Wendepunkt]
 StationaereStellenListe = list[StationaereStelle]
 SattelpunkteListe = list[Sattelpunkt]
@@ -269,7 +307,8 @@ PolynomKoeffizienten = list[int | float | sp.Integer | sp.Rational]
 # Typen für mathematische Funktionen mit präzisen Signaturen
 MathematischeFunktion = Callable[[T_Expr], T_Expr]
 AnalyseFunktion = Callable[
-    [T_Func], ExactNullstellenListe | ExtremaListe | WendepunkteListe
+    [T_Func],
+    ExactNullstellenListe | ExtremstellenListe | ExtrempunkteListe | WendepunkteListe,
 ]
 ParameterFunktion = Callable[[T_Func, dict[str, Any]], T_Func]
 
@@ -343,7 +382,7 @@ class Analysierbar(Protocol[T_Expr]):
         """
         ...
 
-    def extrema(self) -> ExtremaListe:
+    def extrema(self) -> ExtremstellenListe:
         """
         Berechnet Extremstellen mit exakten SymPy-Ergebnissen.
 

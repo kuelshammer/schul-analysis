@@ -1498,82 +1498,93 @@ def _erstelle_plotly_figur_mit_intelligenten_achsen(
 
     # Füge spezielle Punkte hinzu (nur für ganzrationale Funktionen)
     if hasattr(funktion, "nullstellen") and zeige_nullstellen:
-        nullstellen = funktion.nullstellen
-        for ns in nullstellen:
-            try:
-                x_ns = _formatiere_float(ns)
-                if x_min <= x_ns <= x_max:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[x_ns],
-                            y=[0],
-                            mode="markers",
-                            name=f"Nullstelle x={x_ns:.3f}",
-                            marker=config.get_marker_config(
-                                color_key="secondary", size=10
-                            ),
-                            showlegend=False,
-                            hovertemplate=f"<b>Nullstelle</b><br>x: {x_ns:.3f}<br>f(x): 0<extra></extra>",
+        try:
+            nullstellen = funktion.nullstellen()
+            for ns in nullstellen:
+                try:
+                    x_ns = _formatiere_float(ns)
+                    if x_min <= x_ns <= x_max:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_ns],
+                                y=[0],
+                                mode="markers",
+                                name=f"Nullstelle x={x_ns:.3f}",
+                                marker=config.get_marker_config(
+                                    color_key="secondary", size=10
+                                ),
+                                showlegend=False,
+                                hovertemplate=f"<b>Nullstelle</b><br>x: {x_ns:.3f}<br>f(x): 0<extra></extra>",
+                            )
                         )
-                    )
-            except (ValueError, TypeError):
-                continue
+                except (ValueError, TypeError):
+                    continue
+        except (AttributeError, TypeError):
+            pass
 
     if hasattr(funktion, "extremstellen") and zeige_extremstellen:
-        extremstellen = funktion.extremstellen
-        for es in extremstellen:
-            try:
-                if isinstance(es, tuple):
-                    x_es = _formatiere_float(es[0])
-                    art = es[1]
-                else:
-                    x_es = _formatiere_float(es)
-                    art = "Extremum"
+        try:
+            extremstellen = funktion.extremstellen()
+            for es in extremstellen:
+                try:
+                    if isinstance(es, tuple):
+                        x_es = _formatiere_float(es[0])
+                        art = es[1]
+                    else:
+                        x_es = _formatiere_float(es)
+                        art = "Extremum"
 
-                y_es = funktion.wert(x_es)
-                if _ist_endlich(y_es) and x_min <= x_es <= x_max:
-                    color = "green" if art == "Maximum" else "orange"
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[x_es],
-                            y=[_formatiere_float(y_es)],
-                            mode="markers",
-                            name=f"{art} ({x_es:.3f}|{_formatiere_float(y_es):.3f})",
-                            marker=config.get_marker_config(color_key=color, size=12),
-                            showlegend=False,
-                            hovertemplate=f"<b>{art}</b><br>x: {x_es:.3f}<br>f(x): {_formatiere_float(y_es):.3f}<extra></extra>",
+                    y_es = funktion.wert(x_es)
+                    if _ist_endlich(y_es) and x_min <= x_es <= x_max:
+                        color = "green" if art == "Maximum" else "orange"
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_es],
+                                y=[_formatiere_float(y_es)],
+                                mode="markers",
+                                name=f"{art} ({x_es:.3f}|{_formatiere_float(y_es):.3f})",
+                                marker=config.get_marker_config(
+                                    color_key=color, size=12
+                                ),
+                                showlegend=False,
+                                hovertemplate=f"<b>{art}</b><br>x: {x_es:.3f}<br>f(x): {_formatiere_float(y_es):.3f}<extra></extra>",
+                            )
                         )
-                    )
-            except (ValueError, TypeError):
-                continue
+                except (ValueError, TypeError):
+                    continue
+        except (AttributeError, TypeError):
+            pass
 
     if hasattr(funktion, "wendepunkte") and zeige_wendepunkte:
-        wendepunkte = funktion.wendepunkte
-        for wp in wendepunkte:
-            try:
-                if isinstance(wp, tuple) and len(wp) >= 2:
-                    x_ws = _formatiere_float(wp[0])
-                    y_ws = _formatiere_float(wp[1])
-                    art = wp[2] if len(wp) >= 3 else "Wendepunkt"
-                else:
-                    continue
+        try:
+            wendepunkte = funktion.wendepunkte()
+            for wp in wendepunkte:
+                try:
+                    if isinstance(wp, tuple) and len(wp) >= 2:
+                        x_ws = _formatiere_float(wp[0])
+                        y_ws = _formatiere_float(wp[1])
+                        art = wp[2] if len(wp) >= 3 else "Wendepunkt"
+                    else:
+                        continue
 
-                if _ist_endlich(y_ws) and x_min <= x_ws <= x_max:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[x_ws],
-                            y=[y_ws],
-                            mode="markers",
-                            name=f"Wendepunkt ({x_ws:.3f}|{y_ws:.3f})",
-                            marker=config.get_marker_config(
-                                color_key="tertiary", size=10
-                            ),
-                            showlegend=False,
-                            hovertemplate=f"<b>Wendepunkt</b><br>x: {x_ws:.3f}<br>f(x): {y_ws:.3f}<br>Krümmung: {art}<extra></extra>",
+                    if _ist_endlich(y_ws) and x_min <= x_ws <= x_max:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=[x_ws],
+                                y=[y_ws],
+                                mode="markers",
+                                name=f"Wendepunkt ({x_ws:.3f}|{y_ws:.3f})",
+                                marker=config.get_marker_config(
+                                    color_key="tertiary", size=10
+                                ),
+                                showlegend=False,
+                                hovertemplate=f"<b>Wendepunkt</b><br>x: {x_ws:.3f}<br>f(x): {y_ws:.3f}<br>Krümmung: {art}<extra></extra>",
+                            )
                         )
-                    )
-            except (ValueError, TypeError, IndexError):
-                continue
+                except (ValueError, TypeError, IndexError):
+                    continue
+        except (AttributeError, TypeError):
+            pass
 
     # Polstellen und Asymptoten für gebrochen-rationale Funktionen
     if hasattr(funktion, "polstellen") and zeige_polstellen:
