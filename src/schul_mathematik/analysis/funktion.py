@@ -34,6 +34,7 @@ from .sympy_types import (
     Nullstelle,
     Schnittpunkt,
     SchnittpunkteListe,
+    Wendestelle,
     Wendepunkt,
     WendepunktTyp,
     preserve_exact_types,
@@ -2424,60 +2425,60 @@ class Funktion(BasisFunktion):
             # Bei Fehlern leere Liste zurückgeben
             return []
 
-    def wendepunkte_optimiert(self) -> list[Wendepunkt]:
+    def wendestellen_optimiert(self) -> list[Wendestelle]:
         """
-        Berechnet Wendepunkte mit optimiertem Hybrid-Ansatz und Framework-Integration.
+        Berechnet Wendestellen (x-Koordinaten) mit optimiertem Hybrid-Ansatz und Framework-Integration.
 
         Diese Methode verwendet das leistungsstarke Nullstellen-Framework für die zweite Ableitung
         und implementiert eine Hybrid-Strategie für parametrische vs. nicht-parametrische Funktionen.
 
         Returns:
-            Liste von Wendepunkt-Objekten mit strukturierten Informationen
+            Liste von Wendestelle-Objekten (x-Koordinaten nur)
         """
         try:
-            logging.debug(f"Starte wendepunkte_optimiert() für {self.term()}")
+            logging.debug(f"Starte wendestellen_optimiert() für {self.term()}")
 
             # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
             if self.parameter:
                 logging.debug(f"Parametrische Funktion erkannt: {self.parameter}")
-                return self._wendepunkte_parametrisch_fallback()
+                return self._wendestellen_parametrisch_fallback()
             else:
                 logging.debug("Nicht-parametrische Funktion - verwende Framework")
-                return self._wendepunkte_mit_framework()
+                return self._wendestellen_mit_framework()
 
         except (TypeError, ValueError, AttributeError) as e:
             # Erwartete Fehler bei ungültigen Eingaben oder Attributen
             logging.warning(
-                f"Erwarteter Fehler bei Wendepunkteberechnung für {self.term()}: {e}"
+                f"Erwarteter Fehler bei Wendestellenberechnung für {self.term()}: {e}"
             )
             # Fallback auf parametrische Methode versuchen
             try:
-                return self._wendepunkte_parametrisch_fallback()
+                return self._wendestellen_parametrisch_fallback()
             except Exception as fallback_error:
                 logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
                 return []
         except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
-                f"SymPy-Fehler bei Wendepunkteberechnung für {self.term()}: {e}"
+                f"SymPy-Fehler bei Wendestellenberechnung für {self.term()}: {e}"
             )
             return []
         except Exception as e:
             # Unerwartete Fehler - sollten weitergegeben werden
             logging.error(
-                f"Unerwarteter Fehler bei Wendepunkteberechnung für {self.term()}: {e}"
+                f"Unerwarteter Fehler bei Wendestellenberechnung für {self.term()}: {e}"
             )
             raise
 
-    def _wendepunkte_mit_framework(self) -> list[Wendepunkt]:
+    def _wendestellen_mit_framework(self) -> list[Wendestelle]:
         """
-        Berechnet Wendepunkte unter Verwendung des Nullstellen-Frameworks.
+        Berechnet Wendestellen unter Verwendung des Nullstellen-Frameworks.
 
         Diese Methode wird für nicht-parametrische Funktionen verwendet und
         nutzt die volle Power unseres verbesserten Nullstellen-Frameworks für f''(x) = 0.
 
         Returns:
-            Liste von Wendepunkt-Objekten
+            Liste von Wendestelle-Objekten (x-Koordinaten nur)
         """
         try:
             # 1. Berechne zweite Ableitung
@@ -2497,7 +2498,7 @@ class Funktion(BasisFunktion):
             # 3. Analysiere jede kritische Stelle mit dritter Ableitung
             logging.debug("Analysiere kritische Punkte mit dritter Ableitung")
             f3 = self.ableitung(ordnung=3)
-            wendepunkte = []
+            wendestellen = []
 
             for kritischer_punkt in kritische_punkte:
                 try:
@@ -2510,16 +2511,12 @@ class Funktion(BasisFunktion):
                         multiplicitaet = 1
                         exakt = True
 
-                    # Berechne y-Wert
-                    y_wert = self.wert(x_wert)
-
                     # Bestimme Wendepunkt-Typ durch dritte Ableitung
                     typ = self._bestimme_wendepunkttyp(x_wert, f3)
 
-                    wendepunkte.append(
-                        Wendepunkt(
+                    wendestellen.append(
+                        Wendestelle(
                             x=x_wert,
-                            y=y_wert,
                             typ=typ,
                             exakt=exakt,
                         )
@@ -2536,7 +2533,7 @@ class Funktion(BasisFunktion):
                     )
                     continue
 
-            return wendepunkte
+            return wendestellen
 
         except (TypeError, ValueError, AttributeError) as e:
             # Erwartete Fehler bei ungültigen Eingaben oder Attributen
@@ -2557,12 +2554,12 @@ class Funktion(BasisFunktion):
             )
             raise
 
-    def _wendepunkte_parametrisch_fallback(self) -> list[Wendepunkt]:
+    def _wendestellen_parametrisch_fallback(self) -> list[Wendestelle]:
         """
         Fallback-Methode für parametrische Funktionen mit direkter solve()-Nutzung.
 
         Returns:
-            Liste von Wendepunkt-Objekten
+            Liste von Wendestelle-Objekten (x-Koordinaten nur)
         """
         try:
             logging.debug(f"Verwende parametrischen Fallback für {self.term()}")
@@ -2579,9 +2576,9 @@ class Funktion(BasisFunktion):
             if not kritische_punkte:
                 return []
 
-            # Bestimme Wendepunkte durch dritte Ableitung
+            # Bestimme Wendestellen durch dritte Ableitung
             f3 = self.ableitung(ordnung=3)
-            wendepunkte = []
+            wendestellen = []
 
             for punkt in kritische_punkte:
                 try:
@@ -2605,13 +2602,9 @@ class Funktion(BasisFunktion):
                             ist_wendepunkt = True
 
                     if ist_wendepunkt:
-                        # Berechne y-Wert
-                        y_wert = self.wert(punkt)
-
-                        wendepunkte.append(
-                            Wendepunkt(
+                        wendestellen.append(
+                            Wendestelle(
                                 x=punkt,
-                                y=y_wert,
                                 typ=WendepunktTyp.WENDELPUNKT,
                                 exakt=True,
                             )
@@ -2626,18 +2619,18 @@ class Funktion(BasisFunktion):
                     )
                     continue
 
-            return wendepunkte
+            return wendestellen
 
         except (TypeError, ValueError, AttributeError) as e:
             # Erwartete Fehler bei ungültigen Funktionseigenschaften
             logging.warning(
-                f"Erwarteter Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
+                f"Erwarteter Fehler bei parametrischer Wendestellenberechnung für {self.term()}: {e}"
             )
             return []
         except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
             # SymPy-spezifische Fehler bei Termverarbeitung
             logging.warning(
-                f"SymPy-Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
+                f"SymPy-Fehler bei parametrischer Wendestellenberechnung für {self.term()}: {e}"
             )
             return []
         except Exception as e:
@@ -2646,6 +2639,34 @@ class Funktion(BasisFunktion):
                 f"Unerwarteter Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
             )
             raise
+
+    def wendepunkte_optimiert(self) -> list[Wendepunkt]:
+        """
+        Berechnet Wendepunkte ((x,y)-Koordinaten) unter Nutzung des Wendestellen-Frameworks.
+
+        Diese Methode erweitert wendestellen_optimiert() um y-Koordinaten
+        und gibt vollständige Punkte zurück.
+
+        Returns:
+            Liste von Wendepunkt-Objekten mit (x,y)-Koordinaten
+        """
+        # Hole Wendestellen (x-Koordinaten)
+        wendestellen = self.wendestellen_optimiert()
+
+        # Konvertiere zu Wendepunkten mit y-Koordinaten
+        wendepunkte = []
+        for wendestelle in wendestellen:
+            y_wert = self.wert(wendestelle.x)
+            wendepunkte.append(
+                Wendepunkt(
+                    x=wendestelle.x,
+                    y=y_wert,
+                    typ=wendestelle.typ,
+                    exakt=wendestelle.exakt,
+                )
+            )
+
+        return wendepunkte
 
     def _bestimme_wendepunkttyp(self, x_wert, f3: "Funktion") -> WendepunktTyp:
         """
