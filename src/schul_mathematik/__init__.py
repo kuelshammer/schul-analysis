@@ -18,14 +18,13 @@ PÄDAGOGISCHE KERNPRINZIPIEN:
 # Analysis-Modul (Kernfunktionalität)
 from .analysis import *
 
-# Stochastik-Modul
-from .stochastik import *
-
 # Geometrie-Modul (später zu erweitern)
 # from .geometrie import *
-
 # Gemeinsame Basisfunktionalität
 from .gemeinsam import *
+
+# Stochastik-Modul
+from .stochastik import *
 
 # =============================================================================
 # VERSION
@@ -46,17 +45,17 @@ __all__ = [
     "Integral",
     "Flaeche",
     "FlaecheZweiFunktionen",
-    "Extrema",
+    "Extremstellen",
+    "Extrema",  # Alias für Abwärtskompatibilität
     "Wendepunkte",
     "Symmetrie",
     "Term",
     "Zeichne",
-    "Auswerten",
-    "ErstellePolynom",
     "erstelle_funktion_automatisch",
     # 🏗️ ANALYSIS: FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
+    "GebrochenRationaleFunktion",
     "ExponentialFunktion",
     "TrigonometrischeFunktion",
     "StrukturierteFunktion",

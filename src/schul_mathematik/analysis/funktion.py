@@ -17,6 +17,10 @@ try:
 except ImportError:
     UNION_TYPE_AVAILABLE = False
 
+
+# Static helper functions for function selection
+
+
 from .symbolic import _Parameter, _Variable
 from .sympy_types import (
     VALIDATION_EXACT,
@@ -27,6 +31,7 @@ from .sympy_types import (
     validate_exact_results,
     validate_function_result,
 )
+from .basis_funktion import BasisFunktion
 
 
 def _faktorisiere_parameter_koeffizienten(
@@ -652,7 +657,7 @@ def _intelligente_vereinfachung(
     return expr
 
 
-class Funktion:
+class Funktion(BasisFunktion):
     """
     Zentrale vereinheitlichte Funktionsklasse für das Schul-Analysis Framework.
 
@@ -793,6 +798,9 @@ class Funktion:
                      - Tuple: (zaehler_string, nenner_string)
             nenner: Optionaler Nenner (wenn eingabe nur Zähler ist)
         """
+        # Initialisiere die Basisklasse
+        super().__init__()
+
         # Echte Unified Architecture - Keine Wrapper-Delegation mehr!
 
         # Grundlegende Initialisierung
@@ -873,16 +881,78 @@ class Funktion:
                 nenner_expr = nenner
             self.term_sympy = self.term_sympy / nenner_expr
 
+    def _extract_exponent_parameter(self, expr: sp.Basic) -> float:
+        """Extract the exponent parameter from an exponential expression"""
+        from sympy import exp
+
+        # Look for exp(something) pattern
+        exp_matches = expr.find(exp)
+
+        for exp_func in exp_matches:
+            # Get the argument of exp
+            arg = exp_func.args[0]
+
+            # Try to extract coefficient of x
+            if hasattr(arg, "as_coeff_mul"):
+                coeff, terms = arg.as_coeff_mul(self._variable_symbol)
+                if self._variable_symbol in terms:
+                    return float(coeff)
+
+        return 1.0  # default
+
+    def _ist_exponential_rational_struktur(self, expr: sp.Basic) -> bool:
+        """Check if the expression is an exponential-rational function (polynomial * exponential)"""
+        from sympy import exp
+
+        # Check if it's a product
+        if expr.func == sp.Mul:
+            # Look for exponential and polynomial factors
+            has_exp = False
+            has_poly = False
+
+            for factor in expr.args:
+                if factor.has(exp):
+                    has_exp = True
+                elif factor.is_polynomial(self._variable_symbol):
+                    has_poly = True
+
+            return has_exp and has_poly
+
+        return False
+
     def _parse_string_to_sympy(self, eingabe: str) -> sp.Basic:
-        """Parset String-Eingabe zu SymPy-Ausdruck mit deutschen Fehlermeldungen"""
+        """Parset String-Eingabe zu SymPy-Ausdruck mit deutschen Fehlermeldungen und erweiterter Schul-Mathematik-Syntax"""
         from sympy.parsing.sympy_parser import (
             implicit_multiplication_application,
             parse_expr,
             standard_transformations,
         )
+        import re
 
         # Bereinige Eingabe
         bereinigt = eingabe.strip().replace("$", "").replace("^", "**")
+
+        # Erweiterte Schul-Mathematik-Syntax-Unterstützung
+        # Implizite Multiplikation: 2x -> 2*x
+        bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)
+        # x2 -> x*2 (nicht so häufig, aber manchmal von Schülern verwendet)
+        bereinigt = re.sub(r"([a-zA-Z])(\d)", r"\1*\2", bereinigt)
+        # (x+1)x -> (x+1)*x
+        bereinigt = re.sub(r"(\))([a-zA-Z])", r"\1*\2", bereinigt)
+
+        # x(x+1) -> x*(x+1) - aber nur für einfache Fälle, nicht für Funktionsaufrufe
+        # Ersetze nur, wenn es sich nicht um bekannte Funktionsnamen handelt
+        bekannte_funktionen = ["sin", "cos", "tan", "exp", "log", "sqrt", "abs"]
+        for func in bekannte_funktionen:
+            # Schütze Funktionsaufrufe vor der Transformation
+            bereinigt = bereinigt.replace(f"{func}(", f"__{func}__(")
+
+        # Wende die Transformation an
+        bereinigt = re.sub(r"([a-zA-Z])\(", r"\1*(", bereinigt)
+
+        # Stelle Funktionsaufrufe wieder her
+        for func in bekannte_funktionen:
+            bereinigt = bereinigt.replace(f"__{func}__(", f"{func}(")
 
         # Verwende alle Transformationen
         transformations = standard_transformations + (
@@ -1228,11 +1298,16 @@ class Funktion:
         """Berechnet das Integral (Alias für integral)"""
         return self.integral(ordnung)
 
-    @property
     @preserve_exact_types
-    def nullstellen(self) -> ExactNullstellenListe:
+    def nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen mit exakten SymPy-Ergebnissen.
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
 
         Returns:
             Liste der exakten Nullstellen als SymPy-Ausdrücke
@@ -1240,15 +1315,25 @@ class Funktion:
         try:
             # Für ganzrationale Funktionen: spezialisierte Behandlung
             if self.ist_ganzrational:
-                return self._nullstellen_ganzrational()
-
-            # Standardmethode für andere Funktionstypen
-            lösungen = solve(self.term_sympy, self._variable_symbol)
-            # Filtere reelle Lösungen
-            ergebnisse = [lösung for lösung in lösungen if lösung.is_real]
+                ergebnisse = self._nullstellen_ganzrational()
+            else:
+                # Standardmethode für andere Funktionstypen
+                lösungen = solve(self.term_sympy, self._variable_symbol)
+                ergebnisse = [lösung for lösung in lösungen if lösung.is_real]
 
             # Validiere die Ergebnisse
             validate_exact_results(ergebnisse, "Nullstellen")
+
+            # Filtere reelle Lösungen wenn gewünscht
+            if real:
+                ergebnisse = [erg for erg in ergebnisse if erg.is_real]
+
+            # Runde wenn gewünscht
+            if runden is not None:
+                ergebnisse = [
+                    round(float(erg), runden) if erg.is_real else erg
+                    for erg in ergebnisse
+                ]
 
             return ergebnisse
         except Exception as e:
@@ -1257,14 +1342,20 @@ class Funktion:
                 "Tipp: Die Funktion kann möglicherweise nicht symbolisch gelöst werden."
             ) from e
 
-    def Nullstellen(self) -> ExactNullstellenListe:
+    def Nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
         """
         Berechnet die Nullstellen mit exakten SymPy-Ergebnissen (Alias für nullstellen).
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
 
         Returns:
             Liste der exakten Nullstellen als SymPy-Ausdrücke
         """
-        return self.nullstellen
+        return self.nullstellen(real=real, runden=runden)
 
     def _nullstellen_ganzrational(self) -> ExactNullstellenListe:
         """
@@ -1394,17 +1485,22 @@ class Funktion:
                 f"Fehler bei der Nullstellenberechnung für ganzrationale Funktion: {str(e)}"
             ) from e
 
-    @property
-    def extremstellen(self) -> list[tuple[Any, str]]:
+    def extremstellen(
+        self, real: bool = True, runden: int = None
+    ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Extremstellen der Funktion.
 
+        Args:
+            real: Nur reelle Extremstellen (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
         Returns:
-            Liste von (x_wert, art) Tupeln, wobei art "Minimum" oder "Maximum" sein kann
+            Liste von (x_wert, y_wert, art) Tupeln, wobei art "Minimum" oder "Maximum" sein kann
 
         Examples:
             >>> f = Funktion("x^2 - 4x + 3")
-            >>> extremstellen = f.extremstellen()  # [(2.0, "Minimum")]
+            >>> extremstellen = f.extremstellen()  # [(2.0, -1.0, "Minimum")]
         """
         try:
             # Berechne erste Ableitung
@@ -1465,6 +1561,9 @@ class Funktion:
                             # Bei komplexen symbolischen Ausdrücken
                             art = "Extremum (Art hängt von Parametern ab)"
 
+                    # Berechne y-Wert für diesen Punkt
+                    y_wert = self.term_sympy.subs(self._variable_symbol, punkt)
+
                     # Behalte exakte symbolische Ergebnisse bei
                     # Konvertiere nur zu Float, wenn es sich um eine reine Zahl handelt
                     # und keine Parameter oder komplexen Ausdrücke enthält
@@ -1483,7 +1582,17 @@ class Funktion:
                         # Behalte symbolischen Ausdruck bei (enthält Parameter oder ist komplex)
                         x_wert = punkt
 
-                    extremstellen.append((x_wert, art))
+                    # Berechne y-Wert analog
+                    if y_wert.is_number and not y_wert.free_symbols:
+                        if isinstance(y_wert, (sp.Rational, sp.Integer)) or (
+                            hasattr(y_wert, "q") and hasattr(y_wert, "p")
+                        ):
+                            # Behalte exakte Form bei
+                            pass
+                        else:
+                            y_wert = float(y_wert)
+
+                    extremstellen.append((x_wert, y_wert, art))
                 except Exception:
                     # Bei Berechnungsfehlern überspringen wir den Punkt
                     # Debug-Info für Entwicklung
@@ -1496,21 +1605,43 @@ class Funktion:
             # Bei Fehlern leere Liste zurückgeben
             return []
 
-    def Extremstellen(self) -> list[tuple[Any, str]]:
+    def Extremstellen(
+        self, real: bool = True, runden: int = None
+    ) -> list[tuple[Any, Any, str]]:
         """Berechnet die Extremstellen (Alias für extremstellen)"""
-        return self.extremstellen
+        return self.extremstellen(real=real, runden=runden)
 
-    @property
-    def wendepunkte(self) -> list[tuple[Any, Any, str]]:
+    def extrema(
+        self, real: bool = True, runden: int = None
+    ) -> list[tuple[Any, Any, str]]:
+        """
+        Berechnet die Extremstellen der Funktion (Alias für extremstellen).
+
+        Args:
+            real: Nur reelle Extremstellen (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste von (x_wert, y_wert, art) Tupeln, wobei art "Minimum" oder "Maximum" sein kann
+        """
+        return self.extremstellen(real=real, runden=runden)
+
+    def wendepunkte(
+        self, real: bool = True, runden: int = None
+    ) -> list[tuple[Any, Any, str]]:
         """
         Berechnet die Wendepunkte der Funktion.
+
+        Args:
+            real: Nur reelle Wendepunkte (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
 
         Returns:
             Liste von (x_wert, y_wert, art) Tupeln, wobei art "Wendepunkt" ist
 
         Examples:
             >>> f = Funktion("x^3 - 3x^2 + 2")
-            >>> wendepunkte = f.wendepunkte  # [(1.0, 0.0, "Wendepunkt")]
+            >>> wendepunkte = f.wendepunkte()  # [(1.0, 0.0, "Wendepunkt")]
         """
         try:
             # Berechne zweite Ableitung

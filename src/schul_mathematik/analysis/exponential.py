@@ -48,37 +48,45 @@ class ExponentialFunktion(Funktion):
             for base in [expr.base]
         )
 
-    def ableitung(self, ordnung: int = 1) -> "Funktion":
-        """
-        Berechnet die Ableitung gegebener Ordnung.
-        Für exponentialfunktionen gelten spezielle Regeln.
-        """
-        if ordnung < 1:
-            raise ValueError("Die Ordnung muss mindestens 1 sein")
-
-        # Für exp(f(x)) ist die Ableitung exp(f(x)) * f'(x)
-        ableitung = diff(self.term_sympy, self._variable_symbol, ordnung)
-        # Validiere das Ergebnis für exakte Berechnungen
-        validate_function_result(ableitung, VALIDATION_EXACT)
-
-        # Intelligente Vereinfachung für parametrisierte Ausdrücke
-        if self.parameter:
-            # Import hier, um Zirkelreferenzen zu vermeiden
-            from .funktion import _intelligente_vereinfachung
-
-            ableitung = _intelligente_vereinfachung(
-                ableitung, self._variable_symbol, self.parameter
-            )
-
-        # Erstelle neue Funktion
-        from .funktion import Funktion
-
-        return Funktion(ableitung)
-
-    def nullstellen(self) -> list:
+    def nullstellen(self, real: bool = True, runden: int = None) -> list:
         """
         Berechnet die Nullstellen der exponentialfunktion.
         Exponentialfunktionen haben keine reellen Nullstellen.
+
+        Args:
+            real: Nur reelle Nullstellen (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Leere Liste, da Exponentialfunktionen keine reellen Nullstellen haben
+        """
+        return []
+
+    def extrema(self, real: bool = True, runden: int = None) -> list:
+        """
+        Berechnet die Extremstellen der exponentialfunktion.
+        Reine Exponentialfunktionen haben keine Extremstellen.
+
+        Args:
+            real: Nur reelle Extremstellen (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Leere Liste, da reine Exponentialfunktionen keine Extremstellen haben
+        """
+        return []
+
+    def wendepunkte(self, real: bool = True, runden: int = None) -> list:
+        """
+        Berechnet die Wendepunkte der exponentialfunktion.
+        Reine Exponentialfunktionen haben keine Wendepunkte.
+
+        Args:
+            real: Nur reelle Wendepunkte (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Leere Liste, da reine Exponentialfunktionen keine Wendepunkte haben
         """
         return []
 

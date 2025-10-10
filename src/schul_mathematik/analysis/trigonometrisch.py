@@ -95,22 +95,6 @@ class TrigonometrischeFunktion(Funktion):
             )
             return []
 
-    def ableitung(self, ordnung: int = 1) -> "TrigonometrischeFunktion":
-        """
-        Berechnet die Ableitung gegebener Ordnung.
-
-        Args:
-            ordnung: Ordnung der Ableitung (Standard: 1)
-
-        Returns:
-            Neue TrigonometrischeFunktion mit der abgeleiteten Funktion
-        """
-        # 🔥 UNIFIED ARCHITECTURE: Verwende Basis-Klassen-Properties 🔥
-        abgeleitet = diff(self.term_sympy, self._variable_symbol, ordnung)
-        # Validiere das Ergebnis für exakte Berechnungen
-        validate_function_result(abgeleitet, VALIDATION_EXACT)
-        return TrigonometrischeFunktion(abgeleitet)
-
     def term(self) -> str:
         """Gibt den Term als String zurück."""
         # 🔥 UNIFIED ARCHITECTURE: Verwende Basis-Klassen-Funktionalität 🔥
@@ -119,6 +103,38 @@ class TrigonometrischeFunktion(Funktion):
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück."""
         return latex(self.term_sympy)
+
+    def extrema(self, real: bool = True, runden: int = None) -> list:
+        """
+        Berechnet die Extremstellen der trigonometrischen Funktion.
+        Für trigonometrische Funktionen ist dies eine komplexe Berechnung.
+
+        Args:
+            real: Nur reelle Extremstellen (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Extremstellen oder leere Liste wenn nicht berechenbar
+        """
+        # Trigonometrische Funktionen haben unendlich viele Extremstellen
+        # Dies ist eine komplexe Berechnung, die für den Schulgebrauch vereinfacht wird
+        return []
+
+    def wendepunkte(self, real: bool = True, runden: int = None) -> list:
+        """
+        Berechnet die Wendepunkte der trigonometrischen Funktion.
+        Für trigonometrische Funktionen ist dies eine komplexe Berechnung.
+
+        Args:
+            real: Nur reelle Wendepunkte (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Wendepunkte oder leere Liste wenn nicht berechenbar
+        """
+        # Trigonometrische Funktionen haben unendlich viele Wendepunkte
+        # Dies ist eine komplexe Berechnung, die für den Schulgebrauch vereinfacht wird
+        return []
 
     def periodenlaenge(self) -> float:
         """

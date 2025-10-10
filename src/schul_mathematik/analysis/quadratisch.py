@@ -115,12 +115,6 @@ class QuadratischeFunktion(GanzrationaleFunktion):
         y_s = self.wert(x_s)
         return (x_s, y_s)
 
-    @property
-    def nullstellen(self) -> list[float | sp.Basic]:
-        """Gibt die Nullstellen zurück"""
-        # Verwende die Basis-Implementierung aus der Elternklasse
-        return super().nullstellen
-
     def ist_offen_nach_oben(self) -> bool:
         """Prüft, ob die Parabel nach oben geöffnet ist"""
         return self.oeffnungsfaktor > 0

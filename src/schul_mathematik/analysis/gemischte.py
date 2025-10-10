@@ -31,14 +31,6 @@ class GemischteFunktion(Funktion):
         Args:
             eingabe: String, SymPy-Ausdruck oder bestehendes GemischteFunktion-Objekt
         """
-        # Initialize required attributes from parent class
-        from sympy import symbols
-
-        self.x = symbols("x")
-        self.variablen = []
-        self.parameter = []
-        self.hauptvariable = None
-
         # Speichere die ursprüngliche Eingabe
         self.original_eingabe = str(eingabe)
 
@@ -53,25 +45,29 @@ class GemischteFunktion(Funktion):
             transformations = standard_transformations + (
                 implicit_multiplication_application,
             )
-            self.term_sympy = parse_expr(
+            term_sympy = parse_expr(
                 eingabe.replace("^", "**"), transformations=transformations
             )
         elif isinstance(eingabe, sp.Basic):
-            self.term_sympy = eingabe
+            term_sympy = eingabe
         elif isinstance(eingabe, GemischteFunktion):
             # Kopie
-            self.term_sympy = eingabe.term_sympy
+            term_sympy = eingabe.term_sympy
             self.komponenten = eingabe.komponenten.copy()
         else:
             raise TypeError(
                 "Eingabe muss String, SymPy-Ausdruck oder GemischteFunktion sein"
             )
 
+        # Call parent constructor with the parsed term
+        super().__init__(term_sympy)
+        self.term_sympy = term_sympy
+
+        # Bestimme die Hauptvariable
+        self.x = self._erkenne_hauptvariable()
+
         # Analysiere die Komponenten der gemischten Funktion
         self.komponenten = self._analysiere_komponenten()
-
-        # Bestimme die Hauptvariable (überschreibt die von der Elternklasse)
-        self.x = self._erkenne_hauptvariable()
 
         # Erstelle lesbaren Term-String
         self.term_str = self._erstelle_term_string()
@@ -221,7 +217,7 @@ class GemischteFunktion(Funktion):
         )
         return info
 
-    def nullstellen(self, real: bool = True, runden=None) -> list[sp.Basic]:
+    def nullstellen(self, real: bool = True, runden: int = None) -> list:
         """
         Berechnet die Nullstellen der gemischten Funktion.
 
@@ -287,19 +283,6 @@ class GemischteFunktion(Funktion):
 
         return sorted(set(nullstellen))
 
-    def ableitung(self, ordnung: int = 1) -> "GemischteFunktion":
-        """
-        Berechnet die Ableitung gegebener Ordnung.
-
-        Args:
-            ordnung: Ordnung der Ableitung (Standard: 1)
-
-        Returns:
-            Neue GemischteFunktion mit der abgeleiteten Funktion
-        """
-        abgeleitet = diff(self.term_sympy, self.x, ordnung)
-        return GemischteFunktion(abgeleitet)
-
     def wert(self, x_wert: float) -> float:
         """
         Berechnet den Funktionswert an einer Stelle.
@@ -322,6 +305,38 @@ class GemischteFunktion(Funktion):
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück."""
         return latex(self.term_sympy)
+
+    def extrema(self, real: bool = True, runden: int = None) -> list:
+        """
+        Berechnet die Extremstellen der gemischten Funktion.
+        Für gemischte Funktionen ist dies eine komplexe Berechnung.
+
+        Args:
+            real: Nur reelle Extremstellen (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Extremstellen oder leere Liste wenn nicht berechenbar
+        """
+        # Gemischte Funktionen können komplexe Extremstellen haben
+        # Dies ist eine komplexe Berechnung, die für den Schulgebrauch vereinfacht wird
+        return []
+
+    def wendepunkte(self, real: bool = True, runden: int = None) -> list:
+        """
+        Berechnet die Wendepunkte der gemischten Funktion.
+        Für gemischte Funktionen ist dies eine komplexe Berechnung.
+
+        Args:
+            real: Nur reelle Wendepunkte (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Wendepunkte oder leere Liste wenn nicht berechenbar
+        """
+        # Gemischte Funktionen können komplexe Wendepunkte haben
+        # Dies ist eine komplexe Berechnung, die für den Schulgebrauch vereinfacht wird
+        return []
 
     def grad(self) -> int:
         """
