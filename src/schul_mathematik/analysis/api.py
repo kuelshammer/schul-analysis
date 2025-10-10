@@ -8,18 +8,14 @@ Alle Funktionen unterstützen Duck-Typing und funktionieren mit allen
 verfügbaren Funktionstypen (ganzrational, gebrochen rational, etc.)
 """
 
-from typing import Any, Optional
+from typing import Any
 
-import numpy as np
 import sympy as sp
 
 from .errors import SchulAnalysisError, UngueltigeFunktionError
-from .funktion import Funktion
-from .visualisierung import Graph
 
 # Importiere alle verfügbaren Funktionstypen
 from .ganzrationale import GanzrationaleFunktion
-from .lineare_gleichungssysteme import LGS
 from .strukturiert import (
     KompositionFunktion,
     ProduktFunktion,
@@ -29,7 +25,6 @@ from .strukturiert import (
 from .sympy_types import (
     ExactNullstellenListe,
     ExactSymPyExpr,
-    ExtremaListe,
     SattelpunkteListe,
     SchnittpunkteListe,
     StationaereStellenListe,
@@ -38,6 +33,7 @@ from .sympy_types import (
     validate_analysis_results,
     validate_exact_results,
 )
+from .visualisierung import Graph
 
 # Type Hint für alle unterstützten Funktionstypen
 Funktionstyp = (
@@ -853,7 +849,7 @@ def Graph(
     **kwargs,
 ) -> Any:
     """
-    Zeichnet eine oder mehrere Funktionen im gegebenen Bereich.
+    Zeichnet eine oder mehrere Funktionen im gegebenen Bereich mit intelligenter Typ-Erkennung.
 
     Args:
         funktion: Eine beliebige Funktion (auch Python-Funktionen)
@@ -861,6 +857,9 @@ def Graph(
         y_bereich: y-Bereich als (von, bis) - Standard: automatisch
         weitere_funktionen: Zusätzliche Funktionen, die gezeichnet werden sollen
         **kwargs: Zusätzliche Parameter für die Visualisierung
+            aspect_ratio: Seitenverhältnis ('auto', 'quadratisch', 'goldener_schnitt', etc.)
+            titel: Diagrammtitel
+            achsen_beschriftung: Beschriftung der Achsen
 
     Returns:
         Interaktiver Plotly-Graph
@@ -868,6 +867,9 @@ def Graph(
     Beispiele:
         >>> f = Funktion("x^2 - 4x + 3")  # x² - 4x + 3
         >>> Graph(f, (-2, 6))               # Zeichnet Funktion von x=-2 bis x=6
+
+        # Mit spezifischem Seitenverhältnis:
+        >>> Graph(f, (-2, 6), aspect_ratio='quadratisch')
 
         # Mehrere Funktionen:
         >>> g = Funktion("2*x + 1")
@@ -877,6 +879,24 @@ def Graph(
         >>> Graph(lambda x: x**2, (-5, 5))
     """
     try:
+        # Importiere Fehlerbehandlung und Aspect-Ratio-Controller
+        from .visualisierung_errors import (
+            PlotBereichError,
+            DatenpunktBerechnungsError,
+            VisualisierungsError,
+        )
+        from .aspect_ratio import AspectRatioController
+
+        # Validiere Bereiche
+        if x_bereich and len(x_bereich) != 2:
+            raise PlotBereichError(
+                "x_bereich muss ein Tupel mit zwei Werten sein: (von, bis)"
+            )
+        if y_bereich and len(y_bereich) != 2:
+            raise PlotBereichError(
+                "y_bereich muss ein Tupel mit zwei Werten sein: (von, bis)"
+            )
+
         # Konvertiere x_bereich zu x_min/x_max für Graph-Funktion
         if x_bereich:
             kwargs["x_min"] = x_bereich[0]
@@ -885,31 +905,69 @@ def Graph(
             kwargs["y_min"] = y_bereich[0]
             kwargs["y_max"] = y_bereich[1]
 
+        # Aspect-Ratio-Handling
+        aspect_ratio = kwargs.pop("aspect_ratio", "auto")
+        if aspect_ratio != "auto":
+            controller = AspectRatioController()
+            ratio_kwargs = controller.konfiguriere_aspect_ratio(aspect_ratio)
+            kwargs.update(ratio_kwargs)
+
         # Wenn mehrere Funktionen übergeben wurden
         if weitere_funktionen:
             from .visualisierung import Graph as VisualisierungsGraph
 
             return VisualisierungsGraph(funktion, *weitere_funktionen, **kwargs)
         else:
-            # Einzelne Funktion
-            if hasattr(funktion, "graph"):
-                return funktion.graph(**kwargs)
-            elif hasattr(funktion, "zeige_funktion"):
-                if x_bereich:
-                    return funktion.zeige_funktion(x_bereich, **kwargs)
-                else:
-                    return funktion.zeige_funktion(**kwargs)
-            elif callable(funktion):
-                from .visualisierung import zeige_funktion
+            # Intelligente Funktionserkennung für einzelne Funktionen
+            return _zeichne_einzelne_funktion(funktion, x_bereich, kwargs)
 
-                return zeige_funktion(funktion, x_bereich, **kwargs)
-            else:
-                raise TypeError(
-                    "Das übergebene Objekt ist keine zeichnenbare Funktion."
-                )
-
+    except (PlotBereichError, DatenpunktBerechnungsError, VisualisierungsError):
+        # Spezialisierte Fehler durchreichen
+        raise
     except Exception as e:
-        raise SchulAnalysisError(f"Fehler bei der Visualisierung: {str(e)}")
+        # Generische Fehler mit Kontext
+        raise SchulAnalysisError(
+            f"Fehler bei der Visualisierung von {getattr(funktion, '__name__', str(funktion))}: {str(e)}"
+        )
+
+
+def _zeichne_einzelne_funktion(
+    funktion: Any, x_bereich: tuple[float, float] | None, kwargs: dict
+) -> Any:
+    """Hilfsfunktion zum Zeichnen einzelner Funktionen mit Typ-spezifischer Behandlung."""
+
+    # Typ-spezifische Behandlung
+    if hasattr(funktion, "graph"):
+        # Moderne Funktion mit graph-Methode
+        return funktion.graph(**kwargs)
+
+    elif hasattr(funktion, "zeige_funktion"):
+        # Legacy-Funktion mit zeige_funktion-Methode
+        if x_bereich:
+            return funktion.zeige_funktion(x_bereich, **kwargs)
+        else:
+            return funktion.zeige_funktion(**kwargs)
+
+    elif hasattr(funktion, "plot"):
+        # Plotly-kompatible Funktion
+        return funktion.plot(**kwargs)
+
+    elif callable(funktion):
+        # Normale Python-Funktion
+        try:
+            from .visualisierung import zeige_funktion
+
+            return zeige_funktion(funktion, x_bereich, **kwargs)
+        except Exception as e:
+            raise DatenpunktBerechnungsError(
+                f"Kann Datenpunkte für Funktion {getattr(funktion, '__name__', 'anonymous')} nicht berechnen: {str(e)}"
+            )
+
+    else:
+        raise TypeError(
+            f"Das übergebene Objekt vom Typ {type(funktion).__name__} ist keine zeichnenbare Funktion. "
+            "Erwartet wird eine Funktion mit graph(), zeige_funktion(), plot() Methode oder ein callable."
+        )
 
 
 # Für Abwärtskompatibilität
@@ -960,7 +1018,6 @@ def Flaeche(*args, anzeigen: bool = False, **kwargs) -> Any:
     - Bei anzeigen=False: Plotly-Figure-Objekt
     - Bei anzeigen=True: Plotly-Figure-Objekt (zeigt den Graphen an)
     """
-    import sympy as sp
 
     # Fall 1: 3 Argumente -> Flaeche(f, a, b)
     if len(args) == 3:
@@ -1292,6 +1349,7 @@ __all__ = [
     "Flaeche",
     "Extremstellen",
     "Extrempunkte",
+    "Extrema",  # Alias für Abwärtskompatibilität
     "Wendepunkte",
     "Sattelpunkte",
     "Schnittpunkte",
@@ -1306,9 +1364,434 @@ __all__ = [
     "Zeichne",  # Für Abwärtskompatibilität
     "Term",
     "Ausmultiplizieren",
+    # 📊 STOCHASTIK-VISUALISIERUNG
+    "ZeichneBinomialverteilung",
+    "ZeichneNormalverteilung",
+    "ZeichneNormalverteilungsVergleich",
+    # 📐 GEOMETRIE-VISUALISIERUNG
+    "ZeichnePunkt",
+    "ZeichneGerade",
+    "ZeichneZweiPunkteUndGerade",
+    "ZeichneSchnittpunktZweierGeraden",
+    "ZeichneAbstandZweiPunkte",
     # 📈 TAYLOR-FUNKTIONEN
     "Tangente",
     "Taylorpolynom",
+    "FlaecheZweiFunktionen",  # Für Tests
     # Type-Hints
     "Funktionstyp",
 ]
+
+
+# =============================================================================
+# SPECIELLE FUNKTIONEN FÜR TESTS
+# =============================================================================
+
+
+def FlaecheZweiFunktionen(
+    f1: Funktionstyp, f2: Funktionstyp, a: float, b: float, anzeigen: bool = False
+) -> float:
+    """
+    Berechnet die Fläche zwischen zwei Funktionen über dem Intervall [a, b].
+
+    Args:
+        f1: Erste Funktion (obere Funktion)
+        f2: Zweite Funktion (untere Funktion)
+        a: Untere Integrationsgrenze
+        b: Obere Integrationsgrenze
+        anzeigen: Ob die Visualisierung angezeigt werden soll
+
+    Returns:
+        float: Fläche zwischen den Funktionen
+
+    Examples:
+        >>> f1 = GanzrationaleFunktion("x^2")
+        >>> f2 = GanzrationaleFunktion("x")
+        >>> flaeche = FlaecheZweiFunktionen(f1, f2, 0, 1)
+    """
+    import sympy as sp
+
+    from .visualisierung import Graph as VisualisierungsGraph
+
+    # Berechne Fläche numerisch: ∫[a,b] (f1(x) - f2(x)) dx
+    x = sp.symbols("x")
+    f1_expr = f1.term_sympy
+    f2_expr = f2.term_sympy
+    differenz = f1_expr - f2_expr
+
+    # Berechne Integral
+    ergebnis = sp.integrate(differenz, (x, a, b))
+
+    # Konvertiere zu Float wenn möglich
+    try:
+        ergebnis = float(ergebnis)
+    except (TypeError, ValueError):
+        pass
+
+    if anzeigen:
+        # Erstelle Visualisierung mit korrekten Parametern
+        bereich_erweiterung = (b - a) * 0.2
+        x_min = a - bereich_erweiterung
+        x_max = b + bereich_erweiterung
+
+        fig = VisualisierungsGraph(
+            f1,
+            f2,
+            x_min=x_min,
+            x_max=x_max,
+            flaeche_zwei_funktionen=True,
+            flaeche_grenzen=(a, b),
+            titel=f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}",
+        )
+        return fig
+
+    return ergebnis
+
+
+# =============================================================================
+# VISUALISIERUNG FÜR STOCHASTIK
+# =============================================================================
+
+
+def ZeichneBinomialverteilung(
+    n: int, p: float, k_max: int = None, farbe: str = "blue", **kwargs
+) -> Any:
+    """
+    Zeichnet die Binomialverteilung.
+
+    Args:
+        n: Anzahl der Versuche
+        p: Erfolgswahrscheinlichkeit
+        k_max: Maximale Anzahl der Erfolge zur Darstellung (Standard: n)
+        farbe: Farbe für die Balken
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> ZeichneBinomialverteilung(n=10, p=0.3)
+        >>> ZeichneBinomialverteilung(n=20, p=0.5, k_max=15, farbe="green")
+    """
+    try:
+        from ..stochastik.visualisierung import zeichne_binomialverteilung
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_binomialverteilung(n, p, k_max, farbe, **kwargs)
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Binomialverteilungs-Darstellung: {str(e)}"
+        )
+
+
+def ZeichneNormalverteilung(
+    mu: float,
+    sigma: float,
+    x_bereich: tuple = (-4, 4),
+    farbe: str = "blue",
+    sigma_bereiche: bool = True,
+    **kwargs,
+) -> Any:
+    """
+    Zeichnet die Normalverteilung.
+
+    Args:
+        mu: Erwartungswert
+        sigma: Standardabweichung
+        x_bereich: Darstellungsbereich als (min, max) in Einheiten von sigma
+        farbe: Farbe für die Kurve
+        sigma_bereiche: Sigma-Bereiche hervorheben
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> ZeichneNormalverteilung(mu=0, sigma=1)  # Standardnormalverteilung
+        >>> ZeichneNormalverteilung(mu=100, sigma=15, x_bereich=(-3, 3))
+        >>> ZeichneNormalverteilung(mu=50, sigma=10, sigma_bereiche=False)
+    """
+    try:
+        from ..stochastik.visualisierung import zeichne_normalverteilung
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_normalverteilung(
+            mu, sigma, x_bereich, farbe, sigma_bereiche, **kwargs
+        )
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Normalverteilungs-Darstellung: {str(e)}"
+        )
+
+
+def ZeichneNormalverteilungsVergleich(
+    mu1: float,
+    sigma1: float,
+    mu2: float,
+    sigma2: float,
+    x_bereich: tuple = None,
+    farbe1: str = "blue",
+    farbe2: str = "red",
+    **kwargs,
+) -> Any:
+    """
+    Vergleicht zwei Normalverteilungen in einem Graphen.
+
+    Args:
+        mu1, sigma1: Parameter der ersten Verteilung
+        mu2, sigma2: Parameter der zweiten Verteilung
+        x_bereich: Darstellungsbereich (automatisch, wenn None)
+        farbe1, farbe2: Farben für die Verteilungen
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> # Vergleich von zwei Verteilungen
+        >>> ZeichneNormalverteilungsVergleich(mu1=0, sigma1=1, mu2=2, sigma2=1.5)
+
+        # Vergleich mit benutzerdefinierten Farben
+        >>> ZeichneNormalverteilungsVergleich(mu1=100, sigma1=15, mu2=120, sigma2=20,
+        ...                                 farbe1="green", farbe2="orange")
+    """
+    try:
+        from ..stochastik.visualisierung import (
+            zeichne_vergleich_zwei_normalverteilungen,
+        )
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_vergleich_zwei_normalverteilungen(
+            mu1, sigma1, mu2, sigma2, x_bereich, farbe1, farbe2, **kwargs
+        )
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler beim Vergleich der Normalverteilungen: {str(e)}"
+        )
+
+
+# =============================================================================
+# VISUALISIERUNG FÜR GEOMETRIE
+# =============================================================================
+
+
+def ZeichnePunkt(punkt: Any, farbe: str = "red", groesse: int = 10, **kwargs) -> Any:
+    """
+    Zeichnet einen Punkt im 2D-Koordinatensystem.
+
+    Args:
+        punkt: Punkt-Objekt aus dem Geometrie-Modul
+        farbe: Farbe des Punktes
+        groesse: Größe des Punktes
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> from schul_mathematik.geometrie import Punkt
+        >>> P = Punkt([2, 3], "P")
+        >>> ZeichnePunkt(P)
+
+        >>> # Mit benutzerdefinierter Farbe
+        >>> ZeichnePunkt(P, farbe="blue", groesse=15)
+    """
+    try:
+        from ..geometrie.visualisierung import zeichne_punkt_2d
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_punkt_2d(punkt, farbe, groesse, **kwargs)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Punkt-Darstellung: {str(e)}")
+
+
+def ZeichneGerade(
+    gerade: Any,
+    x_bereich: tuple[float, float] = (-10, 10),
+    farbe: str = "blue",
+    aufpunkt_farbe: str = "red",
+    **kwargs,
+) -> Any:
+    """
+    Zeichnet eine Gerade im 2D-Koordinatensystem.
+
+    Args:
+        gerade: Geraden-Objekt aus dem Geometrie-Modul
+        x_bereich: x-Bereich für die Darstellung
+        farbe: Farbe der Geraden
+        aufpunkt_farbe: Farbe des Aufpunktes
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> from schul_mathematik.geometrie import Punkt, Gerade, gerade_durch_zwei_punkte
+        >>> P1 = Punkt([1, 2], "P1")
+        >>> P2 = Punkt([4, 6], "P2")
+        >>> g = gerade_durch_zwei_punkte(P1, P2, "g")
+        >>> ZeichneGerade(g)
+
+        >>> # Mit angepasstem Bereich
+        >>> ZeichneGerade(g, x_bereich=(-5, 10), farbe="green")
+    """
+    try:
+        from ..geometrie.visualisierung import zeichne_gerade_2d
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_gerade_2d(gerade, x_bereich, farbe, aufpunkt_farbe, **kwargs)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Geraden-Darstellung: {str(e)}")
+
+
+def ZeichneZweiPunkteUndGerade(
+    p1: Any, p2: Any, x_bereich: tuple[float, float] = (-10, 10), **kwargs
+) -> Any:
+    """
+    Zeichnet zwei Punkte und die Gerade durch beide Punkte.
+
+    Args:
+        p1: Erster Punkt
+        p2: Zweiter Punkt
+        x_bereich: x-Bereich für die Darstellung
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> from schul_mathematik.geometrie import Punkt
+        >>> A = Punkt([1, 1], "A")
+        >>> B = Punkt([5, 3], "B")
+        >>> ZeichneZweiPunkteUndGerade(A, B)
+
+        >>> # Mit angepasstem Bereich
+        >>> ZeichneZweiPunkteUndGerade(A, B, x_bereich=(0, 8))
+    """
+    try:
+        from ..geometrie.visualisierung import zeichne_zwei_punkte_und_gerade
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_zwei_punkte_und_gerade(p1, p2, x_bereich, **kwargs)
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Darstellung von zwei Punkten und Gerade: {str(e)}"
+        )
+
+
+def ZeichneSchnittpunktZweierGeraden(
+    g1: Any, g2: Any, x_bereich: tuple[float, float] = (-10, 10), **kwargs
+) -> Any:
+    """
+    Zeichnet zwei Geraden und ihren Schnittpunkt.
+
+    Args:
+        g1: Erste Gerade
+        g2: Zweite Gerade
+        x_bereich: x-Bereich für die Darstellung
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> from schul_mathematik.geometrie import Punkt, Gerade
+        >>> g1 = Gerade(Punkt([0, 0], "A"), Punkt([1, 1], "V1"), "g1")
+        >>> g2 = Gerade(Punkt([0, 2], "B"), Punkt([1, 0], "V2"), "g2")
+        >>> ZeichneSchnittpunktZweierGeraden(g1, g2)
+    """
+    try:
+        from ..geometrie.visualisierung import zeichne_schnittpunkt_zweier_geraden
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_schnittpunkt_zweier_geraden(g1, g2, x_bereich, **kwargs)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Schnittpunkt-Darstellung: {str(e)}")
+
+
+def ZeichneAbstandZweiPunkte(
+    p1: Any, p2: Any, x_bereich: tuple[float, float] = (-10, 10), **kwargs
+) -> Any:
+    """
+    Zeichnet zwei Punkte und ihren Abstand.
+
+    Args:
+        p1: Erster Punkt
+        p2: Zweiter Punkt
+        x_bereich: x-Bereich für die Darstellung
+        **kwargs: Zusätzliche Parameter für die Visualisierung
+
+    Returns:
+        Interaktiver Plotly-Graph
+
+    Beispiele:
+        >>> from schul_mathematik.geometrie import Punkt
+        >>> P = Punkt([1, 2], "P")
+        >>> Q = Punkt([4, 6], "Q")
+        >>> ZeichneAbstandZweiPunkte(P, Q)
+
+        >>> # Mit angepasstem Bereich
+        >>> ZeichneAbstandZweiPunkte(P, Q, x_bereich=(0, 8))
+    """
+    try:
+        from ..geometrie.visualisierung import zeichne_abstand_zwei_punkte
+
+        # Konvertiere kwargs zu den erwarteten Parametern
+        titel = kwargs.pop("titel", None)
+        if titel:
+            kwargs["title"] = titel
+
+        return zeichne_abstand_zwei_punkte(p1, p2, x_bereich, **kwargs)
+    except Exception as e:
+        raise SchulAnalysisError(f"Fehler bei der Abstands-Darstellung: {str(e)}")
+
+
+# =============================================================================
+# ABWÄRTSKOMPATIBILITÄT: ALIASE FÜR ALTE API-NAMEN
+# =============================================================================
+
+
+def Extrema(funktion: Funktionstyp) -> list[tuple[Any, str]]:
+    """
+    Alias für Extremstellen zur Abwärtskompatibilität.
+
+    Args:
+        funktion: Die zu analysierende Funktion
+
+    Returns:
+        Liste der Extremstellen mit Typ-Informationen
+
+    Note:
+        Diese Funktion existiert nur für Abwärtskompatibilität
+        mit älteren Tests und Dokumentation.
+        Neue Code sollte Extremstellen() verwenden.
+    """
+    return Extremstellen(funktion)
