@@ -1463,7 +1463,7 @@ class Funktion(BasisFunktion):
             # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
             if self.parameter:
                 logging.debug(f"Parametrische Funktion erkannt: {self.parameter}")
-                return self._nullstellen_parametrisch_fallback()
+                return self._nullstellen_parametrisch_fortgeschritten()
             else:
                 logging.debug("Nicht-parametrische Funktion - verwende Framework")
                 return self._nullstellen_mit_framework()
@@ -1559,6 +1559,352 @@ class Funktion(BasisFunktion):
                 f"Unerwarteter Fehler bei parametrischer Nullstellenberechnung: {e}"
             )
             raise
+
+    def _nullstellen_parametrisch_fortgeschritten(self) -> ExactNullstellenListe:
+        """
+        Fortgeschrittene parametrische Nullstellenberechnung mit mehreren Strategien.
+
+        Diese Methode verwendet verschiedene fortschrittliche Techniken:
+        1. Faktorisierung vor der Lösung
+        2. Polynom-spezifische Methoden mit roots()
+        3. solveset() als Alternative zu solve()
+        4. Parameter-Ausklammern und Vereinfachung
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        import sympy as sp
+        from .sympy_types import Nullstelle
+
+        try:
+            logging.debug(
+                f"Starte fortgeschrittene parametrische Berechnung für {self.term()}"
+            )
+
+            # Strategie 1: Faktorisierungs-basierter Ansatz
+            try:
+                logging.debug("Versuche Faktorisierungs-Strategie")
+                ergebnisse = self._parametrisch_mit_faktorisierung()
+                if ergebnisse:
+                    logging.debug(
+                        f"Faktorisierung erfolgreich: {len(ergebnisse)} Lösungen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"Faktorisierung fehlgeschlagen: {e}")
+
+            # Strategie 2: Polynom-spezifische Methoden
+            try:
+                logging.debug("Versuche Polynom-Strategie")
+                ergebnisse = self._parametrisches_polynom()
+                if ergebnisse:
+                    logging.debug(
+                        f"Polynom-Methode erfolgreich: {len(ergebnisse)} Lösungen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"Polynom-Methode fehlgeschlagen: {e}")
+
+            # Strategie 3: solveset() als Alternative
+            try:
+                logging.debug("Versuche solveset-Alternative")
+                ergebnisse = self._parametrisch_mit_solveset()
+                if ergebnisse:
+                    logging.debug(f"solveset erfolgreich: {len(ergebnisse)} Lösungen")
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"solveset fehlgeschlagen: {e}")
+
+            # Fallback auf ursprüngliche Methode
+            logging.debug("Verwende ursprüngliche solve()-Methode als Fallback")
+            return self._nullstellen_parametrisch_fallback()
+
+        except Exception as e:
+            logging.error(
+                f"Fehler bei fortgeschrittener parametrischer Berechnung: {e}"
+            )
+            # Letzter Fallback auf einfache Methode
+            return self._nullstellen_parametrisch_fallback()
+
+    def _parametrisch_mit_faktorisierung(self) -> ExactNullstellenListe:
+        """
+        Parametrische Nullstellenberechnung mit Faktorisierungs-Strategie.
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        import sympy as sp
+        from .sympy_types import Nullstelle
+
+        try:
+            logging.debug(f"Versuche Faktorisierung für {self.term()}")
+
+            # Versuche 1: Direkte Faktorisierung
+            faktorisiert = sp.factor(self.term_sympy)
+            if faktorisiert != self.term_sympy:
+                logging.debug(
+                    f"Faktorisierung erfolgreich: {self.term()} -> {faktorisiert}"
+                )
+                raw_lösungen = sp.solve(faktorisiert, self._variable_symbol)
+            else:
+                logging.debug("Keine direkte Faktorisierung möglich")
+                raw_lösungen = []
+
+            # Versuche 2: Zusammenfassen und nochmal faktorisieren
+            if not raw_lösungen:
+                zusammengefasst = sp.together(self.term_sympy)
+                if zusammengefasst != self.term_sympy:
+                    logging.debug(f"Zusammenfassung erfolgreich: {zusammengefasst}")
+                    faktorisiert_zusammen = sp.factor(zusammengefasst)
+                    if faktorisiert_zusammen != zusammengefasst:
+                        raw_lösungen = sp.solve(
+                            faktorisiert_zusammen, self._variable_symbol
+                        )
+
+            # Verarbeite die Lösungen
+            if raw_lösungen:
+                return self._verarbeite_parametrische_lösungen(
+                    raw_lösungen, "Faktorisierung"
+                )
+
+            return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei Faktorisierungs-Strategie: {e}")
+            return []
+
+    def _parametrisches_polynom(self) -> ExactNullstellenListe:
+        """
+        Parametrische Polynom-Lösung mit roots() Methode.
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        import sympy as sp
+        from .sympy_types import Nullstelle
+
+        try:
+            logging.debug(f"Versuche Polynom-Methode für {self.term()}")
+
+            # Prüfe, ob es sich um ein Polynom handelt
+            if not self.term_sympy.is_polynomial(self._variable_symbol):
+                logging.debug("Kein Polynom - Methode nicht anwendbar")
+                return []
+
+            # Erstelle Polynom
+            try:
+                poly = sp.Poly(self.term_sympy, self._variable_symbol)
+
+                # Versuche roots() für exakte Lösungen
+                root_dict = sp.roots(poly, self._variable_symbol)
+
+                if root_dict:
+                    logging.debug(f"roots() erfolgreich mit {len(root_dict)} Lösungen")
+                    lösungen = []
+                    for x_wert, vielfachheit in root_dict.items():
+                        logging.debug(
+                            f"Prüfe root: {x_wert} (Typ: {type(x_wert)}), is_real: {hasattr(x_wert, 'is_real') and x_wert.is_real}"
+                        )
+
+                        # Angepasste Realitätsprüfung für parametrische Lösungen
+                        if hasattr(x_wert, "is_real"):
+                            if x_wert.is_real is False:
+                                logging.debug(
+                                    f"Root {x_wert} ist explizit nicht reell (is_real=False) - überspringe"
+                                )
+                                continue
+                            elif x_wert.is_real is True:
+                                logging.debug(
+                                    f"Root {x_wert} ist explizit reell (is_real=True) - verarbeite weiter"
+                                )
+                            else:
+                                # is_real ist None (unbekannt) - für parametrische Funktionen annehmen wir reell
+                                logging.debug(
+                                    f"Root {x_wert} hat is_real=None (parametrisch) - nehme reell an"
+                                )
+                        else:
+                            # Für SymPy-Objekte ohne is_real Eigenschaft (wie Symbole)
+                            if hasattr(x_wert, "is_complex") and x_wert.is_complex:
+                                logging.debug(
+                                    f"Root {x_wert} ist komplex - überspringe"
+                                )
+                                continue
+                            else:
+                                logging.debug(
+                                    f"Root {x_wert} hat keine is_real Eigenschaft - nehme reell an"
+                                )
+
+                        lösungen.append(
+                            Nullstelle(
+                                x=x_wert, multiplicitaet=vielfachheit, exakt=True
+                            )
+                        )
+                    logging.debug(f"Gefundene reelle Lösungen: {len(lösungen)}")
+                    return lösungen
+                else:
+                    logging.debug("roots() lieferte keine Lösungen")
+                    return []
+
+            except Exception as e:
+                logging.debug(f"Polynom-Methode fehlgeschlagen: {e}")
+                return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei Polynom-Strategie: {e}")
+            return []
+
+    def _parametrisch_mit_solveset(self) -> ExactNullstellenListe:
+        """
+        Parametrische Nullstellenberechnung mit solveset().
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        import sympy as sp
+        from .sympy_types import Nullstelle
+
+        try:
+            logging.debug(f"Versuche solveset für {self.term()}")
+
+            # Verwende solveset statt solve
+            lösungs_menge = sp.solveset(
+                self.term_sympy, self._variable_symbol, domain=sp.S.Reals
+            )
+
+            # Konvertiere solveset-Ergebnis zu Liste
+            if hasattr(lösungs_menge, "is_FiniteSet") and lösungs_menge.is_FiniteSet:
+                raw_lösungen = list(lösungs_menge)
+                logging.debug(f"solveset FiniteSet mit {len(raw_lösungen)} Lösungen")
+                return self._verarbeite_parametrische_lösungen(raw_lösungen, "solveset")
+            elif hasattr(lösungs_menge, "is_Union") and lösungs_menge.is_Union:
+                # Verarbeite Union von Mengen
+                raw_lösungen = []
+                for menge in lösungs_menge.args:
+                    if hasattr(menge, "is_FiniteSet") and menge.is_FiniteSet:
+                        raw_lösungen.extend(list(menge))
+                logging.debug(f"solveset Union mit {len(raw_lösungen)} Lösungen")
+                return self._verarbeite_parametrische_lösungen(raw_lösungen, "solveset")
+            else:
+                logging.debug(
+                    f"solveset gab komplexe Menge zurück: {type(lösungs_menge)}"
+                )
+                return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei solveset-Strategie: {e}")
+            return []
+
+    def _verarbeite_parametrische_lösungen(
+        self, raw_lösungen, strategie: str
+    ) -> ExactNullstellenListe:
+        """
+        Verarbeitet rohe Lösungen von parametrischen Lösungsstrategien.
+
+        Args:
+            raw_lösungen: Liste der rohen SymPy-Lösungen
+            strategie: Name der verwendeten Strategie für Logging
+
+        Returns:
+            Liste von Nullstelle-Objekten
+        """
+        from .sympy_types import Nullstelle
+
+        try:
+            logging.debug(f"Verarbeite {len(raw_lösungen)} Rohlösungen von {strategie}")
+            logging.debug(f"Rohlösungen: {raw_lösungen}")
+
+            nullstellen = []
+            for i, lösung in enumerate(raw_lösungen):
+                try:
+                    logging.debug(
+                        f"Verarbeite Lösung {i}: {lösung} (Typ: {type(lösung)})"
+                    )
+
+                    # Filtere reelle Lösungen - angepasst für parametrische Funktionen
+                    if hasattr(lösung, "is_real"):
+                        if lösung.is_real is False:
+                            logging.debug(
+                                f"Lösung {lösung} ist explizit nicht reell (is_real=False) - überspringe"
+                            )
+                            continue
+                        elif lösung.is_real is True:
+                            logging.debug(
+                                f"Lösung {lösung} ist explizit reell (is_real=True) - verarbeite weiter"
+                            )
+                        else:
+                            # is_real ist None (unbekannt) - für parametrische Funktionen annehmen wir reell
+                            logging.debug(
+                                f"Lösung {lösung} hat is_real=None (parametrisch) - nehme reell an"
+                            )
+                    else:
+                        # Für SymPy-Objekte ohne is_real Eigenschaft (wie Symbole)
+                        # nehmen wir an, dass sie reell sind, es sei denn sie enthalten komplexe Komponenten
+                        if hasattr(lösung, "is_complex") and lösung.is_complex:
+                            logging.debug(f"Lösung {lösung} ist komplex - überspringe")
+                            continue
+                        else:
+                            logging.debug(
+                                f"Lösung {lösung} hat keine is_real Eigenschaft - nehme reell an"
+                            )
+
+                    # Vereinfache die Lösung
+                    vereinfacht = sp.simplify(sp.together(lösung))
+                    logging.debug(f"Vereinfacht: {vereinfacht}")
+
+                    # Berechne Vielfachheit
+                    try:
+                        vielfachheit = self._berechne_vielfachheit(vereinfacht)
+                        logging.debug(f"Vielfachheit für {vereinfacht}: {vielfachheit}")
+                    except Exception as e:
+                        logging.debug(
+                            f"Fehler bei Vielfachheitsberechnung für {vereinfacht}: {e}, verwende 1"
+                        )
+                        vielfachheit = 1
+
+                    # Prüfe auf Duplikate mit verbesserter Logik
+                    ist_duplikat = False
+                    for j, existierende in enumerate(nullstellen):
+                        logging.debug(
+                            f"Prüfe Duplikat mit existierender Lösung {j}: {existierende.x}"
+                        )
+                        differenz = sp.simplify(existierende.x - vereinfacht)
+                        logging.debug(f"Differenz: {differenz}")
+
+                        # Bessere Duplikatserkennung für parametrische Ausdrücke
+                        if differenz == 0 or differenz.is_zero:
+                            logging.debug(
+                                f"Duplikat gefunden - erhöhe Vielfachheit von {existierende.multiplicitaet} um {vielfachheit}"
+                            )
+                            ist_duplikat = True
+                            existierende.multiplicitaet += vielfachheit
+                            break
+
+                    if not ist_duplikat:
+                        logging.debug(f"Neue eindeutige Lösung: {vereinfacht}")
+                        nullstellen.append(
+                            Nullstelle(
+                                x=vereinfacht, multiplicitaet=vielfachheit, exakt=True
+                            )
+                        )
+
+                except Exception as e:
+                    logging.warning(f"Fehler bei Verarbeitung von Lösung {lösung}: {e}")
+                    import traceback
+
+                    logging.debug(traceback.format_exc())
+                    continue
+
+            logging.debug(
+                f"{strategie} erzeugte {len(nullstellen)} eindeutige Lösungen"
+            )
+            return nullstellen
+
+        except Exception as e:
+            logging.error(f"Fehler bei Lösungsaufbereitung für {strategie}: {e}")
+            import traceback
+
+            logging.debug(traceback.format_exc())
+            return []
 
     def NullstellenMitWiederholungen(
         self, real: bool = True, runden: int = None
@@ -2014,10 +2360,10 @@ class Funktion(BasisFunktion):
         try:
             # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
             if self.parameter:
-                # Parametrische Funktionen: Verwende Fallback mit solve()
-                return self._extremstellen_parametrisch_fallback()
+                logging.debug(f"Parametrische Funktion erkannt: {self.parameter}")
+                return self._extremstellen_parametrisch_fortgeschritten()
             else:
-                # Nicht-parametrische Funktionen: Nutze unser starkes Framework
+                logging.debug("Nicht-parametrische Funktion - verwende Framework")
                 return self._extremstellen_mit_framework()
 
         except (TypeError, ValueError, AttributeError) as e:
@@ -2286,6 +2632,299 @@ class Funktion(BasisFunktion):
             )
             raise
 
+    def _extremstellen_parametrisch_fortgeschritten(self) -> list[Extremstelle]:
+        """
+        Fortgeschrittene parametrische Extremstellenberechnung mit mehreren Strategien.
+
+        Diese Methode verwendet verschiedene fortschrittliche Techniken:
+        1. Faktorisierung vor der Lösung
+        2. Polynom-spezifische Methoden mit roots()
+        3. solveset() als Alternative zu solve()
+        4. Parameter-Ausklammern und Vereinfachung
+
+        Returns:
+            Liste von Extremstelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(
+                f"Starte fortgeschrittene parametrische Extremstellenberechnung für {self.term()}"
+            )
+
+            # Berechne erste Ableitung
+            f_strich = self.ableitung(ordnung=1)
+
+            # Strategie 1: Faktorisierungs-basierter Ansatz
+            try:
+                logging.debug("Versuche Faktorisierungs-Strategie für Extremstellen")
+                ergebnisse = self._extremstellen_mit_faktorisierung(f_strich)
+                if ergebnisse:
+                    logging.debug(
+                        f"Faktorisierung erfolgreich: {len(ergebnisse)} Extremstellen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"Faktorisierung fehlgeschlagen: {e}")
+
+            # Strategie 2: Polynom-spezifische Methoden
+            try:
+                logging.debug("Versuche Polynom-Strategie für Extremstellen")
+                ergebnisse = self._extremstellen_mit_polynom(f_strich)
+                if ergebnisse:
+                    logging.debug(
+                        f"Polynom-Methode erfolgreich: {len(ergebnisse)} Extremstellen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"Polynom-Methode fehlgeschlagen: {e}")
+
+            # Strategie 3: solveset() als Alternative
+            try:
+                logging.debug("Versuche solveset-Alternative für Extremstellen")
+                ergebnisse = self._extremstellen_mit_solveset(f_strich)
+                if ergebnisse:
+                    logging.debug(
+                        f"solveset erfolgreich: {len(ergebnisse)} Extremstellen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"solveset fehlgeschlagen: {e}")
+
+            # Fallback auf ursprüngliche Methode
+            logging.debug(
+                "Verwende ursprüngliche solve()-Methode als Fallback für Extremstellen"
+            )
+            return self._extremstellen_parametrisch_fallback()
+
+        except Exception as e:
+            logging.error(
+                f"Fehler bei fortgeschrittener parametrischer Extremstellenberechnung: {e}"
+            )
+            # Letzter Fallback auf einfache Methode
+            return self._extremstellen_parametrisch_fallback()
+
+    def _extremstellen_mit_faktorisierung(
+        self, f_strich: "Funktion"
+    ) -> list[Extremstelle]:
+        """
+        Parametrische Extremstellenberechnung mit Faktorisierungs-Strategie.
+
+        Args:
+            f_strich: Erste Ableitung der Funktion
+
+        Returns:
+            Liste von Extremstelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(f"Versuche Faktorisierung für {f_strich.term()}")
+
+            # Versuche 1: Direkte Faktorisierung
+            faktorisiert = sp.factor(f_strich.term_sympy)
+            if faktorisiert != f_strich.term_sympy:
+                logging.debug(
+                    f"Faktorisierung erfolgreich: {f_strich.term()} -> {faktorisiert}"
+                )
+                raw_lösungen = sp.solve(faktorisiert, f_strich._variable_symbol)
+            else:
+                logging.debug("Keine direkte Faktorisierung möglich")
+                raw_lösungen = []
+
+            # Versuche 2: Zusammenfassen und nochmal faktorisieren
+            if not raw_lösungen:
+                zusammengefasst = sp.together(f_strich.term_sympy)
+                if zusammengefasst != f_strich.term_sympy:
+                    logging.debug(f"Zusammenfassung erfolgreich: {zusammengefasst}")
+                    faktorisiert_zusammen = sp.factor(zusammengefasst)
+                    if faktorisiert_zusammen != zusammengefasst:
+                        raw_lösungen = sp.solve(
+                            faktorisiert_zusammen, f_strich._variable_symbol
+                        )
+
+            # Verarbeite die Lösungen
+            if raw_lösungen:
+                return self._verarbeite_parametrische_extremstellen(
+                    raw_lösungen, "Faktorisierung"
+                )
+
+            return []
+
+        except Exception as e:
+            logging.warning(
+                f"Fehler bei Faktorisierungs-Strategie für Extremstellen: {e}"
+            )
+            return []
+
+    def _extremstellen_mit_polynom(self, f_strich: "Funktion") -> list[Extremstelle]:
+        """
+        Parametrische Extremstellenberechnung mit Polynom-Methode.
+
+        Args:
+            f_strich: Erste Ableitung der Funktion
+
+        Returns:
+            Liste von Extremstelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(f"Versuche Polynom-Methode für {f_strich.term()}")
+
+            # Prüfe, ob es sich um ein Polynom handelt
+            if not f_strich.term_sympy.is_polynomial(f_strich._variable_symbol):
+                logging.debug("Kein Polynom - Methode nicht anwendbar")
+                return []
+
+            # Erstelle Polynom
+            try:
+                poly = sp.Poly(f_strich.term_sympy, f_strich._variable_symbol)
+
+                # Versuche roots() für exakte Lösungen
+                root_dict = sp.roots(poly, f_strich._variable_symbol)
+
+                if root_dict:
+                    logging.debug(f"roots() erfolgreich mit {len(root_dict)} Lösungen")
+                    return self._verarbeite_parametrische_extremstellen(
+                        list(root_dict.keys()), "Polynom"
+                    )
+                else:
+                    logging.debug("roots() lieferte keine Lösungen")
+                    return []
+
+            except Exception as e:
+                logging.debug(f"Polynom-Methode fehlgeschlagen: {e}")
+                return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei Polynom-Strategie für Extremstellen: {e}")
+            return []
+
+    def _extremstellen_mit_solveset(self, f_strich: "Funktion") -> list[Extremstelle]:
+        """
+        Parametrische Extremstellenberechnung mit solveset().
+
+        Args:
+            f_strich: Erste Ableitung der Funktion
+
+        Returns:
+            Liste von Extremstelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(f"Versuche solveset für {f_strich.term()}")
+
+            # Verwende solveset statt solve
+            lösungs_menge = sp.solveset(
+                f_strich.term_sympy, f_strich._variable_symbol, domain=sp.S.Reals
+            )
+
+            # Konvertiere solveset-Ergebnis zu Liste
+            if hasattr(lösungs_menge, "is_FiniteSet") and lösungs_menge.is_FiniteSet:
+                raw_lösungen = list(lösungs_menge)
+                logging.debug(f"solveset FiniteSet mit {len(raw_lösungen)} Lösungen")
+                return self._verarbeite_parametrische_extremstellen(
+                    raw_lösungen, "solveset"
+                )
+            elif hasattr(lösungs_menge, "is_Union") and lösungs_menge.is_Union:
+                # Verarbeite Union von Mengen
+                raw_lösungen = []
+                for menge in lösungs_menge.args:
+                    if hasattr(menge, "is_FiniteSet") and menge.is_FiniteSet:
+                        raw_lösungen.extend(list(menge))
+                logging.debug(f"solveset Union mit {len(raw_lösungen)} Lösungen")
+                return self._verarbeite_parametrische_extremstellen(
+                    raw_lösungen, "solveset"
+                )
+            else:
+                logging.debug(
+                    f"solveset gab komplexe Menge zurück: {type(lösungs_menge)}"
+                )
+                return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei solveset-Strategie für Extremstellen: {e}")
+            return []
+
+    def _verarbeite_parametrische_extremstellen(
+        self, raw_lösungen, strategie: str
+    ) -> list[Extremstelle]:
+        """
+        Verarbeitet rohe Lösungen von parametrischen Extremstellen-Strategien.
+
+        Args:
+            raw_lösungen: Liste der rohen SymPy-Lösungen
+            strategie: Name der verwendeten Strategie für Logging
+
+        Returns:
+            Liste von Extremstelle-Objekten
+        """
+        try:
+            logging.debug(f"Verarbeite {len(raw_lösungen)} Rohlösungen von {strategie}")
+
+            extrema = []
+            for lösung in raw_lösungen:
+                try:
+                    logging.debug(f"Verarbeite Lösung {lösung} (Typ: {type(lösung)})")
+
+                    # Angepasste Realitätsprüfung für parametrische Lösungen
+                    if hasattr(lösung, "is_real"):
+                        if lösung.is_real is False:
+                            logging.debug(
+                                f"Lösung {lösung} ist explizit nicht reell - überspringe"
+                            )
+                            continue
+                        elif lösung.is_real is True:
+                            logging.debug(
+                                f"Lösung {lösung} ist explizit reell - verarbeite weiter"
+                            )
+                        else:
+                            # is_real ist None (unbekannt) - für parametrische Funktionen annehmen wir reell
+                            logging.debug(
+                                f"Lösung {lösung} hat is_real=None (parametrisch) - nehme reell an"
+                            )
+                    else:
+                        # Für SymPy-Objekte ohne is_real Eigenschaft
+                        if hasattr(lösung, "is_complex") and lösung.is_complex:
+                            logging.debug(f"Lösung {lösung} ist komplex - überspringe")
+                            continue
+                        else:
+                            logging.debug(
+                                f"Lösung {lösung} hat keine is_real Eigenschaft - nehme reell an"
+                            )
+
+                    # Berechne y-Wert
+                    try:
+                        y_wert = self.wert(lösung)
+                    except Exception as e:
+                        logging.debug(f"Fehler bei y-Wert Berechnung für {lösung}: {e}")
+                        continue
+
+                    # Bestimme Extremtyp
+                    try:
+                        typ = self._bestimme_extremtyp(lösung)
+                    except Exception as e:
+                        logging.debug(
+                            f"Fehler bei Extremtyp-Bestimmung für {lösung}: {e}"
+                        )
+                        # Fallback auf SATTELPUNKT
+                        typ = ExtremumTyp.SATTELPUNKT
+
+                    extrema.append(Extremstelle(x=lösung, typ=typ, exakt=True))
+
+                except Exception as e:
+                    logging.warning(f"Fehler bei Verarbeitung von Lösung {lösung}: {e}")
+                    continue
+
+            logging.debug(f"{strategie} erzeugte {len(extrema)} Extremstellen")
+            return extrema
+
+        except Exception as e:
+            logging.error(f"Fehler bei Extremstellen-Aufbereitung für {strategie}: {e}")
+            return []
+
     def Extremstellen(self) -> list[Extremstelle]:
         """
         Berechnet die Extremstellen (neue strukturierte Methode).
@@ -2441,7 +3080,7 @@ class Funktion(BasisFunktion):
             # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
             if self.parameter:
                 logging.debug(f"Parametrische Funktion erkannt: {self.parameter}")
-                return self._wendestellen_parametrisch_fallback()
+                return self._wendestellen_parametrisch_fortgeschritten()
             else:
                 logging.debug("Nicht-parametrische Funktion - verwende Framework")
                 return self._wendestellen_mit_framework()
@@ -2639,6 +3278,323 @@ class Funktion(BasisFunktion):
                 f"Unerwarteter Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
             )
             raise
+
+    def _wendestellen_parametrisch_fortgeschritten(self) -> list[Wendestelle]:
+        """
+        Fortgeschrittene parametrische Wendestellenberechnung mit mehreren Strategien.
+
+        Diese Methode verwendet verschiedene fortschrittliche Techniken:
+        1. Faktorisierung vor der Lösung
+        2. Polynom-spezifische Methoden mit roots()
+        3. solveset() als Alternative zu solve()
+        4. Parameter-Ausklammern und Vereinfachung
+
+        Returns:
+            Liste von Wendestelle-Objekten (x-Koordinaten nur)
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(
+                f"Starte fortgeschrittene parametrische Wendestellenberechnung für {self.term()}"
+            )
+
+            # Berechne zweite Ableitung
+            f2 = self.ableitung(ordnung=2)
+
+            # Strategie 1: Faktorisierungs-basierter Ansatz
+            try:
+                logging.debug("Versuche Faktorisierungs-Strategie für Wendestellen")
+                ergebnisse = self._wendestellen_mit_faktorisierung(f2)
+                if ergebnisse:
+                    logging.debug(
+                        f"Faktorisierung erfolgreich: {len(ergebnisse)} Wendestellen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"Faktorisierung fehlgeschlagen: {e}")
+
+            # Strategie 2: Polynom-spezifische Methoden
+            try:
+                logging.debug("Versuche Polynom-Strategie für Wendestellen")
+                ergebnisse = self._wendestellen_mit_polynom(f2)
+                if ergebnisse:
+                    logging.debug(
+                        f"Polynom-Methode erfolgreich: {len(ergebnisse)} Wendestellen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"Polynom-Methode fehlgeschlagen: {e}")
+
+            # Strategie 3: solveset() als Alternative
+            try:
+                logging.debug("Versuche solveset-Alternative für Wendestellen")
+                ergebnisse = self._wendestellen_mit_solveset(f2)
+                if ergebnisse:
+                    logging.debug(
+                        f"solveset erfolgreich: {len(ergebnisse)} Wendestellen"
+                    )
+                    return ergebnisse
+            except Exception as e:
+                logging.debug(f"solveset fehlgeschlagen: {e}")
+
+            # Fallback auf ursprüngliche Methode
+            logging.debug(
+                "Verwende ursprüngliche solve()-Methode als Fallback für Wendestellen"
+            )
+            return self._wendestellen_parametrisch_fallback()
+
+        except Exception as e:
+            logging.error(
+                f"Fehler bei fortgeschrittener parametrischer Wendestellenberechnung: {e}"
+            )
+            # Letzter Fallback auf einfache Methode
+            return self._wendestellen_parametrisch_fallback()
+
+    def _wendestellen_mit_faktorisierung(self, f2: "Funktion") -> list[Wendestelle]:
+        """
+        Parametrische Wendestellenberechnung mit Faktorisierungs-Strategie.
+
+        Args:
+            f2: Zweite Ableitung der Funktion
+
+        Returns:
+            Liste von Wendestelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(f"Versuche Faktorisierung für {f2.term()}")
+
+            # Versuche 1: Direkte Faktorisierung
+            faktorisiert = sp.factor(f2.term_sympy)
+            if faktorisiert != f2.term_sympy:
+                logging.debug(
+                    f"Faktorisierung erfolgreich: {f2.term()} -> {faktorisiert}"
+                )
+                raw_lösungen = sp.solve(faktorisiert, f2._variable_symbol)
+            else:
+                logging.debug("Keine direkte Faktorisierung möglich")
+                raw_lösungen = []
+
+            # Versuche 2: Zusammenfassen und nochmal faktorisieren
+            if not raw_lösungen:
+                zusammengefasst = sp.together(f2.term_sympy)
+                if zusammengefasst != f2.term_sympy:
+                    logging.debug(f"Zusammenfassung erfolgreich: {zusammengefasst}")
+                    faktorisiert_zusammen = sp.factor(zusammengefasst)
+                    if faktorisiert_zusammen != zusammengefasst:
+                        raw_lösungen = sp.solve(
+                            faktorisiert_zusammen, f2._variable_symbol
+                        )
+
+            # Verarbeite die Lösungen
+            if raw_lösungen:
+                return self._verarbeite_parametrische_wendestellen(
+                    raw_lösungen, "Faktorisierung"
+                )
+
+            return []
+
+        except Exception as e:
+            logging.warning(
+                f"Fehler bei Faktorisierungs-Strategie für Wendestellen: {e}"
+            )
+            return []
+
+    def _wendestellen_mit_polynom(self, f2: "Funktion") -> list[Wendestelle]:
+        """
+        Parametrische Wendestellenberechnung mit Polynom-Methode.
+
+        Args:
+            f2: Zweite Ableitung der Funktion
+
+        Returns:
+            Liste von Wendestelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(f"Versuche Polynom-Methode für {f2.term()}")
+
+            # Prüfe, ob es sich um ein Polynom handelt
+            if not f2.term_sympy.is_polynomial(f2._variable_symbol):
+                logging.debug("Kein Polynom - Methode nicht anwendbar")
+                return []
+
+            # Erstelle Polynom
+            try:
+                poly = sp.Poly(f2.term_sympy, f2._variable_symbol)
+
+                # Versuche roots() für exakte Lösungen
+                root_dict = sp.roots(poly, f2._variable_symbol)
+
+                if root_dict:
+                    logging.debug(f"roots() erfolgreich mit {len(root_dict)} Lösungen")
+                    return self._verarbeite_parametrische_wendestellen(
+                        list(root_dict.keys()), "Polynom"
+                    )
+                else:
+                    logging.debug("roots() lieferte keine Lösungen")
+                    return []
+
+            except Exception as e:
+                logging.debug(f"Polynom-Methode fehlgeschlagen: {e}")
+                return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei Polynom-Strategie für Wendestellen: {e}")
+            return []
+
+    def _wendestellen_mit_solveset(self, f2: "Funktion") -> list[Wendestelle]:
+        """
+        Parametrische Wendestellenberechnung mit solveset().
+
+        Args:
+            f2: Zweite Ableitung der Funktion
+
+        Returns:
+            Liste von Wendestelle-Objekten
+        """
+        import sympy as sp
+
+        try:
+            logging.debug(f"Versuche solveset für {f2.term()}")
+
+            # Verwende solveset statt solve
+            lösungs_menge = sp.solveset(
+                f2.term_sympy, f2._variable_symbol, domain=sp.S.Reals
+            )
+
+            # Konvertiere solveset-Ergebnis zu Liste
+            if hasattr(lösungs_menge, "is_FiniteSet") and lösungs_menge.is_FiniteSet:
+                raw_lösungen = list(lösungs_menge)
+                logging.debug(f"solveset FiniteSet mit {len(raw_lösungen)} Lösungen")
+                return self._verarbeite_parametrische_wendestellen(
+                    raw_lösungen, "solveset"
+                )
+            elif hasattr(lösungs_menge, "is_Union") and lösungs_menge.is_Union:
+                # Verarbeite Union von Mengen
+                raw_lösungen = []
+                for menge in lösungs_menge.args:
+                    if hasattr(menge, "is_FiniteSet") and menge.is_FiniteSet:
+                        raw_lösungen.extend(list(menge))
+                logging.debug(f"solveset Union mit {len(raw_lösungen)} Lösungen")
+                return self._verarbeite_parametrische_wendestellen(
+                    raw_lösungen, "solveset"
+                )
+            else:
+                logging.debug(
+                    f"solveset gab komplexe Menge zurück: {type(lösungs_menge)}"
+                )
+                return []
+
+        except Exception as e:
+            logging.warning(f"Fehler bei solveset-Strategie für Wendestellen: {e}")
+            return []
+
+    def _verarbeite_parametrische_wendestellen(
+        self, raw_lösungen, strategie: str
+    ) -> list[Wendestelle]:
+        """
+        Verarbeitet rohe Lösungen von parametrischen Wendestellen-Strategien.
+
+        Args:
+            raw_lösungen: Liste der rohen SymPy-Lösungen
+            strategie: Name der verwendeten Strategie für Logging
+
+        Returns:
+            Liste von Wendestelle-Objekten
+        """
+        try:
+            logging.debug(f"Verarbeite {len(raw_lösungen)} Rohlösungen von {strategie}")
+
+            # Berechne dritte Ableitung für Wendepunkt-Test
+            f3 = self.ableitung(ordnung=3)
+
+            wendestellen = []
+            for lösung in raw_lösungen:
+                try:
+                    logging.debug(f"Verarbeite Lösung {lösung} (Typ: {type(lösung)})")
+
+                    # Angepasste Realitätsprüfung für parametrische Lösungen
+                    if hasattr(lösung, "is_real"):
+                        if lösung.is_real is False:
+                            logging.debug(
+                                f"Lösung {lösung} ist explizit nicht reell - überspringe"
+                            )
+                            continue
+                        elif lösung.is_real is True:
+                            logging.debug(
+                                f"Lösung {lösung} ist explizit reell - verarbeite weiter"
+                            )
+                        else:
+                            # is_real ist None (unbekannt) - für parametrische Funktionen annehmen wir reell
+                            logging.debug(
+                                f"Lösung {lösung} hat is_real=None (parametrisch) - nehme reell an"
+                            )
+                    else:
+                        # Für SymPy-Objekte ohne is_real Eigenschaft
+                        if hasattr(lösung, "is_complex") and lösung.is_complex:
+                            logging.debug(f"Lösung {lösung} ist komplex - überspringe")
+                            continue
+                        else:
+                            logging.debug(
+                                f"Lösung {lösung} hat keine is_real Eigenschaft - nehme reell an"
+                            )
+
+                    # Prüfe, ob es sich wirklich um einen Wendepunkt handelt
+                    try:
+                        wert_f3 = f3.wert(lösung)
+
+                        # Prüfe, ob dritte Ableitung ungleich null ist
+                        ist_wendepunkt = False
+
+                        if wert_f3.is_number:
+                            if wert_f3 != 0:
+                                ist_wendepunkt = True
+                        else:
+                            # Symbolischer Wert - vereinfachen und prüfen
+                            try:
+                                wert_f3_simplified = sp.simplify(wert_f3)
+                                if not wert_f3_simplified.equals(0):
+                                    ist_wendepunkt = True
+                            except Exception:
+                                # Bei komplexen Ausdrücken als Wendepunkt annehmen
+                                ist_wendepunkt = True
+
+                        if ist_wendepunkt:
+                            # Bestimme den genauen Typ
+                            typ = self._bestimme_wendepunkttyp(lösung, f3)
+                            wendestellen.append(
+                                Wendestelle(x=lösung, typ=typ, exakt=True)
+                            )
+                        else:
+                            logging.debug(
+                                f"Lösung {lösung} ist kein Wendepunkt (f'''(x) = 0)"
+                            )
+
+                    except Exception as e:
+                        logging.debug(f"Fehler bei Wendepunkt-Test für {lösung}: {e}")
+                        # Bei Fehler als Wendepunkt annehmen
+                        wendestellen.append(
+                            Wendestelle(
+                                x=lösung,
+                                typ=WendepunktTyp.WENDELPUNKT,
+                                exakt=True,
+                            )
+                        )
+
+                except Exception as e:
+                    logging.warning(f"Fehler bei Verarbeitung von Lösung {lösung}: {e}")
+                    continue
+
+            logging.debug(f"{strategie} erzeugte {len(wendestellen)} Wendestellen")
+            return wendestellen
+
+        except Exception as e:
+            logging.error(f"Fehler bei Wendestellen-Aufbereitung für {strategie}: {e}")
+            return []
 
     def wendepunkte_optimiert(self) -> list[Wendepunkt]:
         """
