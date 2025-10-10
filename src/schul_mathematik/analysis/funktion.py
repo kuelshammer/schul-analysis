@@ -29,8 +29,11 @@ from .sympy_types import (
     Extremum,
     ExtremumTyp,
     ExtremaListe,
+    Nullstelle,
     Schnittpunkt,
     SchnittpunkteListe,
+    Wendepunkt,
+    WendepunktTyp,
     preserve_exact_types,
     validate_exact_results,
     validate_function_result,
@@ -2277,6 +2280,325 @@ class Funktion(BasisFunktion):
         except Exception:
             # Bei Fehlern leere Liste zurückgeben
             return []
+
+    def wendepunkte_optimiert(self) -> list[Wendepunkt]:
+        """
+        Berechnet Wendepunkte mit optimiertem Hybrid-Ansatz und Framework-Integration.
+
+        Diese Methode verwendet das leistungsstarke Nullstellen-Framework für die zweite Ableitung
+        und implementiert eine Hybrid-Strategie für parametrische vs. nicht-parametrische Funktionen.
+
+        Returns:
+            Liste von Wendepunkt-Objekten mit strukturierten Informationen
+        """
+        try:
+            logging.debug(f"Starte wendepunkte_optimiert() für {self.term()}")
+
+            # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
+            if self.parameter:
+                logging.debug(f"Parametrische Funktion erkannt: {self.parameter}")
+                return self._wendepunkte_parametrisch_fallback()
+            else:
+                logging.debug("Nicht-parametrische Funktion - verwende Framework")
+                return self._wendepunkte_mit_framework()
+
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Eingaben oder Attributen
+            logging.warning(
+                f"Erwarteter Fehler bei Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            # Fallback auf parametrische Methode versuchen
+            try:
+                return self._wendepunkte_parametrisch_fallback()
+            except Exception as fallback_error:
+                logging.warning(f"Fallback ebenfalls fehlgeschlagen: {fallback_error}")
+                return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            raise
+
+    def _wendepunkte_mit_framework(self) -> list[Wendepunkt]:
+        """
+        Berechnet Wendepunkte unter Verwendung des Nullstellen-Frameworks.
+
+        Diese Methode wird für nicht-parametrische Funktionen verwendet und
+        nutzt die volle Power unseres verbesserten Nullstellen-Frameworks für f''(x) = 0.
+
+        Returns:
+            Liste von Wendepunkt-Objekten
+        """
+        try:
+            # 1. Berechne zweite Ableitung
+            logging.debug(f"Berechne zweite Ableitung für {self.term()}")
+            f2 = self.ableitung(ordnung=2)
+
+            # 2. Nutze unser starkes nullstellen()-Framework für f''(x) = 0
+            logging.debug(
+                f"Verwende Nullstellen-Framework für zweite Ableitung {f2.term()}"
+            )
+            kritische_punkte = f2.nullstellen()
+
+            if not kritische_punkte:
+                logging.debug(f"Keine kritischen Punkte für {self.term()} gefunden")
+                return []
+
+            # 3. Analysiere jede kritische Stelle mit dritter Ableitung
+            logging.debug("Analysiere kritische Punkte mit dritter Ableitung")
+            f3 = self.ableitung(ordnung=3)
+            wendepunkte = []
+
+            for kritischer_punkt in kritische_punkte:
+                try:
+                    if isinstance(kritischer_punkt, Nullstelle):
+                        x_wert = kritischer_punkt.x
+                        multiplicitaet = kritischer_punkt.multiplicitaet
+                        exakt = kritischer_punkt.exakt
+                    else:
+                        x_wert = kritischer_punkt
+                        multiplicitaet = 1
+                        exakt = True
+
+                    # Berechne y-Wert
+                    y_wert = self.wert(x_wert)
+
+                    # Bestimme Wendepunkt-Typ durch dritte Ableitung
+                    typ = self._bestimme_wendepunkttyp(x_wert, f3)
+
+                    wendepunkte.append(
+                        Wendepunkt(
+                            x=x_wert,
+                            y=y_wert,
+                            typ=typ,
+                            exakt=exakt,
+                        )
+                    )
+
+                except (TypeError, ValueError, AttributeError) as e:
+                    logging.warning(
+                        f"Fehler bei Verarbeitung von kritischem Punkt {kritischer_punkt}: {e}"
+                    )
+                    continue
+                except Exception as e:
+                    logging.error(
+                        f"Unerwarteter Fehler bei Verarbeitung von kritischem Punkt {kritischer_punkt}: {e}"
+                    )
+                    continue
+
+            return wendepunkte
+
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Eingaben oder Attributen
+            logging.warning(
+                f"Erwarteter Fehler bei Framework-Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei Framework-Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei Framework-Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            raise
+
+    def _wendepunkte_parametrisch_fallback(self) -> list[Wendepunkt]:
+        """
+        Fallback-Methode für parametrische Funktionen mit direkter solve()-Nutzung.
+
+        Returns:
+            Liste von Wendepunkt-Objekten
+        """
+        try:
+            logging.debug(f"Verwende parametrischen Fallback für {self.term()}")
+
+            # Berechne zweite Ableitung
+            f2 = self.ableitung(ordnung=2)
+
+            # Verwende solve() direkt für parametrische Funktionen
+            import sympy as sp
+
+            kritische_punkte = sp.solve(f2.term_sympy, self._variable_symbol)
+            kritische_punkte = [sp.together(p) for p in kritische_punkte]
+
+            if not kritische_punkte:
+                return []
+
+            # Bestimme Wendepunkte durch dritte Ableitung
+            f3 = self.ableitung(ordnung=3)
+            wendepunkte = []
+
+            for punkt in kritische_punkte:
+                try:
+                    # Werte dritte Ableitung an diesem Punkt aus
+                    wert_f3 = f3.wert(punkt)
+
+                    # Prüfe, ob dritte Ableitung ungleich null ist
+                    ist_wendepunkt = False
+
+                    if wert_f3.is_number:
+                        if wert_f3 != 0:
+                            ist_wendepunkt = True
+                    else:
+                        # Symbolischer Wert - vereinfachen und prüfen
+                        try:
+                            wert_f3_simplified = sp.simplify(wert_f3)
+                            if not wert_f3_simplified.equals(0):
+                                ist_wendepunkt = True
+                        except Exception:
+                            # Bei komplexen Ausdrücken als Wendepunkt annehmen
+                            ist_wendepunkt = True
+
+                    if ist_wendepunkt:
+                        # Berechne y-Wert
+                        y_wert = self.wert(punkt)
+
+                        wendepunkte.append(
+                            Wendepunkt(
+                                x=punkt,
+                                y=y_wert,
+                                typ=WendepunktTyp.WENDELPUNKT,
+                                exakt=True,
+                            )
+                        )
+
+                except (TypeError, ValueError, AttributeError, ZeroDivisionError) as e:
+                    logging.warning(f"Fehler bei Verarbeitung von Punkt {punkt}: {e}")
+                    continue
+                except Exception as e:
+                    logging.error(
+                        f"Unerwarteter Fehler bei Verarbeitung von Punkt {punkt}: {e}"
+                    )
+                    continue
+
+            return wendepunkte
+
+        except (TypeError, ValueError, AttributeError) as e:
+            # Erwartete Fehler bei ungültigen Funktionseigenschaften
+            logging.warning(
+                f"Erwarteter Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            return []
+        except (sp.SympifyError, sp.polys.polyerrors.PolynomialError) as e:
+            # SymPy-spezifische Fehler bei Termverarbeitung
+            logging.warning(
+                f"SymPy-Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            return []
+        except Exception as e:
+            # Unerwartete Fehler - sollten weitergegeben werden
+            logging.error(
+                f"Unerwarteter Fehler bei parametrischer Wendepunkteberechnung für {self.term()}: {e}"
+            )
+            raise
+
+    def _bestimme_wendepunkttyp(self, x_wert, f3: "Funktion") -> WendepunktTyp:
+        """
+        Bestimmt den Wendepunkt-Typ via dritte Ableitung.
+
+        Args:
+            x_wert: x-Koordinate der kritischen Stelle
+            f3: Dritte Ableitung als Funktion
+
+        Returns:
+            WendepunktTyp: WENDELPUNKT oder SATTELPUNKT
+        """
+        try:
+            logging.debug(
+                f"Bestimme Wendepunkttyp für x={x_wert} bei Funktion {self.term()}"
+            )
+            dritte_ableitung_wert = f3.wert(x_wert)
+
+            # Für numerische Werte
+            if isinstance(dritte_ableitung_wert, (int, float)):
+                if dritte_ableitung_wert > 0:
+                    logging.debug(
+                        f"Dritte Ableitung = {dritte_ableitung_wert} > 0 → Links-Rechts-Wendepunkt"
+                    )
+                    return WendepunktTyp.WENDEPUNKT
+                elif dritte_ableitung_wert < 0:
+                    logging.debug(
+                        f"Dritte Ableitung = {dritte_ableitung_wert} < 0 → Rechts-Links-Wendepunkt"
+                    )
+                    return WendepunktTyp.WENDEPUNKT
+                else:
+                    # Dritte Ableitung = 0 → höhere Ableitungen prüfen
+                    logging.debug(f"Dritte Ableitung = 0 → prüfe höhere Ableitungen")
+                    return self._bestimme_wendepunkttyp_hoere_ableitungen(x_wert)
+            else:
+                # Symbolische Ausdrücke: Vereinfachen und analysieren
+                vereinfacht = sp.simplify(dritte_ableitung_wert)
+                if hasattr(vereinfacht, "is_positive") and vereinfacht.is_positive:
+                    logging.debug(
+                        f"Symbolische dritte Ableitung {vereinfacht} > 0 → Links-Rechts-Wendepunkt"
+                    )
+                    return WendepunktTyp.WENDEPUNKT
+                elif hasattr(vereinfacht, "is_negative") and vereinfacht.is_negative:
+                    logging.debug(
+                        f"Symbolische dritte Ableitung {vereinfacht} < 0 → Rechts-Links-Wendepunkt"
+                    )
+                    return WendepunktTyp.WENDEPUNKT
+                else:
+                    # Für komplexe symbolische Fälle
+                    return WendepunktTyp.WENDEPUNKT
+
+        except (TypeError, ValueError, AttributeError) as e:
+            logging.warning(f"Fehler bei Wendepunkttyp-Bestimmung für x={x_wert}: {e}")
+            return WendepunktTyp.WENDEPUNKT
+        except Exception as e:
+            logging.error(
+                f"Unerwarteter Fehler bei Wendepunkttyp-Bestimmung für x={x_wert}: {e}"
+            )
+            raise
+
+    def _bestimme_wendepunkttyp_hoere_ableitungen(self, x_wert) -> WendepunktTyp:
+        """
+        Bestimmt den Wendepunkt-Typ via höhere Ableitungen, wenn dritte Ableitung = 0.
+
+        Args:
+            x_wert: x-Koordinate der kritischen Stelle
+
+        Returns:
+            WendepunktTyp: WENDELPUNKT oder SATTELPUNKT
+        """
+        try:
+            # Prüfe höhere Ableitungen bis zur 7. Ordnung
+            for ordnung in range(4, 8):
+                f_abl = self.ableitung(ordnung)
+                wert = f_abl.wert(x_wert)
+
+                if isinstance(wert, (int, float)) and wert != 0:
+                    # Erste nicht-null Ableitung bestimmt den Typ
+                    if ordnung % 2 == 1:  # Ungerade Ordnung = Wendepunkt
+                        return WendepunktTyp.WENDEPUNKT
+                    else:  # Gerade Ordnung =特殊情况，可能是Sattelpunkt
+                        return WendepunktTyp.SATTELPUNKT
+
+            # Wenn alle Ableitungen bis 7. Ordnung = 0, Wendepunkt
+            return WendepunktTyp.WENDEPUNKT
+
+        except (TypeError, ValueError, AttributeError) as e:
+            logging.warning(
+                f"Fehler bei Wendepunkttyp-Bestimmung höherer Ableitungen für x={x_wert}: {e}"
+            )
+            return WendepunktTyp.WENDEPUNKT
+        except Exception as e:
+            logging.error(
+                f"Unerwarteter Fehler bei Wendepunkttyp-Bestimmung höherer Ableitungen für x={x_wert}: {e}"
+            )
+            raise
 
     def Wendepunkte(self) -> list[tuple[Any, Any, str]]:
         """Berechnet die Wendepunkte (Alias für wendepunkte)"""

@@ -77,7 +77,7 @@ class WendepunktTyp(Enum):
     """Typen von Wendepunkten für präzise Typisierung."""
 
     WENDEPUNKT = "Wendepunkt"
-    SATTelpunkt = "Sattelpunkt"  # Kann sowohl Extremum als auch Wendepunkt sein
+    SATTELPUNKT = "Sattelpunkt"  # Kann sowohl Extremum als auch Wendepunkt sein
 
 
 class PolstellenTyp(Enum):
