@@ -8,9 +8,10 @@ import sys
 sys.path.insert(0, "/Users/max/Python/Schul-Analysis/src")
 
 import sympy as sp
+
 from schul_mathematik.analysis.api import *
 from schul_mathematik.analysis.funktion import Funktion
-from schul_mathematik.analysis.taylor import taylorpolynom, tangente
+from schul_mathematik.analysis.taylor import tangente, taylorpolynom
 
 
 def debug_taylor_tangente():

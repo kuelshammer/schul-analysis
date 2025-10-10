@@ -4,16 +4,15 @@ Wrapper-Funktionen für das Stochastik-Modul im deutschen Stil
 Bieten eine intuitive, unterrichtsnahe Syntax für statistische Berechnungen
 """
 
-from typing import Union
+
 import sympy as sp
 from sympy import stats
 
-from .verteilungen import Binomialverteilung, Normalverteilung
 from ..gemeinsam import *
 
 
 def BinomialPDF(
-    n: Union[int, sp.Expr], p: Union[float, sp.Expr], k: Union[int, sp.Expr]
+    n: int | sp.Expr, p: float | sp.Expr, k: int | sp.Expr
 ) -> sp.Expr:
     """Berechnet P(X=k) für Binomialverteilung
 
@@ -30,7 +29,7 @@ def BinomialPDF(
 
 
 def BinomialCDF(
-    n: Union[int, sp.Expr], p: Union[float, sp.Expr], k: Union[int, sp.Expr]
+    n: int | sp.Expr, p: float | sp.Expr, k: int | sp.Expr
 ) -> sp.Expr:
     """Berechnet P(X≤k) für Binomialverteilung
 
@@ -47,7 +46,7 @@ def BinomialCDF(
 
 
 def NormalPDF(
-    mu: Union[float, sp.Expr], sigma: Union[float, sp.Expr], x: Union[float, sp.Expr]
+    mu: float | sp.Expr, sigma: float | sp.Expr, x: float | sp.Expr
 ) -> sp.Expr:
     """Berechnet f(x) für Normalverteilung
 
@@ -64,7 +63,7 @@ def NormalPDF(
 
 
 def NormalCDF(
-    mu: Union[float, sp.Expr], sigma: Union[float, sp.Expr], x: Union[float, sp.Expr]
+    mu: float | sp.Expr, sigma: float | sp.Expr, x: float | sp.Expr
 ) -> sp.Expr:
     """Berechnet F(x) für Normalverteilung
 
@@ -81,10 +80,10 @@ def NormalCDF(
 
 
 def NormalIntervall(
-    mu: Union[float, sp.Expr],
-    sigma: Union[float, sp.Expr],
-    a: Union[float, sp.Expr],
-    b: Union[float, sp.Expr],
+    mu: float | sp.Expr,
+    sigma: float | sp.Expr,
+    a: float | sp.Expr,
+    b: float | sp.Expr,
 ) -> sp.Expr:
     """Berechnet P(a ≤ X ≤ b) für Normalverteilung
 
@@ -101,7 +100,7 @@ def NormalIntervall(
     return stats.P(a <= X <= b)
 
 
-def StandardnormalPDF(x: Union[float, sp.Expr]) -> sp.Expr:
+def StandardnormalPDF(x: float | sp.Expr) -> sp.Expr:
     """Berechnet f(x) für Standardnormalverteilung (μ=0, σ=1)
 
     Args:
@@ -113,7 +112,7 @@ def StandardnormalPDF(x: Union[float, sp.Expr]) -> sp.Expr:
     return NormalPDF(0, 1, x)
 
 
-def StandardnormalCDF(x: Union[float, sp.Expr]) -> sp.Expr:
+def StandardnormalCDF(x: float | sp.Expr) -> sp.Expr:
     """Berechnet F(x) für Standardnormalverteilung (μ=0, σ=1)
 
     Args:
@@ -127,21 +126,21 @@ def StandardnormalCDF(x: Union[float, sp.Expr]) -> sp.Expr:
 
 # Komfort-Funktionen für häufige Berechnungen
 def Sigma1Bereich(
-    mu: Union[float, sp.Expr] = 0, sigma: Union[float, sp.Expr] = 1
+    mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1
 ) -> sp.Expr:
     """Berechnet P(μ-σ ≤ X ≤ μ+σ) für Normalverteilung (ca. 68%)"""
     return NormalIntervall(mu, sigma, mu - sigma, mu + sigma)
 
 
 def Sigma2Bereich(
-    mu: Union[float, sp.Expr] = 0, sigma: Union[float, sp.Expr] = 1
+    mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1
 ) -> sp.Expr:
     """Berechnet P(μ-2σ ≤ X ≤ μ+2σ) für Normalverteilung (ca. 95%)"""
     return NormalIntervall(mu, sigma, mu - 2 * sigma, mu + 2 * sigma)
 
 
 def Sigma3Bereich(
-    mu: Union[float, sp.Expr] = 0, sigma: Union[float, sp.Expr] = 1
+    mu: float | sp.Expr = 0, sigma: float | sp.Expr = 1
 ) -> sp.Expr:
     """Berechnet P(μ-3σ ≤ X ≤ μ+3σ) für Normalverteilung (ca. 99.7%)"""
     return NormalIntervall(mu, sigma, mu - 3 * sigma, mu + 3 * sigma)

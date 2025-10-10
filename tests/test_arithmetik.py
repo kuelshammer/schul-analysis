@@ -8,8 +8,9 @@ import sys
 sys.path.insert(0, "src")
 
 
-from schul_analysis.ganzrationale import GanzrationaleFunktion
-from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
+from schul_mathematik.analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
 def test_arithmetische_operationen():
@@ -34,21 +35,17 @@ def test_arithmetische_operationen():
     # Funktion+Funktion
     ergebnis = f + g
     print(f"f+g = {ergebnis.term()}")
-    assert ergebnis.term() == "x^2+3x+2", (
-        f"Erwartet: x^2+3x+2, erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "x^2+3*x+2")
 
     # Funktion+Zahl
     ergebnis = f + 5
     print(f"f+5 = {ergebnis.term()}")
-    assert ergebnis.term() == "x^2+2x+6", (
-        f"Erwartet: x^2+2x+6, erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "x^2+2*x+6")
 
     # Zahl+Funktion (rechts)
     ergebnis = 3 + g
     print(f"3+g = {ergebnis.term()}")
-    assert ergebnis.term() == "x+4", f"Erwartet: x+4, erhalten: {ergebnis.term()}"
+    assert_gleich(ergebnis.term(), "x+4")
 
     print("✅ Additionstests erfolgreich\n")
 

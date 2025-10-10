@@ -4,8 +4,8 @@ Test der bereinigten Schul-Mathematik API
 """
 
 # Code Import, wie in Marimo
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 

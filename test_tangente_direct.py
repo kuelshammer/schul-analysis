@@ -4,13 +4,13 @@ Direkter Test der Tangente-Funktion
 """
 
 # Code Import, wie in Marimo
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
-from schul_mathematik.analysis.taylor import tangente
 from schul_mathematik.analysis import Funktion
+from schul_mathematik.analysis.taylor import tangente
 
 # Testfunktion erstellen
 f = Funktion("x**2")

@@ -198,6 +198,76 @@ class KonfigurationsError(SchulAnalysisError):
         self.expected_type = expected_type
 
 
+# === Nullstellen-Berechnungsfehler ===
+
+
+class NullstellenBerechnungsFehler(SchulAnalysisError):
+    """Basisklasse für Fehler bei der Nullstellenberechnung"""
+
+    def __init__(self, message: str, funktion: str = "", ursache: str = ""):
+        super().__init__(
+            message,
+            user_message=f"Fehler bei der Berechnung der Nullstellen von f(x) = {funktion}",
+            suggestion=ursache
+            or "Prüfe die Funktionseingabe und verwende gültige mathematische Ausdrücke.",
+        )
+        self.funktion = funktion
+        self.ursache = ursache
+
+
+class PolynomLoesungsFehler(NullstellenBerechnungsFehler):
+    """Fehler bei der Lösung von Polynom-Gleichungen"""
+
+    def __init__(self, polynom: str, grad: int, ursache: str = ""):
+        super().__init__(
+            f"Polynom-Lösung fehlgeschlagen: {polynom} (Grad {grad})",
+            funktion=polynom,
+            ursache=ursache
+            or "Das Polynom könnte keine analytische Lösung haben oder zu komplex sein.",
+        )
+        self.polynom = polynom
+        self.grad = grad
+
+
+class GleichungsLoesungsFehler(NullstellenBerechnungsFehler):
+    """Fehler bei der Lösung allgemeiner Gleichungen"""
+
+    def __init__(self, gleichung: str, ursache: str = ""):
+        super().__init__(
+            f"Gleichung konnte nicht gelöst werden: {gleichung}",
+            funktion=gleichung,
+            ursache=ursache
+            or "Die Gleichung ist zu komplex oder hat keine geschlossene Lösung.",
+        )
+        self.gleichung = gleichung
+
+
+class TrigonometrischeLoesungsFehler(NullstellenBerechnungsFehler):
+    """Fehler bei der Lösung trigonometrischer Gleichungen"""
+
+    def __init__(self, gleichung: str, ursache: str = ""):
+        super().__init__(
+            f"Trigonometrische Gleichung konnte nicht gelöst werden: {gleichung}",
+            funktion=gleichung,
+            ursache=ursache
+            or "Die trigonometrische Gleichung hat keine einfache Lösung.",
+        )
+        self.gleichung = gleichung
+
+
+class ApproximationsFehler(NullstellenBerechnungsFehler):
+    """Fehler bei numerischer Approximation von Nullstellen"""
+
+    def __init__(self, funktion: str, ursache: str = ""):
+        super().__init__(
+            f"Numerische Approximation fehlgeschlagen: {funktion}",
+            funktion=funktion,
+            ursache=ursache
+            or "Die Funktion hat keine numerisch approximierbaren Nullstellen.",
+        )
+        self.funktion = funktion
+
+
 # === Utility-Funktionen ===
 
 

@@ -5,12 +5,12 @@ Dieses Modul enthält Funktionen zur graphischen Darstellung von Funktionen,
 einschließlich intelligenter Skalierung und Plotly-Integration.
 """
 
+import math
+
 import numpy as np
 import plotly.graph_objects as go
-import math
-import sympy as sp
 
-from .config import config, SchulAnalysisConfig
+from .config import SchulAnalysisConfig, config
 from .funktion import Funktion
 
 
@@ -185,16 +185,13 @@ def _fuege_punkte_fuer_mehrfache_funktionen_hinzu(
                 continue
 
 
-def _fuege_flaeche_zu_graph_hinzu(
-    fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
-):
+def _fuege_flaeche_zu_graph_hinzu(fig, funktionen, x_min, x_max, **kwargs):
     """Fügt Flächenvisualisierung zum Graphen hinzu
 
     Args:
         fig: Plotly-Figur
         funktionen: Liste der Funktionen
-        farben: Liste der Farben für die Funktionen
-        x_min, x_max, y_min, y_max: Bereichsgrenzen
+        x_min, x_max: Bereichsgrenzen
         **kwargs: Zusätzliche Optionen für Flächenvisualisierung
     """
     # Parameter extrahieren
@@ -248,7 +245,7 @@ def _fuege_flaeche_zu_graph_hinzu(
                     y=np.concatenate([y_werte_funktion, y_werte_null[::-1]]),
                     fill="toself",
                     fillcolor=flaeche_farbe,
-                    line=dict(width=0),
+                    line={"width": 0},
                     name=flaechen_text,
                     hovertemplate=(
                         f"<b>{flaechen_text}</b><br>"
@@ -299,7 +296,7 @@ def _fuege_flaeche_zu_graph_hinzu(
                     y=np.concatenate([y_werte_f1, y_werte_f2[::-1]]),
                     fill="toself",
                     fillcolor="rgba(255, 165, 0, 0.3)",  # Orange für Fläche zwischen Funktionen
-                    line=dict(width=0),
+                    line={"width": 0},
                     name=flaechen_text,
                     hovertemplate=(
                         f"<b>{flaechen_text}</b><br>"
@@ -531,56 +528,156 @@ def _sammle_interessante_punkte(funktion):
     }
 
     try:
+        # 🔥 ROBUSTE PROPERTY-ZUGRIFFE mit Validierung 🔥
+
         # Nullstellen
         if hasattr(funktion, "nullstellen"):
-            for ns in funktion.nullstellen:
-                try:
-                    x_val = _formatiere_float(ns)
-                    punkte["x_werte"].append(x_val)
-                    punkte["y_werte"].append(0.0)
-                    punkte["punkte_mit_koordinaten"].append(("Nullstelle", x_val, 0.0))
-                except (ValueError, TypeError):
-                    continue
+            try:
+                nullstellen = funktion.nullstellen
+                # Validiere, dass nullstellen iterierbar ist
+                if hasattr(nullstellen, "__iter__") and not isinstance(
+                    nullstellen, (str, bytes)
+                ):
+                    for ns in nullstellen:
+                        try:
+                            x_val = _formatiere_float(ns)
+                            punkte["x_werte"].append(x_val)
+                            punkte["y_werte"].append(0.0)
+                            punkte["punkte_mit_koordinaten"].append(
+                                ("Nullstelle", x_val, 0.0)
+                            )
+                        except (ValueError, TypeError, Exception):
+                            # Einzelne fehlerhafte Nullstelle überspringen
+                            continue
+                else:
+                    # nullstellen ist nicht iterierbar - Warnung ausgeben
+                    print(
+                        f"Warnung: nullstellen Property gibt nicht-iterierbares Objekt zurück: {type(nullstellen)}"
+                    )
+            except Exception as e:
+                print(f"Warnung: Fehler beim Zugriff auf nullstellen Property: {e}")
 
         # Extremstellen
         if hasattr(funktion, "extremstellen"):
-            for es in funktion.extremstellen:
-                try:
-                    if isinstance(es, tuple) and len(es) >= 1:
-                        x_val = _formatiere_float(es[0])
-                        y_val = _formatiere_float(funktion.wert(x_val))
-                        art = es[1] if len(es) >= 2 else "Extremum"
+            try:
+                extremstellen = funktion.extremstellen
+                # Validiere, dass extremstellen iterierbar ist
+                if hasattr(extremstellen, "__iter__") and not isinstance(
+                    extremstellen, (str, bytes)
+                ):
+                    for es in extremstellen:
+                        try:
+                            if isinstance(es, tuple) and len(es) >= 1:
+                                # 🔥 SICHERER ZUGRIFF AUF TUPEL-ELEMENTE 🔥
+                                if hasattr(es[0], "__getitem__"):
+                                    x_val = _formatiere_float(es[0])
+                                else:
+                                    x_val = (
+                                        _formatiere_float(es[0])
+                                        if hasattr(es[0], "__float__")
+                                        else 0.0
+                                    )
 
-                        punkte["x_werte"].append(x_val)
-                        punkte["y_werte"].append(y_val)
-                        punkte["punkte_mit_koordinaten"].append((art, x_val, y_val))
-                    else:
-                        # Einzelner Wert (x-Koordinate)
-                        x_val = _formatiere_float(es)
-                        y_val = _formatiere_float(funktion.wert(x_val))
+                                y_val = _formatiere_float(funktion.wert(x_val))
+                                art = es[1] if len(es) >= 2 else "Extremum"
 
-                        punkte["x_werte"].append(x_val)
-                        punkte["y_werte"].append(y_val)
-                        punkte["punkte_mit_koordinaten"].append(
-                            ("Extremum", x_val, y_val)
-                        )
-                except (ValueError, TypeError, ZeroDivisionError):
-                    continue
+                                punkte["x_werte"].append(x_val)
+                                punkte["y_werte"].append(y_val)
+                                punkte["punkte_mit_koordinaten"].append(
+                                    (art, x_val, y_val)
+                                )
+                            else:
+                                # Einzelner Wert (x-Koordinate) - 🔥 SICHERER ZUGRIFF 🔥
+                                try:
+                                    x_val = _formatiere_float(es)
+                                    y_val = _formatiere_float(funktion.wert(x_val))
+
+                                    punkte["x_werte"].append(x_val)
+                                    punkte["y_werte"].append(y_val)
+                                    punkte["punkte_mit_koordinaten"].append(
+                                        ("Extremum", x_val, y_val)
+                                    )
+                                except (TypeError, ValueError):
+                                    # es ist nicht konvertierbar zu float
+                                    continue
+                        except (
+                            ValueError,
+                            TypeError,
+                            ZeroDivisionError,
+                            IndexError,
+                            Exception,
+                        ):
+                            # Einzelne fehlerhafte Extremstelle überspringen
+                            continue
+                else:
+                    # extremstellen ist nicht iterierbar - Warnung ausgeben
+                    print(
+                        f"Warnung: extremstellen Property gibt nicht-iterierbares Objekt zurück: {type(extremstellen)}"
+                    )
+            except Exception as e:
+                print(f"Warnung: Fehler beim Zugriff auf extremstellen Property: {e}")
 
         # Wendepunkte
         if hasattr(funktion, "wendepunkte"):
-            for wp in funktion.wendepunkte:
-                try:
-                    if isinstance(wp, tuple) and len(wp) >= 2:
-                        x_val = _formatiere_float(wp[0])
-                        y_val = _formatiere_float(wp[1])
-                        art = wp[2] if len(wp) >= 3 else "Wendepunkt"
+            try:
+                wendepunkte = funktion.wendepunkte
+                # Validiere, dass wendepunkte iterierbar ist
+                if hasattr(wendepunkte, "__iter__") and not isinstance(
+                    wendepunkte, (str, bytes)
+                ):
+                    for wp in wendepunkte:
+                        try:
+                            if isinstance(wp, tuple) and len(wp) >= 2:
+                                # 🔥 SICHERER ZUGRIFF AUF TUPEL-ELEMENTE 🔥
+                                if hasattr(wp[0], "__getitem__"):
+                                    x_val = _formatiere_float(wp[0])
+                                else:
+                                    x_val = (
+                                        _formatiere_float(wp[0])
+                                        if hasattr(wp[0], "__float__")
+                                        else 0.0
+                                    )
 
-                        punkte["x_werte"].append(x_val)
-                        punkte["y_werte"].append(y_val)
-                        punkte["punkte_mit_koordinaten"].append((art, x_val, y_val))
-                except (ValueError, TypeError, IndexError):
-                    continue
+                                if hasattr(wp[1], "__getitem__"):
+                                    y_val = _formatiere_float(wp[1])
+                                else:
+                                    y_val = (
+                                        _formatiere_float(wp[1])
+                                        if hasattr(wp[1], "__float__")
+                                        else 0.0
+                                    )
+
+                                art = wp[2] if len(wp) >= 3 else "Wendepunkt"
+
+                                punkte["x_werte"].append(x_val)
+                                punkte["y_werte"].append(y_val)
+                                punkte["punkte_mit_koordinaten"].append(
+                                    (art, x_val, y_val)
+                                )
+                            else:
+                                # 🔥 SICHERER ZUGRIFF FÜR NICHT-TUPEL WENDEPUNKTE 🔥
+                                try:
+                                    x_val = _formatiere_float(wp)
+                                    y_val = _formatiere_float(funktion.wert(x_val))
+                                    art = "Wendepunkt"
+
+                                    punkte["x_werte"].append(x_val)
+                                    punkte["y_werte"].append(y_val)
+                                    punkte["punkte_mit_koordinaten"].append(
+                                        (art, x_val, y_val)
+                                    )
+                                except (ValueError, TypeError):
+                                    continue
+                        except (ValueError, TypeError, IndexError, Exception):
+                            # Einzelne fehlerhaften Wendepunkt überspringen
+                            continue
+                else:
+                    # wendepunkte ist nicht iterierbar - Warnung ausgeben
+                    print(
+                        f"Warnung: wendepunkte Property gibt nicht-iterierbares Objekt zurück: {type(wendepunkte)}"
+                    )
+            except Exception as e:
+                print(f"Warnung: Fehler beim Zugriff auf wendepunkte Property: {e}")
 
         # Polstellen (nur Y-Werte relevant für asymptotisches Verhalten)
         if hasattr(funktion, "polstellen"):
@@ -601,10 +698,10 @@ def _sammle_interessante_punkte(funktion):
                 # Manche Funktionen haben keine polstellen() Methode
                 pass
 
-    except Exception as e:
+    except Exception:
         import logging
 
-        logging.debug(f"Fehler beim Sammeln von Punkten: {e}")
+        logging.debug("Fehler beim Sammeln von Punkten")
 
     return punkte
 
@@ -632,13 +729,23 @@ def _filtere_sichtbare_punkte(punkte, x_min=None, x_max=None, y_min=None, y_max=
     for art, x_val, y_val in punkte["punkte_mit_koordinaten"]:
         # Sonderbehandlung für Polstellen (kein Y-Wert)
         if art == "Polstelle":
-            if x_min_eff <= x_val <= x_max_eff:
-                sichtbare_punkte.append((art, x_val, y_val))
+            # 🔥 ROBUSTE VERGLEICHE GEGEN NONE-WERTE 🔥
+            if x_val is not None and y_val is not None:
+                if x_min_eff <= x_val <= x_max_eff:
+                    sichtbare_punkte.append((art, x_val, y_val))
+                else:
+                    abgeschnittene_punkte.append((art, x_val, y_val))
             else:
+                # Punkte mit None-Koordinaten werden als abgeschnitten betrachtet
                 abgeschnittene_punkte.append((art, x_val, y_val))
         else:
             # Normale Punkte mit X- und Y-Koordinaten
-            if (x_min_eff <= x_val <= x_max_eff) and (y_min_eff <= y_val <= y_max_eff):
+            if (
+                x_val is not None
+                and y_val is not None
+                and (x_min_eff <= x_val <= x_max_eff)
+                and (y_min_eff <= y_val <= y_max_eff)
+            ):
                 sichtbare_punkte.append((art, x_val, y_val))
             else:
                 abgeschnittene_punkte.append((art, x_val, y_val))
@@ -724,7 +831,6 @@ def _berechne_optimalen_bereich(
     Returns:
         tuple: (x_min, x_max) optimaler Bereich
     """
-    import math
     import statistics
 
     # 1. Sammle und bereinige alle x-Koordinaten
@@ -910,24 +1016,55 @@ def _berechne_y_bereich(
 
         # Hole y-Werte von Extremstellen
         if hasattr(funktion, "extremstellen"):
-            for extremstelle in funktion.extremstellen:
-                if isinstance(extremstelle, tuple) and len(extremstelle) >= 1:
-                    x_val = extremstelle[0]
-                    y_val = funktion.wert(x_val)
-                    if _ist_endlich(y_val):
-                        y_float = _formatiere_float(y_val)
-                        if y_float is not None:
-                            wichtige_y_werte.append(y_float)
+            try:
+                extremstellen = funktion.extremstellen
+                if hasattr(extremstellen, "__iter__") and not isinstance(
+                    extremstellen, (str, bytes)
+                ):
+                    for extremstelle in extremstellen:
+                        try:
+                            if (
+                                isinstance(extremstelle, tuple)
+                                and len(extremstelle) >= 1
+                            ):
+                                # 🔥 SICHERER ZUGRIFF AUF TUPEL-ELEMENTE 🔥
+                                try:
+                                    x_val = extremstelle[0]
+                                    y_val = funktion.wert(x_val)
+                                    if _ist_endlich(y_val):
+                                        y_float = _formatiere_float(y_val)
+                                        if y_float is not None:
+                                            wichtige_y_werte.append(y_float)
+                                except (TypeError, IndexError):
+                                    continue
+                        except Exception:
+                            continue
+            except Exception:
+                pass
 
         # Hole y-Werte von Wendepunkten
         if hasattr(funktion, "wendepunkte"):
-            for wendepunkt in funktion.wendepunkte:
-                if isinstance(wendepunkt, tuple) and len(wendepunkt) >= 2:
-                    y_val = wendepunkt[1]  # y-Wert ist an Position 1
-                    if _ist_endlich(y_val):
-                        y_float = _formatiere_float(y_val)
-                        if y_float is not None:
-                            wichtige_y_werte.append(y_float)
+            try:
+                wendepunkte = funktion.wendepunkte
+                if hasattr(wendepunkte, "__iter__") and not isinstance(
+                    wendepunkte, (str, bytes)
+                ):
+                    for wendepunkt in wendepunkte:
+                        try:
+                            if isinstance(wendepunkt, tuple) and len(wendepunkt) >= 2:
+                                # 🔥 SICHERER ZUGRIFF AUF TUPEL-ELEMENTE 🔥
+                                try:
+                                    y_val = wendepunkt[1]  # y-Wert ist an Position 1
+                                    if _ist_endlich(y_val):
+                                        y_float = _formatiere_float(y_val)
+                                        if y_float is not None:
+                                            wichtige_y_werte.append(y_float)
+                                except (TypeError, IndexError):
+                                    continue
+                        except Exception:
+                            continue
+            except Exception:
+                pass
 
         # 2. Berechne Basisbereich aus allen y-Werten (mit Ausreißer-Schutz)
         y_array = np.array([y for y in alle_y if y is not None])
@@ -1056,26 +1193,62 @@ def _berechne_y_bereich_mehrfach(funktionen, x_min, x_max, default_range=(-5, 5)
 
             # Extremstellen
             if hasattr(funktion, "extremstellen"):
-                for extremstelle in funktion.extremstellen:
-                    if isinstance(extremstelle, tuple) and len(extremstelle) >= 1:
-                        x_val = extremstelle[0]
-                        y_val = funktion.wert(x_val)
-                        if _ist_endlich(y_val):
-                            y_float = _formatiere_float(y_val)
-                            if y_float is not None:
-                                funktion_wichtige_y.append(y_float)
-                                alle_wichtige_y_werte.append(y_float)
+                try:
+                    extremstellen = funktion.extremstellen
+                    if hasattr(extremstellen, "__iter__") and not isinstance(
+                        extremstellen, (str, bytes)
+                    ):
+                        for extremstelle in extremstellen:
+                            try:
+                                if (
+                                    isinstance(extremstelle, tuple)
+                                    and len(extremstelle) >= 1
+                                ):
+                                    # 🔥 SICHERER ZUGRIFF AUF TUPEL-ELEMENTE 🔥
+                                    try:
+                                        x_val = extremstelle[0]
+                                        y_val = funktion.wert(x_val)
+                                        if _ist_endlich(y_val):
+                                            y_float = _formatiere_float(y_val)
+                                            if y_float is not None:
+                                                funktion_wichtige_y.append(y_float)
+                                                alle_wichtige_y_werte.append(y_float)
+                                    except (TypeError, IndexError):
+                                        continue
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
 
             # Wendepunkte
             if hasattr(funktion, "wendepunkte"):
-                for wendepunkt in funktion.wendepunkte:
-                    if isinstance(wendepunkt, tuple) and len(wendepunkt) >= 2:
-                        y_val = wendepunkt[1]  # y-Wert ist an Position 1
-                        if _ist_endlich(y_val):
-                            y_float = _formatiere_float(y_val)
-                            if y_float is not None:
-                                funktion_wichtige_y.append(y_float)
-                                alle_wichtige_y_werte.append(y_float)
+                try:
+                    wendepunkte = funktion.wendepunkte
+                    if hasattr(wendepunkte, "__iter__") and not isinstance(
+                        wendepunkte, (str, bytes)
+                    ):
+                        for wendepunkt in wendepunkte:
+                            try:
+                                if (
+                                    isinstance(wendepunkt, tuple)
+                                    and len(wendepunkt) >= 2
+                                ):
+                                    # 🔥 SICHERER ZUGRIFF AUF TUPEL-ELEMENTE 🔥
+                                    try:
+                                        y_val = wendepunkt[
+                                            1
+                                        ]  # y-Wert ist an Position 1
+                                        if _ist_endlich(y_val):
+                                            y_float = _formatiere_float(y_val)
+                                            if y_float is not None:
+                                                funktion_wichtige_y.append(y_float)
+                                                alle_wichtige_y_werte.append(y_float)
+                                    except (TypeError, IndexError):
+                                        continue
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
 
             # Sammle einige Funktionswerte für die Basisbereichsberechnung
             x_werte = np.linspace(
@@ -1570,9 +1743,12 @@ def _berechne_kombinierten_intelligenten_bereich(funktionen):
     for f in funktionen:
         punkte = _sammle_interessante_punkte(f)
         if punkte["x_werte"]:
-            bereich_min = min(punkte["x_werte"])
-            bereich_max = max(punkte["x_werte"])
-            bereiche.append((bereich_min, bereich_max))
+            # 🔥 ROBUST GEGEN NONE-WERTE 🔥
+            gueltige_x_werte = [x for x in punkte["x_werte"] if x is not None]
+            if gueltige_x_werte:
+                bereich_min = min(gueltige_x_werte)
+                bereich_max = max(gueltige_x_werte)
+                bereiche.append((bereich_min, bereich_max))
 
     # NEU: Berechne Schnittpunkte und füge sie zur Bereichsberechnung hinzu
     if len(funktionen) >= 2:
@@ -1621,17 +1797,27 @@ def _berechne_finale_grenzen(funktion, x_min=None, x_max=None, y_min=None, y_max
     punkte = _sammle_interessante_punkte(funktion)
 
     # === GRUNDBEREICH BERECHNEN ===
-    # X-Basisbereich aus wichtigen Punkten
+    # X-Basisbereich aus wichtigen Punkten - 🔥 ROBUST GEGEN NONE-WERTE 🔥
     if punkte["x_werte"]:
-        basis_x_min = min(punkte["x_werte"])
-        basis_x_max = max(punkte["x_werte"])
+        # Filtere None-Werte heraus
+        gueltige_x_werte = [x for x in punkte["x_werte"] if x is not None]
+        if gueltige_x_werte:
+            basis_x_min = min(gueltige_x_werte)
+            basis_x_max = max(gueltige_x_werte)
+        else:
+            basis_x_min, basis_x_max = -5, 5
     else:
         basis_x_min, basis_x_max = -5, 5
 
-    # Y-Basisbereich aus wichtigen Punkten
+    # Y-Basisbereich aus wichtigen Punkten - 🔥 ROBUST GEGEN NONE-WERTE 🔥
     if punkte["y_werte"]:
-        basis_y_min = min(punkte["y_werte"])
-        basis_y_max = max(punkte["y_werte"])
+        # Filtere None-Werte heraus
+        gueltige_y_werte = [y for y in punkte["y_werte"] if y is not None]
+        if gueltige_y_werte:
+            basis_y_min = min(gueltige_y_werte)
+            basis_y_max = max(gueltige_y_werte)
+        else:
+            basis_y_min, basis_y_max = -5, 5
     else:
         basis_y_min, basis_y_max = -5, 5
 
@@ -1819,10 +2005,14 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
             # Formatiere Warnungen für bessere Lesbarkeit
             warnungen = []
             for art, x_val, y_val in abgeschnittene:
-                if y_val is not None:
+                # 🔥 ROBUSTE FORMATIERUNG GEGEN NONE-WERTE 🔥
+                if y_val is not None and x_val is not None:
                     warnungen.append(f"{art} bei ({x_val:.2f}|{y_val:.2f})")
-                else:
+                elif x_val is not None:
                     warnungen.append(f"{art} bei x={x_val:.2f}")
+                else:
+                    # Wenn beide None sind, zeige nur die Art an
+                    warnungen.append(f"{art}")
 
             print(f"⚠️  Hinweis: Abgeschnittene Punkte: {'; '.join(warnungen)}")
 
@@ -1949,9 +2139,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
         )
 
         # NEU: Füge Flächenvisualisierung hinzu
-        _fuege_flaeche_zu_graph_hinzu(
-            fig, funktionen, farben, x_min, x_max, y_min, y_max, **kwargs
-        )
+        _fuege_flaeche_zu_graph_hinzu(fig, funktionen, x_min, x_max, **kwargs)
 
         # Konfiguration
         layout_config = config.get_plot_config()

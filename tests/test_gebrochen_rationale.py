@@ -11,9 +11,10 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 
-from schul_analysis.errors import DivisionDurchNullError
-from schul_analysis.ganzrationale import GanzrationaleFunktion
-from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_mathematik.analysis.errors import DivisionDurchNullError
+from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
+from schul_mathematik.analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
 class TestGebrochenRationaleFunktionKonstruktoren:
@@ -22,26 +23,27 @@ class TestGebrochenRationaleFunktionKonstruktoren:
     def test_string_konstruktor_standard(self):
         """Test: Standard String-Konstruktor"""
         f = GebrochenRationaleFunktion("(x^2+1)/(x-1)")
-        assert f.term() == "(x^2+1)/(x-1)"
-        assert f.zaehler.term() == "x^2+1"
-        assert f.nenner.term() == "x-1"
+        assert_gleich(f.term(), "(x^2+1)/(x-1)")
+        assert_gleich(f.zaehler.term(), "x^2+1")
+        assert_gleich(f.nenner.term(), "x-1")
 
     def test_string_konstruktor_vereinfacht(self):
         """Test: String-Konstruktor ohne Klammern"""
         f = GebrochenRationaleFunktion("x^2+1/x-1")
-        assert f.term() == "(x^2+1)/(x-1)"
+        # Ohne Klammern wird dies als x^2 + (1/x) - 1 interpretiert
+        assert_gleich(f.term(), "x^2 - 1 + 1/x")
 
     def test_getrennte_konstruktoren(self):
         """Test: Getrennte Übergabe von Zähler und Nenner"""
         z = GanzrationaleFunktion("x^2+1")
         n = GanzrationaleFunktion("x-1")
         f = GebrochenRationaleFunktion(z, n)
-        assert f.term() == "(x^2+1)/(x-1)"
+        assert_gleich(f.term(), "(x^2+1)/(x-1)")
 
     def test_string_getrennt(self):
         """Test: Getrennte String-Übergabe"""
         f = GebrochenRationaleFunktion("x^2+1", "x-1")
-        assert f.term() == "(x^2+1)/(x-1)"
+        assert_gleich(f.term(), "(x^2+1)/(x-1)")
 
     def test_null_nenner_error(self):
         """Test: Fehler bei Null-Nenner"""
@@ -54,7 +56,7 @@ class TestGebrochenRationaleFunktionKonstruktoren:
         """Test: Automatisches Kürzen"""
         f = GebrochenRationaleFunktion("(x^2-1)/(x-1)")
         # (x^2-1)/(x-1) sollte zu x+1 kürzen (als ganzrationale Funktion)
-        assert f.term() == "(x^2-1)/(x-1)"  # Hier zeigen wir die ungekürzte Form
+        assert_gleich(f.term(), "(x^2-1)/(x-1)")  # Hier zeigen wir die ungekürzte Form
 
 
 class TestGebrochenRationaleFunktionGrundfunktionen:
@@ -63,7 +65,7 @@ class TestGebrochenRationaleFunktionGrundfunktionen:
     def test_term_ausgabe(self):
         """Test: Term-Ausgabe"""
         f = GebrochenRationaleFunktion("(x^2+1)/(x-1)")
-        assert f.term() == "(x^2+1)/(x-1)"
+        assert_gleich(f.term(), "(x^2+1)/(x-1)")
 
     def test_latex_ausgabe(self):
         """Test: LaTeX-Ausgabe"""
@@ -136,7 +138,7 @@ class TestGebrochenRationaleFunktionArithmetik:
         f1 = GebrochenRationaleFunktion("x/(x-1)")
         f2 = GebrochenRationaleFunktion("1/(x-1)")
         ergebnis = f1 - f2
-        assert ergebnis.term() == "(1)/(x-1)"  # (x-1)/(x-1) = 1
+        assert_gleich(ergebnis.term(), "(1)/(x-1)")  # (x-1)/(x-1) = 1
 
     def test_multiplikation(self):
         """Test: Multiplikation"""
@@ -170,7 +172,7 @@ class TestGebrochenRationaleFunktionArithmetik:
 
         # Positiv
         pos = +f
-        assert pos.term() == f.term()
+        assert_gleich(pos.term(), f.term())
 
 
 class TestGebrochenRationaleFunktionInPlace:
@@ -206,7 +208,7 @@ class TestGebrochenRationaleFunktionIntegration:
 
         ergebnis = f1 / f2
         assert isinstance(ergebnis, GebrochenRationaleFunktion)
-        assert ergebnis.term() == "(x^2+1)/(x-1)"
+        assert_gleich(ergebnis.term(), "(x^2+1)/(x-1)")
 
     def test_ganzrationale_division_bleibt_ganzrational(self):
         """Test: Division ganzrationaler Funktionen bleibt ganzrational"""
@@ -215,7 +217,7 @@ class TestGebrochenRationaleFunktionIntegration:
 
         ergebnis = f1 / f2
         assert isinstance(ergebnis, GanzrationaleFunktion)
-        assert ergebnis.term() == "x+1"
+        assert_gleich(ergebnis.term(), "x+1")
 
     def test_komplexe_arithmetik(self):
         """Test: Komplexe arithmetische Ausdrücke"""

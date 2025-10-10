@@ -3,38 +3,7 @@
 Test der vereinheitlichten Funktion Klasse
 """
 
-import sys
-
-sys.path.insert(0, "src")
-
-from schul_mathematik import GanzrationaleFunktion, GebrochenRationaleFunktion
-from schul_analysis.funktion import Funktion
-
-
-def test_migration():
-    """Zeigt die Migration von alten zu neuen Klassen"""
-    print("=== Migration von alten zu neuen Klassen ===")
-
-    # Alte Klassen (bestehender Code)
-    print("\n1. Alte Klassen (für Rückwärtskompatibilität):")
-    f_alt = GanzrationaleFunktion("x^2 + 1")
-    g_alt = GebrochenRationaleFunktion("(x^2 - 1)/(x - 1)")
-    print(f"GanzrationaleFunktion('x^2 + 1') → {f_alt.term()}")
-    print(f"GebrochenRationaleFunktion('(x^2-1)/(x-1)') → {g_alt.term()}")
-
-    # Neue Klasse (vereinheitlicht)
-    print("\n2. Neue Klasse (vereinheitlicht):")
-    f_neu = Funktion("x^2 + 1")
-    g_neu = Funktion("(x^2 - 1)/(x - 1)")
-    print(f"Funktion('x^2 + 1') → {f_neu.term()}")
-    print(f"Funktion('(x^2-1)/(x-1)') → {g_neu.term()}")
-
-    print("\n3. Vorteile der neuen Klasse:")
-    print("• Einheitliche Syntax für alle Funktionstypen")
-    print("• Automatische Symbolerkennung (Variablen vs Parameter)")
-    print("• Unterstützung für implizite Multiplikation (z.B. '2x^2')")
-    print("• Vereinfachte API mit weniger Methodenaufrufen")
-    print("• Bessere Fehlerbehandlung und Rückwärtskompatibilität")
+from schul_mathematik import Funktion
 
 
 def test_vereinheitlichte_funktion():
@@ -125,7 +94,4 @@ def test_vereinheitlichte_funktion():
 
 
 if __name__ == "__main__":
-    # Führe zuerst die Migrationstests durch
-    test_migration()
-    print("\n" + "=" * 50)
     test_vereinheitlichte_funktion()

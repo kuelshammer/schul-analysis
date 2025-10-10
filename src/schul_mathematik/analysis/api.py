@@ -126,6 +126,76 @@ def Nullstellen(
         ) from e
 
 
+def NullstellenMitWiederholungen(
+    funktion: Funktionstyp, real: bool = True, runden: int | None = None
+) -> list:
+    """
+    Berechnet die Nullstellen mit Wiederholungen gemäß Vielfachheit.
+
+    Diese Methode expandiert Nullstellen mit Vielfachheit > 1 zu mehreren
+    Einträgen in der Liste, um Kompatibilität mit bestehenden Tests
+    und der traditionellen Darstellung zu gewährleisten.
+
+    Args:
+        funktion: Eine beliebige Funktion
+        real: Nur reelle Nullstellen zurückgeben (Standard: True)
+        runden: Anzahl Dezimalstellen zum Runden (optional)
+
+    Returns:
+        Liste der Nullstellen mit Wiederholungen für Vielfachheiten
+
+    Beispiele:
+        >>> f = ErstellePolynom([1, -2, 1])  # (x-1)²
+        >>> xs = NullstellenMitWiederholungen(f)  # [1, 1] (doppelte Nullstelle)
+    """
+    try:
+        # Verwende die neue Methode der Funktion
+        if hasattr(funktion, "nullstellen_mit_wiederholungen"):
+            attr = funktion.nullstellen_mit_wiederholungen
+            if callable(attr):
+                # It's a method - try with parameters first
+                try:
+                    result = funktion.nullstellen_mit_wiederholungen(
+                        real=real, runden=runden
+                    )
+                except TypeError:
+                    # Method doesn't accept parameters, call without them
+                    result = funktion.nullstellen_mit_wiederholungen()
+            else:
+                # It's a property - access it directly
+                result = funktion.nullstellen_mit_wiederholungen
+        elif hasattr(funktion, "NullstellenMitWiederholungen"):
+            attr = funktion.NullstellenMitWiederholungen
+            if callable(attr):
+                # It's a method - try with parameters first
+                try:
+                    result = funktion.NullstellenMitWiederholungen(
+                        real=real, runden=runden
+                    )
+                except TypeError:
+                    # Method doesn't accept parameters, call without them
+                    result = funktion.NullstellenMitWiederholungen()
+            else:
+                # It's a property - access it directly
+                result = funktion.NullstellenMitWiederholungen
+        else:
+            raise AttributeError(
+                "Keine nullstellen_mit_wiederholungen Eigenschaft oder Methode gefunden"
+            )
+
+        return result
+    except AttributeError:
+        raise UngueltigeFunktionError(
+            "Nullstellenberechnung mit Wiederholungen",
+            f"Die Funktion vom Typ '{type(funktion).__name__}' "
+            "unterstützt die Nullstellen-Berechnung mit Wiederholungen nicht.",
+        )
+    except Exception as e:
+        raise SchulAnalysisError(
+            f"Fehler bei der Nullstellenberechnung mit Wiederholungen: {str(e)}"
+        )
+
+
 @preserve_exact_types
 def Ableitung(funktion: Funktionstyp, ordnung: int = 1) -> ExactSymPyExpr:
     """
@@ -1344,6 +1414,7 @@ def Taylorpolynom(
 __all__ = [
     # 🔥 KERN-ANALYSE-FUNKTIONEN (Haupt-API für Schüler)
     "Nullstellen",
+    "NullstellenMitWiederholungen",
     "Ableitung",
     "Integral",
     "Flaeche",

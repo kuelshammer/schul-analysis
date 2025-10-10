@@ -111,9 +111,33 @@ class Nullstelle:
     exakt: bool = True  # Ob exakt berechnet wurde
 
     def __str__(self) -> str:
+        """String-Repräsentation mit Vielfachheit nur bei > 1."""
         if self.multiplicitaet > 1:
             return f"x = {self.x} (Vielfachheit: {self.multiplicitaet})"
         return f"x = {self.x}"
+
+    def to_float(self) -> float:
+        """Konvertiert die Nullstelle zu einem Float-Wert."""
+        if hasattr(self.x, "evalf"):
+            return float(self.x.evalf())
+        return float(self.x)
+
+    def to_list_with_multiplicity(self) -> list:
+        """Erzeugt eine Liste mit der Nullstelle entsprechend ihrer Vielfachheit."""
+        return [self.x] * self.multiplicitaet
+
+    def is_equivalent(self, other: "Nullstelle") -> bool:
+        """Prüft, ob zwei Nullstellen äquivalent sind (symbolischer Vergleich)."""
+        try:
+            from sympy import simplify
+
+            return simplify(self.x - other.x) == 0
+        except:
+            return str(self.x) == str(other.x)
+
+    def __iter__(self):
+        """Erlaubt Iteration über die Nullstelle mit Vielfachheit."""
+        return iter(self.to_list_with_multiplicity())
 
 
 @dataclass(frozen=True)

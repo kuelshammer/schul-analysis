@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis import Funktion, ErstellePolynom, Schnittpunkte
+from schul_analysis import ErstellePolynom, Funktion, Schnittpunkte
 
 
 def test_exakte_schnittpunkte():

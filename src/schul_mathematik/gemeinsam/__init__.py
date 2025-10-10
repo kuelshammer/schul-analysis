@@ -5,8 +5,8 @@ Enthält gemeinsam genutzte Typ-Definitionen, Fehlerklassen,
 Validierungsfunktionen und Basis-Visualisierung.
 """
 
-from ..analysis.sympy_types import *  # Alle Typ-Definitionen importieren
 from ..analysis.errors import *  # Alle Fehlerklassen importieren
+from ..analysis.sympy_types import *  # Alle Typ-Definitionen importieren
 
 __all__ = [
     # Wird später mit gemeinsam genutzten Komponenten gefüllt

@@ -4,6 +4,7 @@ Detailed debugging of the _optimiere_achse function
 """
 
 import math
+
 from src.schul_analysis.ganzrationale import GanzrationaleFunktion
 from src.schul_analysis.visualisierung import Graph, _sammle_interessante_punkte
 
@@ -27,7 +28,7 @@ def debug_optimierung():
     print(f"Final X-range: {x_range}")
 
     # Now let's manually trace through the optimization
-    print(f"\n=== Manual Optimization Trace ===")
+    print("\n=== Manual Optimization Trace ===")
 
     # First, let's find the initial range
     import numpy as np
@@ -76,7 +77,6 @@ def debug_optimierung():
         if min_near_int and max_near_int:
             print("✓ Using special case logic with integer bounds")
             # Simulate the special case logic
-            from src.schul_analysis.visualisierung import _berechne_intervalle
 
             min_rounded = round(x_min_initial)
             max_rounded = round(x_max_initial)
@@ -115,8 +115,8 @@ def debug_optimierung():
         else:
             print("✗ Using normal logic (not the special case)")
 
-    print(f"\n=== Comparison ===")
-    print(f"Expected range with proper buffering: [-4.0, 11.0]")
+    print("\n=== Comparison ===")
+    print("Expected range with proper buffering: [-4.0, 11.0]")
     print(f"Actual range from Graph: {x_range}")
 
     # Check each nullstelle distance
@@ -127,9 +127,9 @@ def debug_optimierung():
             f"Nullstelle x={ns}: left_dist={left_dist:.3f}, right_dist={right_dist:.3f}"
         )
         if min(left_dist, right_dist) < 1.0:
-            print(f"  ❌ TOO CLOSE!")
+            print("  ❌ TOO CLOSE!")
         else:
-            print(f"  ✅ OK")
+            print("  ✅ OK")
 
 
 if __name__ == "__main__":

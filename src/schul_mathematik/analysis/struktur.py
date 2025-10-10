@@ -222,19 +222,22 @@ def analysiere_funktionsstruktur(
         >>> print(ergebnis['struktur'])
         'produkt'
     """
+    # Rekursionsschutz
+    if hasattr(analysiere_funktionsstruktur, "_in_progress"):
+        raise StrukturAnalyseError("Rekursion in der Strukturanalyse erkannt")
+
+    analysiere_funktionsstruktur._in_progress = True
+
     try:
         # Konvertiere zu SymPy-Ausdruck
         if isinstance(funktion, Funktion):
             expr = funktion.term_sympy
             variable = funktion._variable_symbol
         elif isinstance(funktion, str):
-            expr = sp.sympify(funktion, rational=True)
-            # Finde die Variable automatisch
-            freie_variablen = expr.free_symbols
-            if len(freie_variablen) == 1:
-                variable = next(iter(freie_variablen))
-            else:
-                variable = sp.symbols("x")  # Standardvariable
+            # Use the enhanced parsing from Funktion class
+            temp_funktion = Funktion(funktion)
+            expr = temp_funktion.term_sympy
+            variable = temp_funktion._variable_symbol
         else:
             expr = funktion
             freie_variablen = expr.free_symbols
@@ -375,6 +378,10 @@ def analysiere_funktionsstruktur(
         raise StrukturAnalyseError(
             f"Konnte die Funktion '{funktion}' nicht analysieren: {e}"
         )
+    finally:
+        # Rekursionsschutz zurücksetzen
+        if hasattr(analysiere_funktionsstruktur, "_in_progress"):
+            del analysiere_funktionsstruktur._in_progress
 
 
 def erstelle_strukturierte_funktion(

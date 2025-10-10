@@ -8,14 +8,13 @@ automatische Erkennung von Funktionstypen.
 import pytest
 import sympy as sp
 
-from schul_mathematik import (
+from schul_mathematik.analysis.funktion import (
     Funktion,
-    GanzrationaleFunktion,
-    QuotientFunktion,
-    SummeFunktion,
-    assert_gleich,
     erstelle_funktion_automatisch,
 )
+from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
+from schul_mathematik.analysis.strukturiert import QuotientFunktion, SummeFunktion
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
 class TestAutomatischeFunktionserkennung:
@@ -26,17 +25,17 @@ class TestAutomatischeFunktionserkennung:
         # Einfache ganzrationale Funktion
         f = erstelle_funktion_automatisch("x^2 + 2x + 1")
         assert isinstance(f, GanzrationaleFunktion)
-        assert f.term() == "x^2+2x+1"
+        assert_gleich(f.term(), "x^2+2x+1")
 
         # Lineare Funktion
         f = erstelle_funktion_automatisch("3x - 5")
         assert isinstance(f, GanzrationaleFunktion)
-        assert f.term() == "3x-5"
+        assert_gleich(f.term(), "3x-5")
 
         # Konstante Funktion
         f = erstelle_funktion_automatisch("7")
         assert isinstance(f, GanzrationaleFunktion)
-        assert f.term() == "7"
+        assert_gleich(f.term(), "7")
 
     def test_ganzrationale_funktion_sympy(self):
         """Test der Erkennung ganzrationaler Funktionen aus SymPy-Ausdruck."""
@@ -129,7 +128,7 @@ class TestAutomatischeFunktionserkennung:
 
         # Teste Ableitung
         f_abgeleitet = f_ganz.ableitung()
-        assert f_abgeleitet.term() == "2x"
+        assert_gleich(f_abgeleitet.term(), "2x")
 
         # Teste Werteberechnung
         assert f_ganz.wert(2) == 0.0
@@ -206,7 +205,7 @@ class TestStaticExponentialDetection:
 
     def test_string_erkennung_exp_klein(self):
         """Test der Erkennung von exp() in Strings."""
-        from schul_analysis.funktion import _ist_exponential_funktion_static
+        from schul_mathematik.funktion import _ist_exponential_funktion_static
 
         assert _ist_exponential_funktion_static("exp(x)")
         assert _ist_exponential_funktion_static("exp(2x)")
@@ -215,14 +214,14 @@ class TestStaticExponentialDetection:
 
     def test_string_erkennung_exp_gross(self):
         """Test der Erkennung von EXP() in Strings (case-insensitive)."""
-        from schul_analysis.funktion import _ist_exponential_funktion_static
+        from schul_mathematik.funktion import _ist_exponential_funktion_static
 
         assert _ist_exponential_funktion_static("EXP(x)")
         assert _ist_exponential_funktion_static("Exp(x)")
 
     def test_string_erkennung_e_potenz(self):
         """Test der Erkennung von e^ in Strings."""
-        from schul_analysis.funktion import _ist_exponential_funktion_static
+        from schul_mathematik.funktion import _ist_exponential_funktion_static
 
         assert _ist_exponential_funktion_static("e^x")
         assert _ist_exponential_funktion_static("e^(2x)")
@@ -230,7 +229,7 @@ class TestStaticExponentialDetection:
 
     def test_sympy_erkennung(self):
         """Test der Erkennung in SymPy-Ausdrücken."""
-        from schul_analysis.funktion import _ist_exponential_funktion_static
+        from schul_mathematik.funktion import _ist_exponential_funktion_static
 
         x = sp.symbols("x")
         expr_exp = sp.exp(x)
@@ -241,7 +240,7 @@ class TestStaticExponentialDetection:
 
     def test_kombinierte_ausdrücke(self):
         """Test der Erkennung in kombinierten Ausdrücken."""
-        from schul_analysis.funktion import _ist_exponential_funktion_static
+        from schul_mathematik.funktion import _ist_exponential_funktion_static
 
         # Sollte als Exponentialfunktion erkannt werden
         assert _ist_exponential_funktion_static("exp(x) + x^2")

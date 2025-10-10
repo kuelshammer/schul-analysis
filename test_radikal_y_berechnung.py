@@ -14,12 +14,12 @@ def test_radikal_verbessert():
     f = GanzrationaleFunktion("2x+6")  # Nullstelle bei x=-3, y=0
     g = GanzrationaleFunktion("(x-10)^2")  # Minimum bei x=10, y=0
 
-    print(f"Wichtige Punkte für f:")
+    print("Wichtige Punkte für f:")
     print(f"  Nullstelle: x=-3, y={f.wert(-3)}")
     if hasattr(f, "extremstellen"):
         print(f"  Extremstellen: {f.extremstellen}")
 
-    print(f"Wichtige Punkte für g:")
+    print("Wichtige Punkte für g:")
     print(f"  Minimum: x=10, y={g.wert(10)}")
     if hasattr(g, "extremstellen"):
         print(f"  Extremstellen: {g.extremstellen}")
@@ -69,7 +69,7 @@ def test_radikal_verbessert():
         x_range = fig.layout.xaxis.range
         y_range = fig.layout.yaxis.range
 
-        print(f"\nAktuelle Implementierung:")
+        print("\nAktuelle Implementierung:")
         print(f"y=[{y_range[0]:.3f}, {y_range[1]:.3f}]")
         print(f"Y-Spanne: {y_range[1] - y_range[0]:.3f}")
 
@@ -79,7 +79,7 @@ def test_radikal_verbessert():
                 f"\n✅ Die neue Logik wäre besser: {(y_max_final - y_min_final):.3f} vs {(y_range[1] - y_range[0]):.3f}"
             )
         else:
-            print(f"\n❌ Aktuelle Implementierung ist besser")
+            print("\n❌ Aktuelle Implementierung ist besser")
 
 
 if __name__ == "__main__":

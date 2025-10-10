@@ -49,7 +49,6 @@ from .sympy_types import *
 # Unused imports removed
 from .test_utils import assert_gleich, assert_wert_gleich
 from .trigonometrisch import TrigonometrischeFunktion
-from .gemischte import GemischteFunktion
 from .lineare import LineareFunktion
 from .quadratisch import QuadratischeFunktion
 from .visualisierung import Graph
@@ -99,7 +98,6 @@ __all__ = [
     "GebrochenRationaleFunktion",
     "ExponentialFunktion",
     "TrigonometrischeFunktion",
-    "GemischteFunktion",
     "LineareFunktion",
     "QuadratischeFunktion",
     "StrukturierteFunktion",

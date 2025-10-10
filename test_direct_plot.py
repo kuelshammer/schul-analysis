@@ -45,7 +45,7 @@ def test_direct_plot():
                         print(f"  Y range: [{min(y_data):.3f}, {max(y_data):.3f}]")
 
                         # Check if any point is near x=-3
-                        for j, (x, y) in enumerate(zip(x_data, y_data)):
+                        for j, (x, y) in enumerate(zip(x_data, y_data, strict=False)):
                             if abs(x - (-3)) < 0.1:
                                 print(f"  Point near x=-3: ({x:.3f}, {y:.3f})")
 
@@ -53,7 +53,7 @@ def test_direct_plot():
         print(f"Error inspecting plot: {e}")
 
     # Try a more direct approach - check what the actual visual boundaries are
-    print(f"\n=== Boundary Analysis ===")
+    print("\n=== Boundary Analysis ===")
     x_range = fig.layout.xaxis.range
     x_min, x_max = x_range
 
@@ -75,7 +75,7 @@ def test_direct_plot():
         print("⚠️  The point might appear too close to the edge visually!")
 
     # Test with increased buffer
-    print(f"\n=== Testing with Increased Buffer ===")
+    print("\n=== Testing with Increased Buffer ===")
     fig2 = Graph(f, x_min=-5, x_max=12)  # Manual specification
     print(f"Manual range: [{fig2.layout.xaxis.range}]")
     fig2.write_html("test_plot_manual.html")

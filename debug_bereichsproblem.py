@@ -41,8 +41,8 @@ def debug_problem():
         f"Tatsächlicher Graph-Bereich: x=[{x_range[0]:.3f}, {x_range[1]:.3f}], y=[{y_range[0]:.3f}, {y_range[1]:.3f}]"
     )
 
-    print(f"\nErwartet: ca. -3 bis 10 (mit Puffer)")
-    print(f"Problem: Der Bereich ist viel zu groß!")
+    print("\nErwartet: ca. -3 bis 10 (mit Puffer)")
+    print("Problem: Der Bereich ist viel zu groß!")
 
 
 if __name__ == "__main__":

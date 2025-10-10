@@ -4,12 +4,11 @@ Visualisierungsfunktionen für das Stochastik-Modul
 Integration mit Plotly für interaktive statistische Graphen
 """
 
-import plotly.graph_objects as go
 import numpy as np
-from sympy import lambdify
+import plotly.graph_objects as go
 import sympy as sp
+from sympy import lambdify
 
-from .verteilungen import Binomialverteilung, Normalverteilung
 from ..gemeinsam import *
 
 

@@ -10,8 +10,8 @@ sys.path.insert(0, "src")
 from schul_analysis.ganzrationale import GanzrationaleFunktion
 from schul_analysis.visualisierung import (
     Graph,
-    _sammle_interessante_punkte,
     _filtere_sichtbare_punkte,
+    _sammle_interessante_punkte,
 )
 
 # Test mit einer einfachen Parabel

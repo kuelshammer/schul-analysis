@@ -6,12 +6,13 @@ import time
 
 import pytest
 
-from schul_analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_mathematik.analysis.gebrochen_rationale import GebrochenRationaleFunktion
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
 def test_sicherheit():
     """Teste Sicherheitsvalidierung"""
-    from schul_analysis.errors import (
+    from schul_mathematik.errors import (
         DivisionDurchNullError,
         SicherheitsError,
     )
@@ -63,7 +64,8 @@ def test_mathematische_genauigkeit():
     f.kürzen()
 
     # Nach Kürzung sollte einfacher sein
-    assert "x-2" not in f.nenner.term().lower()
+    nenner_term = f.nenner.term()
+    assert "x-2" not in nenner_term.lower()
 
     # Teste asymptotisches Verhalten
     g = GebrochenRationaleFunktion("(x^2+1)/x")
@@ -104,7 +106,7 @@ def test_performance():
 
 def test_fehlerbehandlung():
     """Teste umfassende Fehlerbehandlung"""
-    from schul_analysis.errors import UngueltigerAusdruckError
+    from schul_mathematik.errors import UngueltigerAusdruckError
 
     # Teste ungültige Eingaben
     with pytest.raises(UngueltigerAusdruckError):

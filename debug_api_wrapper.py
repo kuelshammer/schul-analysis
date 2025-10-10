@@ -105,8 +105,8 @@ def debug_api_wrapper():
         # Methoden vergleichen
         print(f"f_test hat term(): {hasattr(f_test, 'term')}")
         print(f"t_test hat term(): {hasattr(t_test, 'term')}")
-        print(f"f_test hat __call__: {hasattr(f_test, '__call__')}")
-        print(f"t_test hat __call__: {hasattr(t_test, '__call__')}")
+        print(f"f_test hat __call__: {callable(f_test)}")
+        print(f"t_test hat __call__: {callable(t_test)}")
 
     except Exception as e:
         print(f"Fehler: {e}")

@@ -30,7 +30,7 @@ def test_problem_beispiel():
     )
 
     # Erwarteter X-Bereich: ca. -3 bis 10 + Puffer
-    print(f"Erwarteter X-Bereich: ca. -4 bis 11")
+    print("Erwarteter X-Bereich: ca. -4 bis 11")
     print(f"X-Bereich akzeptabel: {x_range[0] <= -4 and x_range[1] >= 11}")
 
     # Prüfe wichtige Punkte

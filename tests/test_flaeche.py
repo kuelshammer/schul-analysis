@@ -2,13 +2,13 @@
 Test für die neuen Fläche-Funktionen mit Visualisierung
 """
 
-import sys
 import os
+import sys
 
 # Füge src zum Pfad hinzu
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from schul_mathematik import Funktion, Integral, Flaeche, FlaecheZweiFunktionen
+from schul_mathematik import Flaeche, FlaecheZweiFunktionen, Funktion, Integral
 
 
 def test_flaeche_funktion():
@@ -42,7 +42,7 @@ def test_flaeche_funktion():
     # Test 3: Benutzerdefinierte Farben
     print("\n🎨 Test 3: Benutzerdefinierte Fläche-Farbe")
     fig3 = Flaeche(f, 0, 1, anzeigen=False, flaeche_farbe="rgba(255, 0, 0, 0.5)")
-    print(f"  ✅ Benutzerdefinierte Farbe funktioniert")
+    print("  ✅ Benutzerdefinierte Farbe funktioniert")
 
     print("\n🎉 Alle Fläche-Tests erfolgreich!")
 

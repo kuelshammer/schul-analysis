@@ -24,7 +24,7 @@ def debug_y_bereich():
     print(f"Berechneter Y-Bereich: [{y_min:.3f}, {y_max:.3f}]")
 
     # Teste manuelle Y-Werte an den Grenzen
-    print(f"\nFunktionswerte an den Grenzen:")
+    print("\nFunktionswerte an den Grenzen:")
     print(f"f({x_min}) = {f.wert(x_min)}")
     print(f"f({x_max}) = {f.wert(x_max)}")
     print(f"g({x_min}) = {g.wert(x_min)}")
@@ -39,7 +39,7 @@ def debug_y_bereich():
     fig = Graph(f, g)
     x_range = fig.layout.xaxis.range
     y_range = fig.layout.yaxis.range
-    print(f"\nTatsächlicher Graph-Bereich:")
+    print("\nTatsächlicher Graph-Bereich:")
     print(f"x=[{x_range[0]:.3f}, {x_range[1]:.3f}]")
     print(f"y=[{y_range[0]:.3f}, {y_range[1]:.3f}]")
 

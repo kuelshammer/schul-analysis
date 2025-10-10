@@ -10,16 +10,16 @@ from .verteilungen import (
     Normalverteilung,
     StatistischeVerteilung,
 )
-from .wrapper import (
-    BinomialPDF,
-    BinomialCDF,
-    NormalPDF,
-    NormalCDF,
-    NormalIntervall,
-)
 from .visualisierung import (
     zeichne_binomialverteilung,
     zeichne_normalverteilung,
+)
+from .wrapper import (
+    BinomialCDF,
+    BinomialPDF,
+    NormalCDF,
+    NormalIntervall,
+    NormalPDF,
 )
 
 __all__ = [

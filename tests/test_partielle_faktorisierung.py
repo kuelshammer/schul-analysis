@@ -9,7 +9,7 @@ sys.path.insert(0, "src")
 
 import sympy as sp
 
-from schul_analysis.ganzrationale import GanzrationaleFunktion
+from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
 
 
 def test_partielle_faktorisierung():

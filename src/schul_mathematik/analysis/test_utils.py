@@ -137,16 +137,51 @@ def _konvertiere_zu_sympy(
         return sp.Number(ausdruck)
 
     elif isinstance(ausdruck, str):
-        # Spezielle Behandlung für Schul-Analysis Syntax
+        # Erweiterte Schul-Mathematik-Syntax-Unterstützung
+        import re
+        from sympy.parsing.sympy_parser import parse_expr, standard_transformations
+
+        # Ersetze ^ mit ** für SymPy
         bereinigt = ausdruck.replace("^", "**")
+
+        # Wende Regex-Transformationen an, bevor parse_expr verwendet wird
+        # Implizite Multiplikation: 2x -> 2*x
+        bereinigt = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", bereinigt)
+        # x2 -> x*2 (nicht so häufig, aber manchmal von Schülern verwendet)
+        bereinigt = re.sub(r"([a-zA-Z])(\d)", r"\1*\2", bereinigt)
+        # (x+1)x -> (x+1)*x
+        bereinigt = re.sub(r"(\))([a-zA-Z])", r"\1*\2", bereinigt)
+
+        # x(x+1) -> x*(x+1) - aber nur für einfache Fälle, nicht für Funktionsaufrufe
+        # Ersetze nur, wenn es sich nicht um bekannte Funktionsnamen handelt
+        bekannte_funktionen = ["sin", "cos", "tan", "exp", "log", "sqrt", "abs"]
+        for func in bekannte_funktionen:
+            # Schütze Funktionsaufrufe vor der Transformation
+            bereinigt = bereinigt.replace(f"{func}(", f"__{func}__(")
+
+        # Wende die Transformation an
+        bereinigt = re.sub(r"([a-zA-Z])\(", r"\1*(", bereinigt)
+
+        # Stelle Funktionsaufrufe wieder her
+        for func in bekannte_funktionen:
+            bereinigt = bereinigt.replace(f"__{func}(", f"{func}(")
 
         # Versuche, den Ausdruck zu parsen
         try:
-            x = sp.Symbol(variable)
-            return sp.sympify(bereinigt, locals={variable: x})  # type: ignore
-        except Exception:
-            # Fallback: direkte Konvertierung
-            return sp.sympify(bereinigt)  # type: ignore
+            return parse_expr(bereinigt, transformations=standard_transformations)
+        except Exception as e:
+            # Fallback: Versuche mit standard sympify
+            try:
+                return sp.sympify(bereinigt, locals={variable: x})
+            except Exception:
+                # Letzter Versuch: ohne spezielle Locals
+                try:
+                    return sp.sympify(bereinigt)
+                except Exception as e2:
+                    raise ValueError(
+                        f"Konnte Ausdruck '{ausdruck}' nicht parsen. "
+                        f"Original-Fehler: {e}. Fallback-Fehler: {e2}"
+                    )
 
     else:
         raise TypeError(f"Unbekannter Ausdruckstyp: {type(ausdruck)}")

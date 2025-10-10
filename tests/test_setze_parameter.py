@@ -14,6 +14,7 @@ import sympy as sp
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from schul_mathematik import Funktion
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
 class TestSetzeParameter:
@@ -94,15 +95,15 @@ class TestSetzeParameter:
 
         # Parameter im Zähler setzen
         g2 = g.setze_parameter(a=3)
-        assert str(g2.term()) == "(3*x + 1)/(x**2 - b)"
+        assert_gleich(g2.term(), "(3*x + 1)/(x**2 - b)")
 
         # Parameter im Nenner setzen
         g3 = g.setze_parameter(b=4)
-        assert str(g3.term()) == "(a*x + 1)/(x**2 - 4)"
+        assert_gleich(g3.term(), "(a*x + 1)/(x**2 - 4)")
 
         # Beide Parameter setzen
         g4 = g.setze_parameter(a=3, b=4)
-        assert str(g4.term()) == "(3*x + 1)/(x**2 - 4)"
+        assert_gleich(g4.term(), "(3*x + 1)/(x**2 - 4)")
 
     def test_produkt_funktion(self):
         """Teste setze_parameter() mit Produkt-Funktionen."""
@@ -126,7 +127,7 @@ class TestSetzeParameter:
 
         # Nur a setzen
         f_a = f.setze_parameter(a=3)
-        assert str(f_a.term()) == "3*x**2 + b*x + c"
+        assert_gleich(f_a.term(), "3*x**2 + b*x + c")
         assert f_a.parameter == [
             sp.Symbol("b"),
             sp.Symbol("c"),
@@ -134,7 +135,7 @@ class TestSetzeParameter:
 
         # Nur b setzen
         f_b = f.setze_parameter(b=2)
-        assert str(f_b.term()) == "a*x**2 + 2*x + c"
+        assert_gleich(f_b.term(), "a*x**2 + 2*x + c")
         assert f_b.parameter == [
             sp.Symbol("a"),
             sp.Symbol("c"),
@@ -175,11 +176,11 @@ class TestSetzeParameter:
 
         # Teilweise Substitution
         k2 = k.setze_parameter(a=2, b=3)
-        assert str(k2.term()) == "(2*x + 3)/(c*x + d)"
+        assert_gleich(k2.term(), "(2*x + 3)/(c*x + d)")
 
         # Alle Parameter setzen
         k3 = k.setze_parameter(a=2, b=3, c=1, d=4)
-        assert str(k3.term()) == "(2*x + 3)/(x + 4)"
+        assert_gleich(k3.term(), "(2*x + 3)/(x + 4)")
 
         # Auswertung testen
         result = k3.setze_parameter(a=2, b=3, c=1, d=4)(2)

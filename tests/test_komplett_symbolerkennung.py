@@ -30,7 +30,7 @@ def test_allgemeine_symbolerkennung():
     print(f"   Parameter: {[p.name for p in g.parameter]}")
     print(f"   Hauptvariable: {g.hauptvariable.name if g.hauptvariable else 'None'}")
 
-    # Testfall 3: Gemischte Buchstaben
+    # Testfall 3: Verschiedene Buchstaben als Parameter
     print("\n3. Test: h = GanzrationaleFunktion('p y^2 + q y + r')")
     h = GanzrationaleFunktion("p y^2 + q y + r")
     print(f"   Funktion: {h.term()}")

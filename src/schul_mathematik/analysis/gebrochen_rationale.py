@@ -17,7 +17,12 @@ from .errors import (
 )
 from .funktion import Funktion
 from .ganzrationale import GanzrationaleFunktion
-from .sympy_types import VALIDATION_EXACT, validate_function_result
+from .sympy_types import (
+    VALIDATION_EXACT,
+    validate_function_result,
+    preserve_exact_types,
+    ExactNullstellenListe,
+)
 
 
 def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
@@ -183,6 +188,69 @@ class GebrochenRationaleFunktion(Funktion):
     def definitionsluecken(self) -> list[float]:
         """Gibt die Definitionslücken zurück (Polstellen)"""
         return self.polstellen()
+
+    @preserve_exact_types
+    def nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
+        """
+        Berechnet die Nullstellen der gebrochen-rationalen Funktion.
+
+        Delegiert an die QuotientFunktion-Implementierung für korrekte
+        Berücksichtigung von Zähler-Nullstellen und Polstellen.
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der gültigen Nullstellen als SymPy-Ausdrücke
+
+        Examples:
+            >>> f = GebrochenRationaleFunktion("x^2-1", "x-1")
+            >>> # (x²-1)/(x-1) = x+1 für x≠1, also keine Nullstellen (x=1 ist Polstelle)
+            >>> nullstellen = f.nullstellen()  # []
+        """
+        try:
+            # Hole Zähler-Nullstellen
+            zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
+
+            # Hole Polstellen (sind schon berechnet)
+            polstellen = self.polstellen()
+
+            # Konvertiere zu Sets für effizienten Vergleich
+            # Handle sowohl alte als auch neue Formate
+            polstelle_set = set()
+            for p in polstellen:
+                if hasattr(p, "x"):
+                    polstelle_set.add(p.x)
+                else:
+                    polstelle_set.add(p)
+
+            # Filtere Zähler-Nullstellen: nur die, die keine Polstellen sind
+            gueltige_nullstellen = []
+            for zn in zaehler_nullstellen:
+                if hasattr(zn, "x"):
+                    # Neues Format: Nullstelle-Datenklasse
+                    if zn.x not in polstelle_set:
+                        gueltige_nullstellen.append(zn)
+                else:
+                    # Altes Format: direktes SymPy-Objekt
+                    if zn not in polstelle_set:
+                        gueltige_nullstellen.append(zn)
+
+            # Validiere die Ergebnisse
+            validate_exact_results(
+                gueltige_nullstellen, "Gebrochen-rationale Nullstellen"
+            )
+
+            return gueltige_nullstellen
+
+        except Exception as e:
+            raise ValueError(
+                f"Fehler bei der Nullstellenberechnung für gebrochen-rationale Funktion: {str(e)}\n"
+                "Tipp: Die Nullstellen entsprechen den Zähler-Nullstellen, die keine Polstellen sind."
+            ) from e
 
     def __str__(self) -> str:
         """String-Repräsentation"""

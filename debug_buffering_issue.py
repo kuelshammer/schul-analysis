@@ -24,7 +24,7 @@ def debug_buffering():
     # Check buffering for each nullstelle
     nullstellen = f.nullstellen
     if nullstellen:
-        print(f"\nBuffer analysis:")
+        print("\nBuffer analysis:")
         for i, nullstelle in enumerate(nullstellen):
             print(f"Nullstelle {i + 1}: x = {nullstelle}")
             left_distance = abs(nullstelle - x_range[0])
@@ -34,23 +34,21 @@ def debug_buffering():
 
             # Check if it's too close to edge
             if min(left_distance, right_distance) < 1.0:
-                print(f"  ❌ TOO CLOSE to edge!")
+                print("  ❌ TOO CLOSE to edge!")
             else:
-                print(f"  ✅ Good buffering")
+                print("  ✅ Good buffering")
 
     # Check what the actual important points are
-    print(f"\n=== Checking important points ===")
+    print("\n=== Checking important points ===")
     from src.schul_analysis.visualisierung import _sammle_interessante_punkte
 
     wichtige_punkte = _sammle_interessante_punkte(f)
     print(f"Wichtige Punkte: {wichtige_punkte}")
 
     # Check the optimization logic directly
-    print(f"\n=== Checking optimization logic ===")
-    from src.schul_analysis.visualisierung import _optimiere_achse
-
+    print("\n=== Checking optimization logic ===")
     # Get initial range
-    from src.schul_analysis.visualisierung import _berechne_intervalle
+    from src.schul_analysis.visualisierung import _berechne_intervalle, _optimiere_achse
 
     x_intervall = _berechne_intervalle(f, x_bereich=None)
     print(f"Initial interval: {x_intervall}")

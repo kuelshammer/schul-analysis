@@ -3,17 +3,16 @@ Tests für die verbesserte Graph-Funktion mit manueller Bereichskontrolle
 """
 
 import pytest
-import numpy as np
-from schul_analysis.ganzrationale import GanzrationaleFunktion
-from schul_analysis.exponential import ExponentialFunktion
-from schul_analysis.visualisierung import (
+
+from schul_mathematik import Funktion
+from schul_mathematik.analysis.visualisierung import (
+    Graph,
+    _berechne_finale_grenzen,
     _berechne_intervalle,
+    _berechne_kombinierten_intelligenten_bereich,
+    _filtere_sichtbare_punkte,
     _optimiere_achse,
     _sammle_interessante_punkte,
-    _filtere_sichtbare_punkte,
-    _berechne_finale_grenzen,
-    Graph,
-    _berechne_kombinierten_intelligenten_bereich,
 )
 
 
@@ -57,7 +56,7 @@ class TestPunktesammlung:
 
     def test_sammle_punkte_parabel(self):
         """Testet Punktesammlung für eine einfache Parabel"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         punkte = _sammle_interessante_punkte(f)
 
         # Sollte Nullstellen bei x=2 und x=-2 haben
@@ -79,7 +78,7 @@ class TestPunktesammlung:
 
     def test_sammle_punkte_lineare_funktion(self):
         """Testet Punktesammlung für eine lineare Funktion"""
-        f = GanzrationaleFunktion("2x + 1")
+        f = Funktion("2x + 1")
         punkte = _sammle_interessante_punkte(f)
 
         # Sollte nur eine Nullstelle bei x=-0.5 haben
@@ -88,7 +87,7 @@ class TestPunktesammlung:
 
     def test_sammle_punkte_konstante_funktion(self):
         """Testet Punktesammlung für eine konstante Funktion"""
-        f = GanzrationaleFunktion("5")
+        f = Funktion("5")
         punkte = _sammle_interessante_punkte(f)
 
         # Sollte keine interessanten Punkte haben
@@ -101,7 +100,7 @@ class TestPunktefilterung:
 
     def test_filtere_punkte_alle_sichtbar(self):
         """Testet Filterung wenn alle Punkte sichtbar sind"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         punkte = _sammle_interessante_punkte(f)
 
         sichtbare, abgeschnittene = _filtere_sichtbare_punkte(
@@ -114,7 +113,7 @@ class TestPunktefilterung:
 
     def test_filtere_punkte_teilweise_sichtbar(self):
         """Testet Filterung wenn einige Punkte abgeschnitten sind"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         punkte = _sammle_interessante_punkte(f)
 
         # Setze Y-Bereich so dass nur positive Y-Werte sichtbar sind
@@ -139,7 +138,7 @@ class TestFinaleGrenzen:
 
     def test_finale_grenzen_vollstaendig_automatic(self):
         """Testet vollständig automatische Grenzberechnung"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         x_min, x_max, y_min, y_max, x_step, y_step = _berechne_finale_grenzen(f)
 
         # Sollte alle wichtigen Punkte umfassen
@@ -156,7 +155,7 @@ class TestFinaleGrenzen:
 
     def test_finale_grenzen_manuelles_y(self):
         """Testet manuelle Y-Grenzen"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         x_min, x_max, y_min, y_max, x_step, y_step = _berechne_finale_grenzen(
             f, y_min=0, y_max=5
         )
@@ -174,7 +173,7 @@ class TestFinaleGrenzen:
 
     def test_finale_grenzen_halb_manuell(self):
         """Testet halb-manuelle Grenzen (nur eine Grenze festgelegt)"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         x_min, x_max, y_min, y_max, x_step, y_step = _berechne_finale_grenzen(
             f, x_min=0
         )
@@ -191,7 +190,7 @@ class TestFinaleGrenzen:
 
     def test_finale_grenzen_strikt_manuell(self):
         """Testet strikte manuelle Grenzen"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         x_min, x_max, y_min, y_max, x_step, y_step = _berechne_finale_grenzen(
             f, x_min=1, x_max=3, y_min=-1, y_max=1
         )
@@ -212,7 +211,7 @@ class TestGraphFunktion:
 
     def test_graph_automatic(self, capsys):
         """Testet Graph-Funktion mit automatischen Grenzen"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         fig = Graph(f)
 
         # Sollte eine gültige Plotly-Figur zurückgeben
@@ -225,7 +224,7 @@ class TestGraphFunktion:
 
     def test_graph_manuelle_grenzen(self, capsys):
         """Testet Graph-Funktion mit manuellen Grenzen"""
-        f = GanzrationaleFunktion("x^2 - 4")
+        f = Funktion("x^2 - 4")
         fig = Graph(f, y_max=-1)  # Schneidet Extremstelle ab bei y=-1
 
         # Sollte eine gültige Plotly-Figur zurückgeben
@@ -250,7 +249,7 @@ class TestGraphFunktion:
 
     def test_graph_parametrisierte_funktion(self):
         """Testet Graph-Funktion mit parametrisierter Funktion"""
-        f = GanzrationaleFunktion("a*x^2 + b*x + c")
+        f = Funktion("a*x^2 + b*x + c")
 
         with pytest.raises(ValueError, match="enthält Parameter"):
             Graph(f)
@@ -262,7 +261,7 @@ class TestIntegrationSzenarien:
 
     def test_szenario_parabel_mit_optimierung(self):
         """Testet eine Parabel mit automatischer Optimierung"""
-        f = GanzrationaleFunktion("x^2 - 6x + 8")  # Nullstellen bei x=2, x=4
+        f = Funktion("x^2 - 6x + 8")  # Nullstellen bei x=2, x=4
         fig = Graph(f)
 
         # X-Bereich sollte Nullstellen umfassen
@@ -281,9 +280,7 @@ class TestIntegrationSzenarien:
 
     def test_szenario_hohe_extremwerte(self):
         """Testet Funktion mit hohen Extremwerten"""
-        f = GanzrationaleFunktion(
-            "x^3 - 12x^2 + 36x - 25"
-        )  # Extremwerte bei hohen y-Werten
+        f = Funktion("x^3 - 12x^2 + 36x - 25")  # Extremwerte bei hohen y-Werten
         fig = Graph(f, y_max=10)  # Beschränke y auf 10
 
         # Y-Bereich sollte genau eingehalten werden
@@ -295,7 +292,7 @@ class TestIntegrationSzenarien:
 
     def test_szenario_linke_begrenzung(self):
         """Testet halb-manuelle Modus mit nur linker Begrenzung"""
-        f = GanzrationaleFunktion("x^2 - 4x + 3")  # Nullstellen bei x=1, x=3
+        f = Funktion("x^2 - 4x + 3")  # Nullstellen bei x=1, x=3
         fig = Graph(f, x_min=2)  # Nur x_min festgelegt
 
         # X-Minimum sollte exakt eingehalten werden
@@ -313,7 +310,7 @@ class TestIntegrationSzenarien:
         Puffer um die äußersten Nullstellen herum einfügt.
         """
         # Testfunktion mit Nullstellen bei x=-3, x=-1, x=10
-        f = GanzrationaleFunktion("(x+3)(x+1)(x-10)")
+        f = Funktion("(x+3)(x+1)(x-10)")
         nullstellen = sorted(f.nullstellen)
         assert nullstellen == [-3, -1, 10]
 
@@ -365,7 +362,7 @@ class TestIntegrationSzenarien:
         ]
 
         for func_str, expected_zeros in test_cases:
-            f = GanzrationaleFunktion(func_str)
+            f = Funktion(func_str)
             fig = Graph(f)
             x_range = fig.layout.xaxis.range
 
@@ -403,7 +400,7 @@ class TestIntegrationSzenarien:
     def test_szenario_intelligenter_puffer_kleine_spanne(self):
         """Testet den intelligenten Puffer bei kleinen Spannen (sollte Mindestpuffer verwenden)"""
         # Funktion mit kleiner Spanne (2 Einheiten)
-        f = GanzrationaleFunktion("(x-1)(x-3)")  # Nullstellen bei x=1, x=3, Spanne=2
+        f = Funktion("(x-1)(x-3)")  # Nullstellen bei x=1, x=3, Spanne=2
         fig = Graph(f)
         x_range = fig.layout.xaxis.range
 
@@ -421,9 +418,7 @@ class TestIntegrationSzenarien:
     def test_szenario_intelligenter_puffer_grosse_spanne(self):
         """Testet den intelligenten Puffer bei großen Spannen (sollte prozentualen Puffer verwenden)"""
         # Funktion mit großer Spanne (100 Einheiten)
-        f = GanzrationaleFunktion(
-            "(x+50)(x-50)"
-        )  # Nullstellen bei x=-50, x=50, Spanne=100
+        f = Funktion("(x+50)(x-50)")  # Nullstellen bei x=-50, x=50, Spanne=100
         fig = Graph(f)
         x_range = fig.layout.xaxis.range
 
@@ -443,8 +438,8 @@ class TestIntegrationSzenarien:
     def test_graph_mehrfach_kombinierter_bereich(self):
         """Testet Graph(f, g) mit kombiniertem intelligentem Bereich"""
         # Beispiel vom Benutzer: f = (x+4)(x-1), g = (x+3)(x-3)
-        f = GanzrationaleFunktion("(x+4)(x-1)")  # Nullstellen bei x=-4, x=1
-        g = GanzrationaleFunktion("(x+3)(x-3)")  # Nullstellen bei x=-3, x=3
+        f = Funktion("(x+4)(x-1)")  # Nullstellen bei x=-4, x=1
+        g = Funktion("(x+3)(x-3)")  # Nullstellen bei x=-3, x=3
 
         fig = Graph(f, g)
         x_range = fig.layout.xaxis.range
@@ -472,8 +467,8 @@ class TestIntegrationSzenarien:
 
     def test_graph_mehrfach_mit_manuellen_grenzen(self):
         """Testet Graph(f, g) mit teilweisen manuellen Grenzen"""
-        f = GanzrationaleFunktion("(x+4)(x-1)")
-        g = GanzrationaleFunktion("(x+3)(x-3)")
+        f = Funktion("(x+4)(x-1)")
+        g = Funktion("(x+3)(x-3)")
 
         # Nur x_max manuell gesetzt
         fig = Graph(f, g, x_max=5)
@@ -489,8 +484,8 @@ class TestIntegrationSzenarien:
 
     def test_graph_mehrfach_vollstaendig_manuell(self):
         """Testet Graph(f, g) mit vollständig manuellen Grenzen"""
-        f = GanzrationaleFunktion("(x+4)(x-1)")
-        g = GanzrationaleFunktion("(x+3)(x-3)")
+        f = Funktion("(x+4)(x-1)")
+        g = Funktion("(x+3)(x-3)")
 
         # Vollständig manuelle Grenzen
         fig = Graph(f, g, x_min=-10, x_max=10, y_min=-20, y_max=20)
@@ -513,9 +508,9 @@ class TestIntegrationSzenarien:
 
     def test_graph_mehrfach_drei_funktionen(self):
         """Testet Graph(f, g, h) mit drei Funktionen"""
-        f = GanzrationaleFunktion("(x+4)(x-1)")  # Bereich: -4 bis 1
-        g = GanzrationaleFunktion("(x+3)(x-3)")  # Bereich: -3 bis 3
-        h = GanzrationaleFunktion("(x+5)(x-2)")  # Bereich: -5 bis 2
+        f = Funktion("(x+4)(x-1)")  # Bereich: -4 bis 1
+        g = Funktion("(x+3)(x-3)")  # Bereich: -3 bis 3
+        h = Funktion("(x+5)(x-2)")  # Bereich: -5 bis 2
 
         fig = Graph(f, g, h)
         x_range = fig.layout.xaxis.range
@@ -533,8 +528,8 @@ class TestIntegrationSzenarien:
 
     def test_graph_mehrfach_exponentielle_funktionen(self):
         """Testet Graph(f, g) mit exponentiellen Funktionen"""
-        f = ExponentialFunktion("2^x")  # Wachstum für x > 0
-        g = ExponentialFunktion("0.5^x")  # Decay für x > 0
+        f = Funktion("2^x")  # Wachstum für x > 0
+        g = Funktion("0.5^x")  # Decay für x > 0
 
         fig = Graph(f, g, x_min=-2, x_max=4)
         x_range = fig.layout.xaxis.range
@@ -552,8 +547,8 @@ class TestIntegrationSzenarien:
 
     def test_berechne_kombinierten_intelligenten_bereich(self):
         """Testet die Hilfsfunktion _berechne_kombinierten_intelligenten_bereich direkt"""
-        f = GanzrationaleFunktion("(x+4)(x-1)")  # Bereich: -4 bis 1
-        g = GanzrationaleFunktion("(x+3)(x-3)")  # Bereich: -3 bis 3
+        f = Funktion("(x+4)(x-1)")  # Bereich: -4 bis 1
+        g = Funktion("(x+3)(x-3)")  # Bereich: -3 bis 3
 
         x_min, x_max, x_step = _berechne_kombinierten_intelligenten_bereich([f, g])
 

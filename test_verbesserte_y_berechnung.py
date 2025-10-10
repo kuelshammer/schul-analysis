@@ -35,7 +35,7 @@ def test_verbesserte_y_berechnung():
     fig = Graph(f, g)
     x_range = fig.layout.xaxis.range
     y_range = fig.layout.yaxis.range
-    print(f"\nTatsächlicher Graph-Bereich:")
+    print("\nTatsächlicher Graph-Bereich:")
     print(f"x=[{x_range[0]:.3f}, {x_range[1]:.3f}]")
     print(f"y=[{y_range[0]:.3f}, {y_range[1]:.3f}]")
     print(f"Y-Spanne: {y_range[1] - y_range[0]:.3f}")

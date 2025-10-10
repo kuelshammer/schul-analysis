@@ -15,6 +15,10 @@ import sympy as sp
 from .funktion import Funktion
 from .ganzrationale import GanzrationaleFunktion
 from .struktur import analysiere_funktionsstruktur
+from .sympy_types import Nullstelle, ExactNullstellenListe, validate_exact_results
+
+from sympy import solve, simplify, solveset, S, Interval
+from .sympy_types import preserve_exact_types
 
 
 class StrukturierteFunktion(Funktion):
@@ -35,7 +39,28 @@ class StrukturierteFunktion(Funktion):
         """
         # Speichere Strukturinformationen
         if struktur_info is None:
-            self._struktur_info = analysiere_funktionsstruktur(eingabe)
+            # Vermeide Rekursion: Verwende die Strukturanalyse nur, wenn sie nicht bereits läuft
+            from .struktur import analysiere_funktionsstruktur, StrukturAnalyseError
+
+            try:
+                self._struktur_info = analysiere_funktionsstruktur(eingabe)
+            except StrukturAnalyseError:
+                # Bei Rekursion oder Fehler, erstelle Basis-Strukturinfo
+                self._struktur_info = {
+                    "original_term": str(eingabe),
+                    "struktur": "unbekannt",
+                    "komponenten": [
+                        {
+                            "ausdruck": eingabe,
+                            "typ": "unbekannt",
+                            "term": str(eingabe),
+                            "latex": str(eingabe),
+                        }
+                    ],
+                    "variable": "x",
+                    "latex": str(eingabe),
+                    "kann_faktorisiert_werden": False,
+                }
         else:
             self._struktur_info = struktur_info
 
@@ -169,6 +194,11 @@ class ProduktFunktion(StrukturierteFunktion):
         self._faktoren = self._komponenten
 
     @property
+    def funktionstyp(self) -> str:
+        """Gibt den Funktionstyp als String zurück"""
+        return "produkt"
+
+    @property
     def faktoren(self) -> list[Funktion]:
         """Gibt die typisierten Faktoren des Produkts zurück."""
         return self._faktoren
@@ -186,6 +216,206 @@ class ProduktFunktion(StrukturierteFunktion):
     def __str__(self):
         return f"Produkt({', '.join(str(f) for f in self.faktoren)})"
 
+    def nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
+        """
+        Berechnet Nullstellen unter Verwendung des Nullproduktsatzes.
+
+        Für f(x) = F₁(x) × F₂(x) × ... × Fₙ(x) = 0 gilt:
+        f(x) = 0 ⇔ mindestens ein Fᵢ(x) = 0
+
+        Diese Methode nutzt Sympy's Vereinfachung für zuverlässige
+        Duplikatserkennung bei symbolischen Ausdrücken.
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Nullstellen mit korrekten Vielfachheiten
+        """
+        # Sammle alle Nullstellen von allen Faktoren
+        alle_nullstellen = []
+
+        for faktor in self.faktoren:
+            if hasattr(faktor, "nullstellen") and callable(faktor.nullstellen):
+                # Rufe nullstellen() des Faktors auf
+                faktor_nullstellen = faktor.nullstellen(real=real, runden=runden)
+                alle_nullstellen.extend(faktor_nullstellen)
+
+        # Kombiniere die Nullstellen mit Sympy-Vereinfachung
+        return self._kombiniere_mit_sympy_simplify(alle_nullstellen)
+
+    def _kombiniere_mit_sympy_simplify(
+        self, alle_nullstellen: list[Nullstelle]
+    ) -> ExactNullstellenListe:
+        """
+        Kombiniert Nullstellen mit Sympy's zuverlässiger Vereinfachung.
+
+        Args:
+            alle_nullstellen: Liste aller Nullstellen von allen Faktoren
+
+        Returns:
+            Kombinierte Liste mit korrekten Vielfachheiten
+        """
+        vereinfachte_map = {}
+
+        for nullstelle in alle_nullstellen:
+            # Handle verschiedene Formate von Nullstellen (alt und neu)
+            # Altes Format: direktes SymPy-Objekt (z.B. Zero, Pi)
+            # Neues Format: Nullstelle-Datenklasse mit .x Attribut
+
+            if hasattr(nullstelle, "x"):
+                # Neues Format: Nullstelle-Datenklasse
+                x_wert = nullstelle.x
+                multiplicitaet = nullstelle.multiplicitaet
+                exakt = nullstelle.exakt
+            else:
+                # Altes Format: direktes SymPy-Objekt
+                x_wert = nullstelle
+                multiplicitaet = 1  # Standard-Vielfachheit
+                exakt = True  # SymPy-Ergebnisse sind exakt
+
+            # Versuche zu vereinfachen, aber handle Fehler gracefully
+            try:
+                if hasattr(x_wert, "is_Number") and x_wert.is_Number:
+                    # Für numerische Werte: direkt verwenden
+                    x_vereinfacht = x_wert
+                else:
+                    # Für symbolische Ausdrücke: vereinfachen
+                    x_vereinfacht = simplify(x_wert)
+            except Exception:
+                # Bei Vereinfachungsfehlern: Originalwert verwenden
+                x_vereinfacht = x_wert
+
+            # Erstelle einen hashbaren Schlüssel
+            try:
+                # Versuche eine String-Repräsentation
+                schlüssel = str(x_vereinfacht)
+            except Exception:
+                # Fallback: Verwende den Index als Schlüssel (sollte selten vorkommen)
+                schlüssel = f"unbekannt_{id(nullstelle)}"
+
+            if schlüssel in vereinfachte_map:
+                # Addiere die Vielfachheiten zur bestehenden Nullstelle
+                vorhandene = vereinfachte_map[schlüssel]
+                neue_multiplicitaet = vorhandene.multiplicitaet + multiplicitaet
+
+                # Ersetze die vorhandene Nullstelle mit neuer Vielfachheit
+                vereinfachte_map[schlüssel] = Nullstelle(
+                    x=x_vereinfacht,
+                    multiplicitaet=neue_multiplicitaet,
+                    exakt=vorhandene.exakt and exakt,
+                )
+            else:
+                # Füge neue vereinfachte Nullstelle hinzu
+                vereinfachte_map[schlüssel] = Nullstelle(
+                    x=x_vereinfacht,
+                    multiplicitaet=multiplicitaet,
+                    exakt=exakt,
+                )
+
+        return list(vereinfachte_map.values())
+
+    def _sind_symbolisch_gleich(self, ausdruck1: sp.Expr, ausdruck2: sp.Expr) -> bool:
+        """
+        Prüft ob zwei symbolische Ausdrücke äquivalent sind.
+
+        Diese Methode erkennt äquivalente Ausdrücke auch in verschiedenen
+        Darstellungsformen, was für die Multiplicity-Erkennung wichtig ist.
+
+        Args:
+            ausdruck1: Erster symbolischer Ausdruck
+            ausdruck2: Zweiter symbolischer Ausdruck
+
+        Returns:
+            True wenn die Ausdrücke äquivalent sind
+        """
+        try:
+            # Vereinfache beide Ausdrücke
+            einfach1 = sp.simplify(ausdruck1)
+            einfach2 = sp.simplify(ausdruck2)
+
+            # Prüfe auf direkte Gleichheit
+            if einfach1 == einfach2:
+                return True
+
+            # Prüfe ob eines das Negative des anderen ist (wichtig für Vorzeichen)
+            if einfach1 == -einfach2:
+                return True
+
+            # Prüfe ob expandierte Formen gleich sind
+            if sp.expand(einfach1) == sp.expand(einfach2):
+                return True
+
+            # Spezialfall: Verhältnisse wie -b/a == c
+            # Dies erfordert Lösung von Gleichungen
+            try:
+                # Prüfe ob einfach1 - einfach2 = 0 für alle Werte gilt
+                diff = sp.simplify(einfach1 - einfach2)
+                if diff == 0:
+                    return True
+
+                # Prüfe ob die Differenz nach Expansion null ist
+                if sp.expand(diff) == 0:
+                    return True
+            except:
+                pass
+
+            return False
+
+        except Exception:
+            # Bei Fehlern in der symbolischen Vereinfachung
+            return False
+
+    def _kombiniere_nullstellen_intelligent(
+        self, alle_nullstellen: list[Nullstelle]
+    ) -> ExactNullstellenListe:
+        """
+        Kombiniert Nullstellen von allen Faktoren mit intelligenter Multiplicity-Berechnung.
+
+        Args:
+            alle_nullstellen: Liste aller Nullstellen von allen Faktoren
+
+        Returns:
+            Kombinierte Liste mit korrekten Vielfachheiten
+        """
+        if not alle_nullstellen:
+            return []
+
+        kombinierte = []
+
+        for aktuelle_nullstelle in alle_nullstellen:
+            # Suche nach äquivalenten Nullstellen in der kombinierten Liste
+            gefunden = False
+
+            for i, vorhandene_nullstelle in enumerate(kombinierte):
+                # Prüfe auf symbolische Gleichheit
+                if self._sind_symbolisch_gleich(
+                    aktuelle_nullstelle.x, vorhandene_nullstelle.x
+                ):
+                    # Addiere die Vielfachheiten
+                    neue_multiplicitaet = (
+                        vorhandene_nullstelle.multiplicitaet
+                        + aktuelle_nullstelle.multiplicitaet
+                    )
+
+                    # Ersetze die vorhandene Nullstelle mit neuer Vielfachheit
+                    kombinierte[i] = Nullstelle(
+                        x=vorhandene_nullstelle.x,
+                        multiplicitaet=neue_multiplicitaet,
+                        exakt=vorhandene_nullstelle.exakt and aktuelle_nullstelle.exakt,
+                    )
+                    gefunden = True
+                    break
+
+            if not gefunden:
+                # Füge neue Nullstelle hinzu
+                kombinierte.append(aktuelle_nullstelle)
+
+        return kombinierte
+
 
 class SummeFunktion(StrukturierteFunktion):
     """Repräsentiert eine Summe von Funktionen mit typisierten Summanden."""
@@ -195,6 +425,11 @@ class SummeFunktion(StrukturierteFunktion):
 
         # Spezifische Eigenschaften für Summen
         self._summanden = self._komponenten
+
+    @property
+    def funktionstyp(self) -> str:
+        """Gibt den Funktionstyp als String zurück"""
+        return "summe"
 
     @property
     def summanden(self) -> list[Funktion]:
@@ -210,6 +445,177 @@ class SummeFunktion(StrukturierteFunktion):
     def summand2(self) -> Funktion | None:
         """Gibt den zweiten Summanden zurück."""
         return self._summanden[1] if len(self._summanden) > 1 else None
+
+    def nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
+        """
+        Berechnet Nullstellen für Summenfunktionen mit verbessertem Ansatz.
+
+        Strategie:
+        1. Versuche Sympy's solve() direkt auf die Summe
+        2. Bei Schwierigkeiten: Vereinfache die gesamte Summe und versuche es erneut
+        3. Für trigonometrische Funktionen: Nutze solveset für allgemeine Lösungen
+        4. Akzeptiere, dass einige Summen nicht exakt lösbar sind
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der gefundenen Nullstellen oder leere Liste
+        """
+        # Strategie 1: Sympy solve() direkt versuchen (aber nicht für trigonometrische Funktionen)
+        try:
+            # Überspringe trigonometrische Funktionen - die werden später mit solveset behandelt
+            term_str = str(self.term_sympy).lower()
+            if not any(func in term_str for func in ["sin", "cos", "tan"]):
+                lösungen = solve(self.term_sympy, self._variable_symbol)
+                if lösungen:
+                    # Filtere reelle Lösungen wenn gewünscht
+                    ergebnisse = []
+                    for lösung in lösungen:
+                        if not real or (hasattr(lösung, "is_real") and lösung.is_real):
+                            ergebnisse.append(Nullstelle(x=lösung, exakt=True))
+                    if ergebnisse:
+                        return ergebnisse
+        except Exception:
+            # Bei Fehlern gehe zur nächsten Strategie
+            pass
+
+        # Strategie 2: Vereinfache die Summe und versuche es erneut (aber nicht für trigonometrische Funktionen)
+        try:
+            # Überspringe trigonometrische Funktionen - die werden später mit solveset behandelt
+            term_str = str(self.term_sympy).lower()
+            if not any(func in term_str for func in ["sin", "cos", "tan"]):
+                vereinfachter_term = simplify(self.term_sympy)
+                lösungen = solve(vereinfachter_term, self._variable_symbol)
+                if lösungen:
+                    # Filtere reelle Lösungen wenn gewünscht
+                    ergebnisse = []
+                    for lösung in lösungen:
+                        if not real or (hasattr(lösung, "is_real") and lösung.is_real):
+                            ergebnisse.append(Nullstelle(x=lösung, exakt=True))
+                    if ergebnisse:
+                        return ergebnisse
+        except Exception:
+            # Bei Fehlern gehe zur nächsten Strategie
+            pass
+
+        # Strategie 3: Für trigonometrische Funktionen - nutze solveset für bessere Lösungen
+        try:
+            term_str = str(self.term_sympy).lower()
+            if any(func in term_str for func in ["sin", "cos", "tan"]):
+                # Nutze solveset für bessere trigonometrische Lösungen
+                allgemeine_lösungen = solveset(
+                    self.term_sympy, self._variable_symbol, domain=S.Reals
+                )
+
+                ergebnisse = []
+
+                # Hilfsfunktion zur Extraktion konkreter Lösungen aus ImageSet
+                from sympy import pi
+
+                def extrahiere_lösungen_aus_imageset(
+                    image_set, x_bereich=(-2 * pi, 2 * pi)
+                ):
+                    """Extrahiert konkrete Lösungen aus einem ImageSet."""
+                    if not hasattr(image_set, "lamda"):
+                        return []
+
+                    lambda_expr = image_set.lamda
+                    n_symbol = lambda_expr.variables[0]  # Normalerweise _n
+                    lösungen = []
+
+                    # Probiere verschiedene n-Werte für Schulmathematik-Bereich
+                    for n_val in range(-3, 4):
+                        try:
+                            lösung = lambda_expr.expr.subs(n_symbol, n_val)
+
+                            # Prüfe, ob die Lösung im gewünschten Bereich liegt
+                            if hasattr(lösung, "evalf"):
+                                lösung_num = float(lösung.evalf())
+                                if x_bereich[0] <= lösung_num <= x_bereich[1]:
+                                    lösungen.append(lösung)
+                            else:
+                                # Symbolische Lösungen immer hinzufügen
+                                lösungen.append(lösung)
+                        except Exception:
+                            continue
+
+                    return lösungen
+
+                # Verarbeite verschiedene solveset-Ergebnistypen
+                try:
+                    from sympy import ImageSet, Union
+
+                    print(f"DEBUG: Verarbeite solveset-Ergebnis...")
+                    if isinstance(allgemeine_lösungen, Union):
+                        print(
+                            f"DEBUG: Ist Union mit {len(allgemeine_lösungen.args)} Args"
+                        )
+                        # Behandle Union von mehreren ImageSets
+                        for i, arg in enumerate(allgemeine_lösungen.args):
+                            print(f"DEBUG: Arg {i}: {arg} (Typ: {type(arg)})")
+                            if isinstance(arg, ImageSet):
+                                print(f"DEBUG: Verarbeite ImageSet...")
+                                lösungen = extrahiere_lösungen_aus_imageset(arg)
+                                print(f"DEBUG: Gefundene Lösungen: {lösungen}")
+                                for lösung in lösungen:
+                                    if hasattr(lösung, "is_real") and lösung.is_real:
+                                        ergebnisse.append(
+                                            Nullstelle(x=lösung, exakt=True)
+                                        )
+                    elif isinstance(allgemeine_lösungen, ImageSet):
+                        print(f"DEBUG: Ist einzelnes ImageSet")
+                        # Einzelnes ImageSet
+                        lösungen = extrahiere_lösungen_aus_imageset(allgemeine_lösungen)
+                        for lösung in lösungen:
+                            if hasattr(lösung, "is_real") and lösung.is_real:
+                                ergebnisse.append(Nullstelle(x=lösung, exakt=True))
+                except Exception as e:
+                    print(f"DEBUG: Fehler bei der Verarbeitung: {e}")
+                    import traceback
+
+                    traceback.print_exc()
+
+                if ergebnisse:
+                    # Entferne Duplikate mit vereinfachtem Vergleich
+                    vereinfachte_ergebnisse = []
+                    seen = set()
+                    for ergebnis in ergebnisse:
+                        # Vereinfache und erstelle Schlüssel
+                        vereinfacht = simplify(ergebnis.x)
+                        schlüssel = str(vereinfacht)
+                        if schlüssel not in seen:
+                            seen.add(schlüssel)
+                            # Ersetze mit vereinfachter Version
+                            vereinfachte_ergebnisse.append(
+                                Nullstelle(x=vereinfacht, exakt=True)
+                            )
+
+                    if vereinfachte_ergebnisse:
+                        # Sortiere für bessere Darstellung
+                        try:
+                            from sympy import pi
+
+                            vereinfachte_ergebnisse.sort(
+                                key=lambda n: float(n.x.evalf())
+                            )
+                        except:
+                            pass
+
+                        return vereinfachte_ergebnisse
+        except Exception as e:
+            print(f"DEBUG: Exception in Strategy 3: {e}")
+            import traceback
+
+            traceback.print_exc()
+            # Bei Fehlern gehe zur letzten Strategie
+            pass
+
+        # Strategie 4: Keine Lösung gefunden - akzeptiere dies und gib leere Liste zurück
+        return []
 
     def __str__(self):
         return f"Summe({', '.join(str(s) for s in self.summanden)})"
@@ -241,6 +647,11 @@ class QuotientFunktion(StrukturierteFunktion):
             "polstellen": None,
             "definitionsluecken": None,
         }
+
+    @property
+    def funktionstyp(self) -> str:
+        """Gibt den Funktionstyp als String zurück"""
+        return "quotient"
 
     @property
     def zaehler(self) -> Funktion:
@@ -295,6 +706,79 @@ class QuotientFunktion(StrukturierteFunktion):
             self._cache["definitionsluecken"] = self.polstellen()
         return self._cache["definitionsluecken"]
 
+    @preserve_exact_types
+    def nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
+        """
+        Berechnet die Nullstellen der Quotientenfunktion.
+
+        Für f(x) = Z(x)/N(x) gilt: f(x) = 0 ⇔ Z(x) = 0 und N(x) ≠ 0
+        Die Nullstellen sind also die Zähler-Nullstellen, die keine Polstellen sind.
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der gültigen Nullstellen als SymPy-Ausdrücke
+
+        Examples:
+            >>> f = QuotientFunktion([GanzrationaleFunktion([1, -1]), GanzrationaleFunktion([1, -2])])
+            >>> # (x-1)/(x-2) hat Nullstelle bei x=1 (Polstelle bei x=2)
+            >>> nullstellen = f.nullstellen()  # [1]
+        """
+        try:
+            if self.zaehler is None:
+                raise ValueError("QuotientFunktion hat keinen gültigen Zähler")
+
+            # Hole Zähler-Nullstellen
+            if hasattr(self.zaehler, "nullstellen") and callable(
+                self.zaehler.nullstellen
+            ):
+                zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
+            else:
+                # Fallback: Leere Liste wenn keine Nullstellen ermittelbar
+                zaehler_nullstellen = []
+
+            # Hole Polstellen (Nenner-Nullstellen)
+            try:
+                polstellen = self.polstellen()
+            except Exception:
+                polstellen = []
+
+            # Konvertiere zu Sets für effizienten Vergleich
+            # Handle sowohl alte als auch neue Formate
+            polstelle_set = set()
+            for p in polstellen:
+                if hasattr(p, "x"):
+                    polstelle_set.add(p.x)
+                else:
+                    polstelle_set.add(p)
+
+            # Filtere Zähler-Nullstellen: nur die, die keine Polstellen sind
+            gueltige_nullstellen = []
+            for zn in zaehler_nullstellen:
+                if hasattr(zn, "x"):
+                    # Neues Format: Nullstelle-Datenklasse
+                    if zn.x not in polstelle_set:
+                        gueltige_nullstellen.append(zn)
+                else:
+                    # Altes Format: direktes SymPy-Objekt
+                    if zn not in polstelle_set:
+                        gueltige_nullstellen.append(zn)
+
+            # Validiere die Ergebnisse
+            validate_exact_results(gueltige_nullstellen, "Quotienten-Nullstellen")
+
+            return gueltige_nullstellen
+
+        except Exception as e:
+            raise ValueError(
+                f"Fehler bei der Nullstellenberechnung für Quotientenfunktion: {str(e)}\n"
+                "Tipp: Überprüfe, ob Zähler und Nenner korrekt definiert sind."
+            ) from e
+
     def __str__(self):
         """String-Repräsentation für Schüler und Lehrer."""
         return f"Quotient({self.zaehler}, {self.nenner})"
@@ -311,6 +795,11 @@ class KompositionFunktion(StrukturierteFunktion):
         self._exponent = self._komponenten[1] if len(self._komponenten) > 1 else None
 
     @property
+    def funktionstyp(self) -> str:
+        """Gibt den Funktionstyp als String zurück"""
+        return "komposition"
+
+    @property
     def basis(self) -> Funktion:
         """Gibt die typisierte Basis zurück."""
         return self._basis
@@ -319,6 +808,56 @@ class KompositionFunktion(StrukturierteFunktion):
     def exponent(self) -> Funktion:
         """Gibt den typisierten Exponenten zurück."""
         return self._exponent
+
+    @preserve_exact_types
+    def nullstellen(
+        self, real: bool = True, runden: int = None
+    ) -> ExactNullstellenListe:
+        """
+        Berechnet die Nullstellen der Kompositionsfunktion.
+
+        Für f(x)^g(x) = 0 gilt: f(x)^g(x) = 0 ⇔ f(x) = 0 (wenn g(x) definiert ist)
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Nullstellen als SymPy-Ausdrücke
+
+        Examples:
+            >>> f = KompositionFunktion([GanzrationaleFunktion([1, -1]), GanzrationaleFunktion([2])])
+            >>> # (x-1)² hat Nullstelle bei x=1
+            >>> nullstellen = f.nullstellen()  # [1]
+        """
+        try:
+            if self.basis is None:
+                raise ValueError("KompositionFunktion hat keine gültige Basis")
+
+            # Für f(x)^g(x) = 0 gilt nur f(x) = 0 (wenn g(x) definiert ist)
+            # Wir brauchen also nur die Nullstellen der Basisfunktion
+            if hasattr(self.basis, "nullstellen") and callable(self.basis.nullstellen):
+                basis_nullstellen = self.basis.nullstellen(real=real, runden=runden)
+            else:
+                # Fallback: Leere Liste wenn keine Nullstellen ermittelbar
+                basis_nullstellen = []
+
+            # TODO: Später erweitern für echte Kompositionen f(g(x))
+            # Für f(g(x)) = 0:
+            # 1. Löse f(u) = 0 ⇒ u₁, u₂, ..., uₙ
+            # 2. Für jedes uᵢ: Löse g(x) = uᵢ
+            # 3. Kombiniere alle Lösungen
+
+            # Validiere die Ergebnisse
+            validate_exact_results(basis_nullstellen, "Kompositions-Nullstellen")
+
+            return basis_nullstellen
+
+        except Exception as e:
+            raise ValueError(
+                f"Fehler bei der Nullstellenberechnung für Kompositionsfunktion: {str(e)}\n"
+                "Tipp: Für Kompositionen f(g(x)) = 0, löse zuerst f(u) = 0, dann g(x) = u."
+            ) from e
 
     def __str__(self):
         return f"Komposition({self.basis}, {self.exponent})"

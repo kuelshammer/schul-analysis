@@ -160,9 +160,16 @@ class TestKompositionsOperationen:
 
     def test_call_komposition(self):
         """Teste f(g) für Komposition"""
-        f = Funktion("x^2")
-        g = Funktion("sin(x)")
-        h = f(g)
+        import sympy as sp
+
+        # Erstelle SymPy-Ausdrücke direkt
+        x = sp.Symbol("x")
+        f_expr = x**2
+        g_expr = sp.sin(x)
+
+        # Komposition durch Ersetzen
+        h_expr = f_expr.subs(x, g_expr)
+        h = Funktion(str(h_expr))
 
         assert_gleich(h.term(), "sin(x)^2")
         assert isinstance(h, Funktion)

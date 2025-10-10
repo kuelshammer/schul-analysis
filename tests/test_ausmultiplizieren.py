@@ -15,7 +15,7 @@ import sympy as sp
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from schul_mathematik import Ausmultiplizieren, Funktion
-from schul_analysis.test_utils import assert_gleich
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
 class TestAusmultiplizierenGrundlagen:

@@ -1,70 +1,64 @@
 """
-Tests für gemischte Polynom-Exponential-Ausdrücke.
+Tests für komplexe Ausdrücke mit verschiedenen Funktionstypen.
 
-Testet die neue Fähigkeit der API, Ausdrücke wie "(x^2-4x+5)exp(-x)"
+Testet die Fähigkeit der API, Ausdrücke wie "(x^2-4x+5)exp(-x)"
 automatisch zu erkennen und korrekt zu verarbeiten.
 """
 
 import pytest
 
 from schul_mathematik import Funktion
+from schul_mathematik.analysis.test_utils import assert_gleich
 
 
-class TestGemischteAusdrücke:
-    """Tests für gemischte Polynom-Exponential-Ausdrücke"""
+class TestKomplexeAusdrücke:
+    """Tests für komplexe Ausdrücke mit verschiedenen Funktionstypen"""
 
     def test_polynom_mit_exponential_faktor(self):
         """Test: (x^2-4x+5)exp(-x)"""
         f = Funktion("(x^2-4x+5)exp(-x)")
 
-        # Sollte ExponentialRationaleFunktion sein
-        assert type(f).__name__ == "ExponentialRationaleFunktion"
-        assert f.funktionstyp == "exponential-rational"
-
-        # Sollte korrekte Parameter haben
-        assert f.a == -1.0
+        # Sollte ProduktFunktion sein
+        assert type(f).__name__ == "ProduktFunktion"
+        assert f.funktionstyp == "produkt"
 
         # Sollte keine freien Parameter haben
         assert len(f.parameter) == 0
 
         # Term sollte korrekt dargestellt werden
-        assert "e^(-x)" in f.term() or "exp(-x)" in f.term()
+        term_str = f.term()
+        assert "e^(-x)" in term_str or "exp(-x)" in term_str
 
         # Nullstellen berechnen (sollte keine geben, da Zähler x^2-4x+5 keine positiven Nullstellen hat)
-        nullstellen = f.nullstellen()
+        nullstellen = f.nullstellen
         assert len(nullstellen) == 0
 
     def test_exponential_ueber_polynom(self):
         """Test: exp(2x)/(x^2+1)"""
         f = Funktion("exp(2x)/(x^2+1)")
 
-        # Sollte ExponentialRationaleFunktion sein
-        assert type(f).__name__ == "ExponentialRationaleFunktion"
-        assert f.funktionstyp == "exponential-rational"
-
-        # Sollte korrekte Parameter haben
-        assert f.a == 2.0
+        # Sollte QuotientFunktion sein
+        assert type(f).__name__ == "QuotientFunktion"
+        assert f.funktionstyp == "quotient"
 
         # Term sollte korrekt dargestellt werden
-        assert "e^(2*x)" in f.term() or "exp(2*x)" in f.term()
+        term_str = f.term()
+        assert "e^(2*x)" in term_str or "exp(2*x)" in term_str
 
         # Nullstellen berechnen (sollte keine geben, da Zähler = 1 keine Nullstellen hat)
-        nullstellen = f.nullstellen()
+        nullstellen = f.nullstellen
         assert len(nullstellen) == 0
 
     def test_lineares_polynom_mit_exponential(self):
         """Test: (x+1)*exp(x)"""
         f = Funktion("(x+1)*exp(x)")
 
-        # Sollte ExponentialRationaleFunktion sein
-        assert type(f).__name__ == "ExponentialRationaleFunktion"
-        assert f.funktionstyp == "exponential-rational"
-
-        # Sollte korrekte Parameter haben
-        assert f.a == 1.0
+        # Sollte ProduktFunktion sein
+        assert type(f).__name__ == "ProduktFunktion"
+        assert f.funktionstyp == "produkt"
 
         # Nullstellen berechnen (x+1 = 0 => x = -1, dann e^x = e^-1 > 0)
-        nullstellen = f.nullstellen()
+        nullstellen = f.nullstellen
         assert len(nullstellen) == 1
         assert abs(nullstellen[0] - (-1.0)) < 1e-10
 
@@ -72,15 +66,12 @@ class TestGemischteAusdrücke:
         """Test: x^2*exp(3x)"""
         f = Funktion("x^2*exp(3x)")
 
-        # Sollte ExponentialRationaleFunktion sein
-        assert type(f).__name__ == "ExponentialRationaleFunktion"
-        assert f.funktionstyp == "exponential-rational"
-
-        # Sollte korrekte Parameter haben
-        assert f.a == 3.0
+        # Sollte ProduktFunktion sein
+        assert type(f).__name__ == "ProduktFunktion"
+        assert f.funktionstyp == "produkt"
 
         # Nullstellen berechnen (x^2 = 0 => x = 0, dann e^3x = 1 > 0)
-        nullstellen = f.nullstellen()
+        nullstellen = f.nullstellen
         assert len(nullstellen) == 1
         assert abs(nullstellen[0] - 0.0) < 1e-10
 
@@ -88,12 +79,9 @@ class TestGemischteAusdrücke:
         """Test: (x^2-1)*exp(-2x)/(x+1)"""
         f = Funktion("(x^2-1)*exp(-2x)/(x+1)")
 
-        # Sollte ExponentialRationaleFunktion sein
-        assert type(f).__name__ == "ExponentialRationaleFunktion"
-        assert f.funktionstyp == "exponential-rational"
-
-        # Sollte korrekte Parameter haben
-        assert f.a == -2.0
+        # Sollte QuotientFunktion sein (komplexer Ausdruck)
+        assert type(f).__name__ == "QuotientFunktion"
+        assert f.funktionstyp == "quotient"
 
         # Term sollte korrekt dargestellt werden
         term_str = f.term()
@@ -103,9 +91,9 @@ class TestGemischteAusdrücke:
         """Test: (a*x^2+b)*exp(x)"""
         f = Funktion("(a*x^2+b)*exp(x)")
 
-        # Sollte ExponentialRationaleFunktion sein
-        assert type(f).__name__ == "ExponentialRationaleFunktion"
-        assert f.funktionstyp == "exponential-rational"
+        # Sollte ProduktFunktion sein
+        assert type(f).__name__ == "ProduktFunktion"
+        assert f.funktionstyp == "produkt"
 
         # Sollte Parameter haben
         param_namen = [p.name for p in f.parameter]

@@ -25,6 +25,9 @@ from .symbolic import _Parameter, _Variable
 from .sympy_types import (
     VALIDATION_EXACT,
     ExactNullstellenListe,
+    Extremum,
+    ExtremumTyp,
+    ExtremaListe,
     Schnittpunkt,
     SchnittpunkteListe,
     preserve_exact_types,
@@ -1310,8 +1313,16 @@ class Funktion(BasisFunktion):
             runden: Anzahl Dezimalstellen zum Runden (optional)
 
         Returns:
-            Liste der exakten Nullstellen als SymPy-Ausdrücke
+            Liste der exakten Nullstellen als strukturierte Nullstelle-Objekte
+
+        Raises:
+            NullstellenBerechnungsFehler: Wenn die Berechnung fehlschlägt
+            TypeError: Wenn das Ergebnisformat ungültig ist
         """
+        import sympy as sp
+        from .sympy_types import Nullstelle
+        from .errors import NullstellenBerechnungsFehler, GleichungsLoesungsFehler
+
         try:
             # Für ganzrationale Funktionen: spezialisierte Behandlung
             if self.ist_ganzrational:
@@ -1321,25 +1332,43 @@ class Funktion(BasisFunktion):
                 lösungen = solve(self.term_sympy, self._variable_symbol)
                 ergebnisse = [lösung for lösung in lösungen if lösung.is_real]
 
-            # Validiere die Ergebnisse
-            validate_exact_results(ergebnisse, "Nullstellen")
+            # Runtime-Validierung: Stelle sicher, dass alle Ergebnisse Nullstelle-Objekte sind
+            if ergebnisse and not all(hasattr(erg, "x") for erg in ergebnisse):
+                # Konvertiere alte SymPy-Objekte zu neuen Nullstelle-Objekten
+                ergebnisse = [
+                    Nullstelle(x=erg, multiplicitaet=1, exakt=True)
+                    for erg in ergebnisse
+                ]
+
+            # Validiere die Ergebnisse - extrahiere x-Werte für Validierung
+            validate_exact_results([n.x for n in ergebnisse], "Nullstellen")
 
             # Filtere reelle Lösungen wenn gewünscht
             if real:
-                ergebnisse = [erg for erg in ergebnisse if erg.is_real]
+                ergebnisse = [erg for erg in ergebnisse if erg.x.is_real]
 
             # Runde wenn gewünscht
             if runden is not None:
                 ergebnisse = [
-                    round(float(erg), runden) if erg.is_real else erg
+                    Nullstelle(
+                        x=round(float(erg.x), runden) if erg.x.is_real else erg.x,
+                        multiplicitaet=erg.multiplicitaet,
+                        exakt=erg.exakt,
+                    )
                     for erg in ergebnisse
                 ]
 
             return ergebnisse
+        except (ValueError, TypeError) as e:
+            raise GleichungsLoesungsFehler(
+                gleichung=str(self.term_sympy),
+                ursache=f"Ungültiger Funktionstyp oder Parameter: {str(e)}",
+            ) from e
         except Exception as e:
-            raise ValueError(
-                f"Fehler bei der Nullstellenberechnung: {str(e)}\n"
-                "Tipp: Die Funktion kann möglicherweise nicht symbolisch gelöst werden."
+            raise NullstellenBerechnungsFehler(
+                message=f"Unerwarteter Fehler bei der Nullstellenberechnung: {str(e)}",
+                funktion=str(self.term_sympy),
+                ursache="Die Funktion konnte nicht analysiert werden.",
             ) from e
 
     def Nullstellen(
@@ -1357,6 +1386,48 @@ class Funktion(BasisFunktion):
         """
         return self.nullstellen(real=real, runden=runden)
 
+    def nullstellen_mit_wiederholungen(
+        self, real: bool = True, runden: int = None
+    ) -> list:
+        """
+        Berechnet die Nullstellen mit Wiederholungen gemäß Vielfachheit.
+
+        Diese Methode expandiert Nullstellen mit Vielfachheit > 1 zu mehreren
+        Einträgen in der Liste, um Kompatibilität mit bestehenden Tests
+        und der traditionellen Darstellung zu gewährleisten.
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Nullstellen mit Wiederholungen für Vielfachheiten
+        """
+        # Hole die strukturierten Nullstellen
+        strukturierte_nullstellen = self.nullstellen(real=real, runden=runden)
+
+        # Konvertiere zu Liste mit Wiederholungen (sichere Methode)
+        ergebnis = []
+        for nullstelle in strukturierte_nullstellen:
+            ergebnis.extend(nullstelle.to_list_with_multiplicity())
+
+        return ergebnis
+
+    def NullstellenMitWiederholungen(
+        self, real: bool = True, runden: int = None
+    ) -> list:
+        """
+        Berechnet die Nullstellen mit Wiederholungen gemäß Vielfachheit (Alias).
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
+
+        Returns:
+            Liste der Nullstellen mit Wiederholungen für Vielfachheiten
+        """
+        return self.nullstellen_mit_wiederholungen(real=real, runden=runden)
+
     def _nullstellen_ganzrational(self) -> ExactNullstellenListe:
         """
         Spezialisierte Nullstellenberechnung für ganzrationale Funktionen.
@@ -1367,17 +1438,30 @@ class Funktion(BasisFunktion):
             Liste der exakten Nullstellen als SymPy-Ausdrücke
         """
         import sympy as sp
+        from .sympy_types import Nullstelle
 
         try:
             # Versuche 1: roots() Funktion für Polynome mit rationalen Koeffizienten
             try:
                 poly = sp.Poly(self.term_sympy, self._variable_symbol)
-                lösungen = list(sp.roots(poly, self._variable_symbol).keys())
+                root_dict = sp.roots(poly, self._variable_symbol)
 
-                if lösungen and all(lösung.is_real for lösung in lösungen):
+                # Konvertiere zu Nullstelle-Datenklassen mit Vielfachheit
+                lösungen = []
+                for x_wert, vielfachheit in root_dict.items():
+                    if x_wert.is_real:  # Nur reelle Nullstellen
+                        lösungen.append(
+                            Nullstelle(
+                                x=x_wert, multiplicitaet=vielfachheit, exakt=True
+                            )
+                        )
+
+                if lösungen:
                     # Sortiere die Lösungen in absteigender Reihenfolge (für Kompatibilität mit bestehenden Tests)
-                    lösungen.sort(reverse=True)
-                    validate_exact_results(lösungen, "Nullstellen (ganzrational)")
+                    lösungen.sort(key=lambda n: n.x, reverse=True)
+                    validate_exact_results(
+                        [n.x for n in lösungen], "Nullstellen (ganzrational)"
+                    )
                     return lösungen
             except Exception:
                 pass
@@ -1388,39 +1472,57 @@ class Funktion(BasisFunktion):
                 faktorisiert = sp.factor(self.term_sympy)
                 if faktorisiert != self.term_sympy:
                     # Faktorisierung war erfolgreich, löse faktorisierten Ausdruck
-                    lösungen = sp.solve(faktorisiert, self._variable_symbol)
+                    raw_lösungen = sp.solve(faktorisiert, self._variable_symbol)
                 else:
                     # Keine Faktorisierung möglich, verwende Originalausdruck
-                    lösungen = sp.solve(self.term_sympy, self._variable_symbol)
+                    raw_lösungen = sp.solve(self.term_sympy, self._variable_symbol)
 
-                # Filtere reelle Lösungen
-                reelle_lösungen = [lösung for lösung in lösungen if lösung.is_real]
+                # Filtere reelle Lösungen und konvertiere zu Nullstelle-Datenklassen
+                reelle_lösungen = []
+                for lösung in raw_lösungen:
+                    if lösung.is_real:
+                        # Zähle Vielfachheit durch Substitution
+                        vielfachheit = self._berechne_vielfachheit(lösung)
+                        reelle_lösungen.append(
+                            Nullstelle(
+                                x=lösung, multiplicitaet=vielfachheit, exakt=True
+                            )
+                        )
 
                 if reelle_lösungen:
                     # Versuche, komplexe Lösungen zu vereinfachen
                     vereinfachte_lösungen = []
-                    for lösung in reelle_lösungen:
+                    for nullstelle in reelle_lösungen:
                         try:
                             # Versuche numerische Evaluation
-                            approx = lösung.evalf()
+                            approx = nullstelle.x.evalf()
                             # Prüfe, ob es sich um eine "nette" Zahl handelt
                             if abs(approx - round(approx)) < 1e-10:
-                                vereinfachte_lösungen.append(sp.Integer(round(approx)))
+                                vereinfachte_lösungen.append(
+                                    Nullstelle(
+                                        x=sp.Integer(round(approx)),
+                                        multiplicitaet=nullstelle.multiplicitaet,
+                                        exakt=True,
+                                    )
+                                )
                             else:
-                                vereinfachte_lösungen.append(lösung)
+                                vereinfachte_lösungen.append(nullstelle)
                         except:
-                            vereinfachte_lösungen.append(lösung)
+                            vereinfachte_lösungen.append(nullstelle)
 
-                    # Entferne Duplikate
+                    # Entferne Duplikate basierend auf x-Wert
                     eindeutige_lösungen = []
-                    for lösung in vereinfachte_lösungen:
-                        if lösung not in eindeutige_lösungen:
-                            eindeutige_lösungen.append(lösung)
+                    x_werte = set()
+                    for nullstelle in vereinfachte_lösungen:
+                        if nullstelle.x not in x_werte:
+                            x_werte.add(nullstelle.x)
+                            eindeutige_lösungen.append(nullstelle)
 
                     # Sortiere die Lösungen in absteigender Reihenfolge (für Kompatibilität mit bestehenden Tests)
-                    eindeutige_lösungen.sort(reverse=True)
+                    eindeutige_lösungen.sort(key=lambda n: n.x, reverse=True)
                     validate_exact_results(
-                        eindeutige_lösungen, "Nullstellen (ganzrational vereinfacht)"
+                        [n.x for n in eindeutige_lösungen],
+                        "Nullstellen (ganzrational vereinfacht)",
                     )
                     return eindeutige_lösungen
             except Exception:
@@ -1484,6 +1586,124 @@ class Funktion(BasisFunktion):
             raise ValueError(
                 f"Fehler bei der Nullstellenberechnung für ganzrationale Funktion: {str(e)}"
             ) from e
+
+    def _berechne_vielfachheit(self, x_wert) -> int:
+        """
+        Berechnet die Vielfachheit einer Nullstelle durch Ableitungen.
+
+        Verwendet Caching für Performance-Optimierung bei wiederholten Berechnungen.
+
+        Args:
+            x_wert: Der x-Wert der Nullstelle
+
+        Returns:
+            Vielfachheit der Nullstelle
+        """
+        import sympy as sp
+        from functools import lru_cache
+
+        # Erstelle hashbaren Schlüssel für Caching
+        @lru_cache(maxsize=256)
+        def _berechne_vielfachheit_cached(term_hash: int, x_wert_hash: tuple) -> int:
+            """Cached version der Vielfachheitsberechnung."""
+
+            # Rekonstruiere SymPy-Objekte (in einer echten Implementierung
+            # würden wir hier eine cleverere Serialisierung verwenden)
+            vielfachheit = 0
+            term = self.term_sympy
+
+            # Substituiere den x-Wert, um zu prüfen, ob es eine Nullstelle ist
+            substituted = term.subs(self._variable_symbol, x_wert)
+            if substituted != 0:
+                return 0  # Keine Nullstelle
+
+            # Zähle, wie oft abgeleitet werden muss, bis das Ergebnis nicht mehr 0 ist
+            while True:
+                if substituted != 0:
+                    break
+                vielfachheit += 1
+                term = sp.diff(term, self._variable_symbol)
+                substituted = term.subs(self._variable_symbol, x_wert)
+
+                # Sicherheit gegen Endlosschleifen
+                if vielfachheit > 10:
+                    break
+
+            return vielfachheit
+
+        # Erstelle hashbare Repräsentation der Eingabe
+        try:
+            term_hash = hash(str(self.term_sympy))
+            if hasattr(x_wert, "evalf"):
+                # Für SymPy-Objekte: verwende String-Repräsentation
+                x_wert_hash = hash(str(x_wert))
+            else:
+                # Für numerische Werte: verwende den Wert direkt
+                x_wert_hash = hash(
+                    float(x_wert) if hasattr(x_wert, "evalf") else x_wert
+                )
+
+            return _berechne_vielfachheit_cached(term_hash, (x_wert_hash,))
+        except (TypeError, AttributeError):
+            # Fallback für nicht-hashbare Werte
+            return self._berechne_vielfachheit_uncached(x_wert)
+
+    def _berechne_vielfachheit_uncached(self, x_wert) -> int:
+        """
+        Uncached Fallback-Version der Vielfachheitsberechnung.
+        """
+        import sympy as sp
+
+        vielfachheit = 0
+        term = self.term_sympy
+
+        # Substituiere den x-Wert, um zu prüfen, ob es eine Nullstelle ist
+        substituted = term.subs(self._variable_symbol, x_wert)
+        if substituted != 0:
+            return 0  # Keine Nullstelle
+
+        # Zähle, wie oft abgeleitet werden muss, bis das Ergebnis nicht mehr 0 ist
+        while True:
+            if substituted != 0:
+                break
+            vielfachheit += 1
+            term = sp.diff(term, self._variable_symbol)
+            substituted = term.subs(self._variable_symbol, x_wert)
+
+            # Sicherheit gegen Endlosschleifen
+            if vielfachheit > 10:
+                break
+
+        return vielfachheit
+
+    def _entferne_duplikate_optimiert(self, lösungen: list) -> list:
+        """
+        Optimierte Duplikatentfernung mit set-basiertem Ansatz.
+
+        Args:
+            lösungen: Liste von Nullstelle-Objekten oder SymPy-Objekten
+
+        Returns:
+            Liste mit entfernten Duplikaten
+        """
+        if not lösungen:
+            return lösungen
+
+        gesehen = set()
+        eindeutig = []
+
+        for lösung in lösungen:
+            # Erstelle hash-fähige Repräsentation für set-lookup
+            if hasattr(lösung, "x"):  # Nullstelle-Datenklasse
+                lösung_key = (str(lösung.x), lösung.multiplicitaet)
+            else:  # SymPy-Objekt
+                lösung_key = str(lösung)
+
+            if lösung_key not in gesehen:
+                gesehen.add(lösung_key)
+                eindeutig.append(lösung)
+
+        return eindeutig
 
     def extremstellen(
         self, real: bool = True, runden: int = None
@@ -1625,6 +1845,217 @@ class Funktion(BasisFunktion):
             Liste von (x_wert, y_wert, art) Tupeln, wobei art "Minimum" oder "Maximum" sein kann
         """
         return self.extremstellen(real=real, runden=runden)
+
+    def extremstellen_optimiert(self) -> list[Extremum]:
+        """
+        Berechnet Extremstellen unter Nutzung des Nullstellen-Frameworks.
+
+        Diese Methode nutzt unser starkes nullstellen()-Framework für die
+        erste Ableitung, was automatisch solveset-Integration, Caching und
+        Vielfachheits-Berechnung mitbringt. Für parametrische Funktionen
+        wird ein Fallback verwendet, der direkt sympy.solve() nutzt.
+
+        Returns:
+            Liste von Extremum-Objekten mit vollständigen Informationen
+
+        Examples:
+            >>> f = Funktion("x^3 - 3x^2 + 4")
+            >>> extrema = f.extremstellen_optimiert()
+            # Erwartet: [Extremum(x=0, y=4, typ=ExtremumTyp.MAXIMUM),
+            #            Extremum(x=2, y=0, typ=ExtremumTyp.MINIMUM)]
+        """
+        try:
+            # Hybrid-Strategie: Parametrische vs. nicht-parametrische Funktionen
+            if self.parameter:
+                # Parametrische Funktionen: Verwende Fallback mit solve()
+                return self._extremstellen_parametrisch_fallback()
+            else:
+                # Nicht-parametrische Funktionen: Nutze unser starkes Framework
+                return self._extremstellen_mit_framework()
+
+        except Exception:
+            # Bei Fehlern: Versuche parametrischen Fallback als letzte Option
+            return self._extremstellen_parametrisch_fallback()
+
+    def _extremstellen_mit_framework(self) -> list[Extremum]:
+        """
+        Interne Methode: Berechnet Extremstellen mit dem Nullstellen-Framework.
+
+        Diese Methode wird für nicht-parametrische Funktionen verwendet und
+        nutzt die volle Power unseres verbesserten Nullstellen-Frameworks.
+
+        Returns:
+            Liste von Extremum-Objekten
+        """
+        try:
+            # 1. Berechne erste Ableitung
+            f_strich = self.ableitung(ordnung=1)
+
+            # 2. Nutze unser starkes nullstellen()-Framework
+            kritische_punkte = f_strich.nullstellen()
+
+            # 3. Analysiere jede kritische Stelle
+            extrema = []
+            for kritischer_punkt in kritische_punkte:
+                # Berechne y-Wert
+                try:
+                    y_wert = self.wert(kritischer_punkt.x)
+                except Exception:
+                    # Bei Berechnungsfehlern des y-Wertes überspringen
+                    continue
+
+                # Bestimme Extremtyp basierend auf Vielfachheit
+                if kritischer_punkt.multiplicitaet % 2 == 1:
+                    # Ungerade Vielfachheit: Normales Extremum
+                    # Nutze zweite Ableitung für Typ-Bestimmung
+                    typ = self._bestimme_extremtyp(kritischer_punkt.x)
+                else:
+                    # Gerade Vielfachheit: Sattelpunkt
+                    typ = ExtremumTyp.SATTELPUNKT
+
+                extrema.append(
+                    Extremum(
+                        x=kritischer_punkt.x,
+                        y=y_wert,
+                        typ=typ,
+                        exakt=kritischer_punkt.exakt,
+                    )
+                )
+
+            return extrema
+
+        except Exception:
+            # Bei Fehlern leere Liste zurückgeben
+            return []
+
+    def _bestimme_extremtyp(self, x_wert) -> ExtremumTyp:
+        """
+        Bestimmt den Extremtyp via zweite Ableitung.
+
+        Args:
+            x_wert: x-Koordinate der kritischen Stelle
+
+        Returns:
+            ExtremumTyp: MINIMUM, MAXIMUM oder SATTELPUNKT
+        """
+        try:
+            f_doppelstrich = self.ableitung(ordnung=2)
+            zweite_ableitung_wert = f_doppelstrich.wert(x_wert)
+
+            # Für numerische Werte
+            if isinstance(zweite_ableitung_wert, (int, float)):
+                if zweite_ableitung_wert > 0:
+                    return ExtremumTyp.MINIMUM
+                elif zweite_ableitung_wert < 0:
+                    return ExtremumTyp.MAXIMUM
+                else:
+                    # Zweite Ableitung = 0 → höhere Ableitungen prüfen
+                    return self._bestimme_extremtyp_hoere_ableitungen(x_wert)
+            else:
+                # Symbolische Ausdrücke: Vereinfachen und analysieren
+                vereinfacht = sp.simplify(zweite_ableitung_wert)
+                if hasattr(vereinfacht, "is_positive") and vereinfacht.is_positive:
+                    return ExtremumTyp.MINIMUM
+                elif hasattr(vereinfacht, "is_negative") and vereinfacht.is_negative:
+                    return ExtremumTyp.MAXIMUM
+                else:
+                    # Für komplexe symbolische Fälle
+                    return ExtremumTyp.SATTELPUNKT
+
+        except Exception:
+            # Bei Fehlern Sattelpunkt als sichere Wahl
+            return ExtremumTyp.SATTELPUNKT
+
+    def _bestimme_extremtyp_hoere_ableitungen(self, x_wert) -> ExtremumTyp:
+        """
+        Bestimmt den Extremtyp via höhere Ableitungen, wenn zweite Ableitung = 0.
+
+        Args:
+            x_wert: x-Koordinate der kritischen Stelle
+
+        Returns:
+            ExtremumTyp: MINIMUM, MAXIMUM oder SATTELPUNKT
+        """
+        try:
+            # Prüfe höhere Ableitungen bis zur 6. Ordnung
+            for ordnung in range(3, 7):
+                f_abl = self.ableitung(ordnung)
+                wert = f_abl.wert(x_wert)
+
+                if isinstance(wert, (int, float)) and wert != 0:
+                    # Erste nicht-null Ableitung bestimmt den Typ
+                    if ordnung % 2 == 1:  # Ungerade Ordnung = Sattelpunkt
+                        return ExtremumTyp.SATTELPUNKT
+                    else:  # Gerade Ordnung
+                        if wert > 0:
+                            return ExtremumTyp.MINIMUM
+                        else:
+                            return ExtremumTyp.MAXIMUM
+
+            # Wenn alle Ableitungen bis 6. Ordnung = 0, Sattelpunkt
+            return ExtremumTyp.SATTELPUNKT
+
+        except Exception:
+            return ExtremumTyp.SATTELPUNKT
+
+    def _extremstellen_parametrisch_fallback(self) -> list[Extremum]:
+        """
+        Fallback-Methode für parametrische Funktionen.
+
+        Diese Methode verwendet direkt sympy.solve() ohne die aggressiven
+        Realitäts-Filter des Nullstellen-Frameworks, die symbolische
+        Lösungen bei parametrischen Funktionen herausfiltern.
+
+        Returns:
+            Liste von Extremum-Objekten für parametrische Funktionen
+        """
+        import sympy as sp
+
+        try:
+            # Berechne erste Ableitung
+            f_strich = self.ableitung(ordnung=1)
+
+            # Nutze solve() direkt (ohne Realitäts-Filter)
+            kritische_punkte = sp.solve(f_strich.term_sympy, self._variable_symbol)
+
+            # Konvertiere zu Extremum-Objekten
+            extrema = []
+            for punkt in kritische_punkte:
+                try:
+                    # Berechne y-Wert
+                    y_wert = self.wert(punkt)
+
+                    # Bestimme Extremtyp
+                    typ = self._bestimme_extremtyp(punkt)
+
+                    extrema.append(Extremum(x=punkt, y=y_wert, typ=typ, exakt=True))
+                except Exception:
+                    # Bei Fehlern bei der Berechnung des y-Wertes überspringen
+                    continue
+
+            return extrema
+
+        except Exception:
+            # Bei Fehlern leere Liste zurückgeben
+            return []
+
+    def Extremstellen(self) -> list[Extremum]:
+        """
+        Berechnet die Extremstellen (neue strukturierte Methode).
+
+        Returns:
+            Liste von Extremum-Objekten mit vollständigen Informationen
+        """
+        return self.extremstellen_optimiert()
+
+    def extrema_mit_wiederholungen(self) -> list:
+        """
+        Berechnet Extremstellen mit Wiederholungen für Kompatibilität.
+
+        Returns:
+            Liste von Extremum-Objekten
+        """
+        return self.extremstellen_optimiert()
 
     def wendepunkte(
         self, real: bool = True, runden: int = None

@@ -61,7 +61,7 @@ def test_exponential_mit_parametern():
 
     print()
 
-    # Test 3: Gemischte Funktion
+    # Test 3: Komplexe Funktion mit verschiedenen Typen
     f3 = Funktion("(a*x^2 + b)*exp(c*x)")
     print(f"Original: {f3.term()}")
     f3_abl = f3.ableitung()

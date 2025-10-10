@@ -14,7 +14,7 @@ def test_finale_darstellung():
     f = GanzrationaleFunktion("2x+6")  # Nullstelle bei x=-3
     g = GanzrationaleFunktion("(x-10)^2")  # Minimum bei x=10
 
-    print(f"Funktionen:")
+    print("Funktionen:")
     print(f"  f(x) = {f.term()}")
     print(f"  g(x) = {g.term()}")
 
@@ -23,7 +23,7 @@ def test_finale_darstellung():
     x_range = fig.layout.xaxis.range
     y_range = fig.layout.yaxis.range
 
-    print(f"\nBereiche:")
+    print("\nBereiche:")
     print(
         f"  X-Bereich: [{x_range[0]:.3f}, {x_range[1]:.3f}] (Spanne: {x_range[1] - x_range[0]:.3f})"
     )
@@ -40,12 +40,12 @@ def test_finale_darstellung():
     )
 
     # Prüfe wichtige Punkte
-    print(f"\nWichtige Punkte Sichtbarkeit:")
+    print("\nWichtige Punkte Sichtbarkeit:")
     print(f"  f-Nullstelle (x=-3): {'✅' if x_range[0] <= -3 <= x_range[1] else '❌'}")
     print(f"  g-Minimum (x=10): {'✅' if x_range[0] <= 10 <= x_range[1] else '❌'}")
 
     # Prüfe, ob der Graph vernünftig aussieht
-    print(f"\nBewertung:")
+    print("\nBewertung:")
     x_ok = x_range[0] <= -4 and x_range[1] >= 11  # Erwarteter Bereich
     y_vernuenftig = y_spanne < 200  # Y-Spanne sollte nicht absurd sein
     aspect_ok = verhaeltnis > 1.5  # Deutlich keine 1:1 Aspect Ratio
@@ -55,18 +55,18 @@ def test_finale_darstellung():
     print(f"  Keine 1:1 Aspect Ratio: {'✅' if aspect_ok else '❌'}")
 
     if x_ok and y_vernuenftig and aspect_ok:
-        print(f"\n🎉 ERGEBNIS: Die Darstellung ist jetzt KORREKT!")
-        print(f"   - X-Bereich zeigt alle wichtigen Punkte")
-        print(f"   - Y-Bereich hat angemessene Skalierung")
-        print(f"   - Keine verzerrte 1:1 Aspect Ratio mehr")
+        print("\n🎉 ERGEBNIS: Die Darstellung ist jetzt KORREKT!")
+        print("   - X-Bereich zeigt alle wichtigen Punkte")
+        print("   - Y-Bereich hat angemessene Skalierung")
+        print("   - Keine verzerrte 1:1 Aspect Ratio mehr")
     else:
-        print(f"\n❌ Es gibt noch Probleme:")
+        print("\n❌ Es gibt noch Probleme:")
         if not x_ok:
-            print(f"   - X-Bereich nicht korrekt")
+            print("   - X-Bereich nicht korrekt")
         if not y_vernuenftig:
-            print(f"   - Y-Bereich nicht vernünftig")
+            print("   - Y-Bereich nicht vernünftig")
         if not aspect_ok:
-            print(f"   - Aspect Ratio noch problematisch")
+            print("   - Aspect Ratio noch problematisch")
 
     return fig
 

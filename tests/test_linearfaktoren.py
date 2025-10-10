@@ -7,7 +7,7 @@ import sys
 
 sys.path.insert(0, "src")
 
-from schul_analysis.ganzrationale import GanzrationaleFunktion
+from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
 
 
 def test_linearfaktoren():

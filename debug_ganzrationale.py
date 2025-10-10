@@ -8,8 +8,8 @@ import sys
 sys.path.insert(0, "/Users/max/Python/Schul-Analysis/src")
 
 import sympy as sp
+
 from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
-from schul_mathematik.analysis.funktion import Funktion
 
 
 def debug_ganzrationale_konvertierung():

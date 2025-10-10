@@ -5,9 +5,9 @@ Grundlegende Klassen für Vektoren, Punkte, Geraden und Ebenen
 mit Operationen und Berechnungen im 2D und 3D Raum
 """
 
-from typing import Union, List, Tuple
+
 import sympy as sp
-from sympy import symbols, Matrix, simplify, solve
+from sympy import Matrix, solve, symbols
 
 from ..gemeinsam import *
 
@@ -15,7 +15,7 @@ from ..gemeinsam import *
 class Punkt:
     """Klasse für Punkte im 2D oder 3D Raum"""
 
-    def __init__(self, koordinaten: List[Union[float, sp.Expr]], name: str = "P"):
+    def __init__(self, koordinaten: list[float | sp.Expr], name: str = "P"):
         """
         Args:
             koordinaten: Liste mit 2 oder 3 Koordinaten [x, y] oder [x, y, z]
@@ -73,7 +73,7 @@ class Punkt:
         ]
         return Punkt(neue_koordinaten, f"{self.name}-{other.name}")
 
-    def __mul__(self, skalar: Union[float, sp.Expr]) -> "Punkt":
+    def __mul__(self, skalar: float | sp.Expr) -> "Punkt":
         """Skalare Multiplikation"""
         neue_koordinaten = [self.koordinaten[i] * skalar for i in range(self.dimension)]
         return Punkt(neue_koordinaten, f"{skalar}·{self.name}")
@@ -125,7 +125,7 @@ class Gerade:
                 return True
         return False
 
-    def schnittpunkt_mit(self, other: "Gerade") -> Union[Punkt, None]:
+    def schnittpunkt_mit(self, other: "Gerade") -> Punkt | None:
         """Berechnet den Schnittpunkt mit einer anderen Geraden"""
         if self.dimension != other.dimension:
             raise ValueError("Geraden müssen gleiche Dimension haben")
@@ -237,9 +237,9 @@ def ursprung(dimension: int = 2) -> Punkt:
 
 
 def punkt_mit_koordinaten(
-    x: Union[float, sp.Expr],
-    y: Union[float, sp.Expr],
-    z: Union[float, sp.Expr] = None,
+    x: float | sp.Expr,
+    y: float | sp.Expr,
+    z: float | sp.Expr = None,
     name: str = "P",
 ) -> Punkt:
     """Erzeugt einen Punkt mit gegebenen Koordinaten"""

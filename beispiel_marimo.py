@@ -18,11 +18,12 @@ def _():
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
     from schul_mathematik.analysis.api import (
-           Nullstellen, Flaeche, Zeichne,
-           Ableitung, Integral, Extrema, Wendepunkte,
-           Schnittpunkte, Funktion, Tangente, Taylorpolynom
-       )
-    return Funktion, Taylorpolynom
+        Funktion,
+        Graph,
+        Taylorpolynom,
+    )
+
+    return Funktion, Graph, Taylorpolynom
 
 
 @app.cell
@@ -33,7 +34,13 @@ def _(Funktion):
 
 @app.cell
 def _(Taylorpolynom, f):
-    Taylorpolynom(f, 1, 3)
+    t = Taylorpolynom(f, 1, 3)
+    return (t,)
+
+
+@app.cell
+def _(Graph, f, t):
+    Graph(f, t)
     return
 
 
