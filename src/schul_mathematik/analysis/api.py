@@ -1540,7 +1540,7 @@ __all__ = [
 
 def FlaecheZweiFunktionen(
     f1: Funktionstyp, f2: Funktionstyp, a: float, b: float, anzeigen: bool = False
-) -> Any:
+) -> float | None:
     """
     Berechnet die Fläche zwischen zwei Funktionen über dem Intervall [a, b].
 
@@ -1552,13 +1552,14 @@ def FlaecheZweiFunktionen(
         anzeigen: Ob die Visualisierung angezeigt werden soll
 
     Returns:
-        Any: Plotly-Figure-Objekt mit Flächendarstellung (bei anzeigen=False)
-             oder zeigt den Graphen an (bei anzeigen=True)
+        float: Fläche zwischen den Funktionen (bei anzeigen=False)
+        None: Wenn die Visualisierung angezeigt wird (bei anzeigen=True)
 
     Examples:
         >>> f1 = GanzrationaleFunktion("x^2")
         >>> f2 = GanzrationaleFunktion("x")
-        >>> fig = FlaecheZweiFunktionen(f1, f2, 0, 1, anzeigen=False)
+        >>> flaeche = FlaecheZweiFunktionen(f1, f2, 0, 1, anzeigen=False)
+        >>> print(f"Fläche: {flaeche}")
     """
     import sympy as sp
 
@@ -1579,7 +1580,11 @@ def FlaecheZweiFunktionen(
     except (TypeError, ValueError):
         pass
 
-    # Erstelle Visualisierung mit korrekten Parametern (immer, wie bei Flaeche-Funktion)
+    # Wenn nur der Wert berechnet werden soll, gib ihn zurück
+    if not anzeigen:
+        return flaechen_wert
+
+    # Erstelle Visualisierung mit korrekten Parametern
     bereich_erweiterung = (b - a) * 0.2
     x_min = a - bereich_erweiterung
     x_max = b + bereich_erweiterung
@@ -1594,11 +1599,9 @@ def FlaecheZweiFunktionen(
         titel=f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}",
     )
 
-    # Zeige den Graphen an, wenn gewünscht (wie bei Flaeche-Funktion)
-    if anzeigen:
-        fig.show()
-
-    return fig
+    # Zeige den Graphen an
+    fig.show()
+    return None
 
 
 # =============================================================================
