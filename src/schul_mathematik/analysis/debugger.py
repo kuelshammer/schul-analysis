@@ -189,8 +189,8 @@ class VereinfachungsStrategie(BerechnungsStrategie):
     """Strategie zur schrittweisen Vereinfachung von Ausdrücken."""
 
     def kann_anwenden(self, funktion: sp.Expr, kontext: Dict[str, Any]) -> bool:
-        """Kann nur auf Vereinfachungsoperationen angewendet werden."""
-        return kontext.get("operation") == "vereinfachung"
+        """Kann immer auf Vereinfachungsoperationen angewendet werden."""
+        return True  # Vereinfachung ist immer möglich
 
     def wende_an(
         self, funktion: sp.Expr, session: DebugSession, kontext: Dict[str, Any]

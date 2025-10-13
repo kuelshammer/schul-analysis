@@ -1049,6 +1049,7 @@ def ist_parametrisierte_funktion(obj: Any) -> TypeGuard[ParametrisierteFunktion]
         and hasattr(obj, "parameter")
         and hasattr(obj, "setze_parameter")
         and callable(obj.setze_parameter)
+        and obj.parameter  # Es müssen tatsächlich Parameter vorhanden sein
     )
 
 
@@ -1078,13 +1079,12 @@ def ist_ableitbare_funktion(obj: Any) -> TypeGuard[AbleitbareFunktion]:
 def ist_ganzrationale_funktion(obj: Any) -> bool:
     """
     Type Guard zur Überprüfung, ob es sich um eine ganzrationale Funktion handelt.
-    Kombiniert Typ-Check mit der methode ist_ganzrational().
+    Kombiniert Typ-Check mit der Eigenschaft ist_ganzrational.
     """
     return (
         ist_mathematische_funktion(obj)
         and hasattr(obj, "ist_ganzrational")
-        and callable(obj.ist_ganzrational)
-        and obj.ist_ganzrational()
+        and obj.ist_ganzrational  # Property, nicht callable
     )
 
 
@@ -1127,10 +1127,10 @@ def erfordert_funktionstyp(erwarteter_typ: T_Funktionstyp):
             if not hasattr(funktion, "funktionstyp"):
                 raise TypeError(f"Objekt {funktion} hat keine funktionstyp-Methode")
 
-            if funktion.funktionstyp() != erwarteter_typ:
+            if funktion.funktionstyp != erwarteter_typ:
                 raise TypeError(
                     f"Operation {func.__name__} nur für {erwarteter_typ}-Funktionen, "
-                    f"aber {funktion.funktionstyp()} gegeben"
+                    f"aber {funktion.funktionstyp} gegeben"
                 )
 
             return func(funktion, *args, **kwargs)
@@ -1162,10 +1162,24 @@ def validiere_domain(domain: str):
                     f"Objekt {funktion} hat keine definitionsbereich-Methode"
                 )
 
-            if funktion.definitionsbereich() != domain:
+            # Normalisiere Domain-Vergleich (entferne zusätzliche Erklärungen)
+            if callable(funktion.definitionsbereich):
+                domain_value = funktion.definitionsbereich()
+            else:
+                domain_value = funktion.definitionsbereich
+
+            # Entferne zusätzliche Erklärungen aus dem Domain-Wert für den Vergleich
+            if isinstance(domain_value, str):
+                domain_value = (
+                    domain_value.split(" (")[0]
+                    if " (" in domain_value
+                    else domain_value
+                )
+
+            if domain_value != domain:
                 raise TypeError(
                     f"Operation {func.__name__} nur für Funktionen mit "
-                    f"Definitionsbereich {domain}, aber {funktion.definitionsbereich()} gegeben"
+                    f"Definitionsbereich {domain}, aber {domain_value} gegeben"
                 )
 
             return func(funktion, *args, **kwargs)
