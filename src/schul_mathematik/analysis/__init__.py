@@ -14,7 +14,7 @@ from .basis_funktion import BasisFunktion
 from .exponential import ExponentialFunktion
 from .funktion import Funktion, erstelle_funktion_automatisch
 from .ganzrationale import GanzrationaleFunktion
-from .gebrochen_rationale import GebrochenRationaleFunktion
+
 from .lineare_gleichungssysteme import (
     LGS,
     LineareGleichung,
@@ -95,7 +95,6 @@ __all__ = [
     "BasisFunktion",  # Neue abstrakte Basisklasse
     "Funktion",
     "GanzrationaleFunktion",
-    "GebrochenRationaleFunktion",
     "ExponentialFunktion",
     "TrigonometrischeFunktion",
     "LineareFunktion",

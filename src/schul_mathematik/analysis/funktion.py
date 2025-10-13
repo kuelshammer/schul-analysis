@@ -1144,11 +1144,30 @@ class Funktion(BasisFunktion):
 
     def _klassifiziere_symbole(self):
         """Klassifiziert Symbole in Variablen und Parameter"""
+        # Standard-Parameter-Namen im deutschen Mathematikunterricht
+        standard_parameter = [
+            "a",
+            "b",
+            "c",
+            "d",
+            "k",
+            "m",
+            "n",
+            "p",
+            "q",
+            "r",
+            "s",
+            "t",
+            "u",
+            "v",
+            "w",
+        ]
+
         for symbol in self.term_sympy.free_symbols:
             symbol_name = str(symbol)
             if symbol_name == str(self._variable_symbol):
                 self.variablen.append(_Variable(symbol_name))
-            elif symbol_name in ["a", "b", "c", "k", "m", "n", "p", "q"]:
+            elif symbol_name in standard_parameter:
                 self.parameter.append(_Parameter(symbol_name))
             else:
                 # Default: als Variable behandeln
@@ -1349,21 +1368,29 @@ class Funktion(BasisFunktion):
         try:
             # Prüfe, ob die angegebenen Parameter existieren
             for param_name in kwargs.keys():
-                param_symbol = sp.Symbol(param_name)
-                if param_symbol not in self.term_sympy.free_symbols:
-                    # Pädagogische Fehlermeldung
-                    verfügbare_parameter = [str(p) for p in self.parameter]
-                    if verfügbare_parameter:
+                # Prüfe, ob der Parameter in der Parameterliste ist (nicht in free_symbols)
+                param_names = [str(p) for p in self.parameter]
+                if param_name not in param_names:
+                    # Prüfe zusätzlich, ob es sich um die Variable handelt
+                    if param_name == str(self._variable_symbol):
                         raise ValueError(
-                            f"Parameter '{param_name}' kommt in der Funktion "
-                            f"f(x) = {self.term()} nicht vor. "
-                            f"Verfügbare Parameter: {verfügbare_parameter}"
+                            f"Parameter '{param_name}' ist die Variable der Funktion "
+                            f"f(x) = {self.term()} und kein Parameter. "
+                            f"Verfügbare Parameter: {param_names}"
                         )
                     else:
-                        raise ValueError(
-                            f"Die Funktion f(x) = {self.term()} hat keine Parameter. "
-                            "Nur Funktionen mit Parametern können mit setze_parameter() manipuliert werden."
-                        )
+                        # Pädagogische Fehlermeldung
+                        if param_names:
+                            raise ValueError(
+                                f"Parameter '{param_name}' kommt in der Funktion "
+                                f"f(x) = {self.term()} nicht vor. "
+                                f"Verfügbare Parameter: {param_names}"
+                            )
+                        else:
+                            raise ValueError(
+                                f"Die Funktion f(x) = {self.term()} hat keine Parameter. "
+                                "Nur Funktionen mit Parametern können mit setze_parameter() manipuliert werden."
+                            )
 
             # Führe die Substitution durch
             new_expr = self.term_sympy.subs(kwargs)
@@ -1563,24 +1590,29 @@ class Funktion(BasisFunktion):
         """Berechnet das Integral (Alias für integral)"""
         return self.integral(ordnung)
 
-    @property
-    def nullstellen(self) -> ExactNullstellenListe:
+    def nullstellen(
+        self, real: bool = True, runden: int | None = None
+    ) -> ExactNullstellenListe:
         """
-        Berechnet die Nullstellen mit exakten SymPy-Ergebnissen (Standard-Property).
+        Berechnet die Nullstellen mit exakten SymPy-Ergebnissen (Standard-Methode).
+
+        Args:
+            real: Nur reelle Nullstellen zurückgeben (Standard: True)
+            runden: Anzahl Dezimalstellen zum Runden (optional)
 
         Returns:
             ExactNullstellenListe: Liste der Nullstellen mit exakten Werten
 
         Examples:
             >>> f = Funktion("x^2 - 4")
-            >>> f.nullstellen  # [2, -2]
+            >>> f.nullstellen()  # [2, -2]
         """
         # Prüfe Cache für Nullstellen
         if hasattr(self, "_nullstellen_cache") and self._nullstellen_cache is not None:
             return self._nullstellen_cache
 
         # Berechne Nullstellen und speichere im Cache
-        ergebnis = self._berechne_nullstellen(real=True, runden=None)
+        ergebnis = self._berechne_nullstellen(real=real, runden=runden)
 
         if not hasattr(self, "_nullstellen_cache"):
             self._nullstellen_cache = None

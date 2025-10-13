@@ -205,6 +205,121 @@ def _erkenne_quotientenstruktur(expr: sp.Basic) -> tuple[bool, sp.Basic, sp.Basi
     return False, expr, sp.Integer(1)
 
 
+def _faktorisiere_exponential_summe(
+    expr: sp.Basic, variable: sp.Symbol
+) -> tuple[bool, sp.Basic, sp.Basic]:
+    """
+    Faktorisiert Exponential-Summen der Form exp(a*x) + exp(b*x) zu exp(min(a,b)*x) * (1 + exp(|a-b|*x)).
+
+    Args:
+        expr: Der zu analysierende Ausdruck
+        variable: Die Variable (normalerweise x)
+
+    Returns:
+        tuple[bool, sp.Basic, sp.Basic]: (kann_faktorisiert_werden, gemeinsamer_faktor, rest_faktor)
+    """
+    if not isinstance(expr, sp.Add) or len(expr.args) != 2:
+        return False, expr, sp.Integer(1)
+
+    term1, term2 = expr.args
+
+    # Prüfe, ob beide Terme Exponentialfunktionen sind
+    def ist_exponential_term(term):
+        if isinstance(term, sp.Mul):
+            # Finde den Exponential-Faktor im Produkt
+            for factor in term.args:
+                if isinstance(factor, sp.exp):
+                    return factor
+        elif isinstance(term, sp.exp):
+            return term
+        return None
+
+    exp1 = ist_exponential_term(term1)
+    exp2 = ist_exponential_term(term2)
+
+    if exp1 is None or exp2 is None:
+        return False, expr, sp.Integer(1)
+
+    # Extrahiere die Exponenten
+    try:
+        # Vereinfache die Exponenten
+        exp1_arg = sp.simplify(exp1.args[0])
+        exp2_arg = sp.simplify(exp2.args[0])
+
+        # Prüfe, ob die Exponenten lineare Ausdrücke der Variable sind
+        if not (exp1_arg.is_polynomial(variable) and exp2_arg.is_polynomial(variable)):
+            return False, expr, sp.Integer(1)
+
+        # Extrahiere die Koeffizienten
+        exp1_poly = exp1_arg.as_poly(variable)
+        exp2_poly = exp2_arg.as_poly(variable)
+
+        if exp1_poly.degree() != 1 or exp2_poly.degree() != 1:
+            return False, expr, sp.Integer(1)
+
+        koeff1 = exp1_poly.coeffs()[0]  # Koeffizient von x
+        koeff2 = exp2_poly.coeffs()[0]  # Koeffizient von x
+
+        # Prüfe, ob die Konstante Terme 0 sind (keine Addition im Exponenten)
+        const1 = exp1_poly.coeffs()[1] if len(exp1_poly.coeffs()) > 1 else 0
+        const2 = exp2_poly.coeffs()[1] if len(exp2_poly.coeffs()) > 1 else 0
+
+        if const1 != 0 or const2 != 0:
+            return False, expr, sp.Integer(1)
+
+        # Bestimme den gemeinsamen Faktor (kleinerer Koeffizient)
+        if koeff1 == koeff2:
+            # Gleiche Koeffizienten - keine Faktorisierung nötig
+            return False, expr, sp.Integer(1)
+
+        # Finde den kleineren Koeffizienten für den gemeinsamen Faktor
+        if abs(koeff1) < abs(koeff2):
+            kleiner_koeff = koeff1
+            diff_koeff = koeff2 - koeff1
+            term_mit_kleinerem_koeff = term1
+            term_mit_größerem_koeff = term2
+        else:
+            kleiner_koeff = koeff2
+            diff_koeff = koeff1 - koeff2
+            term_mit_kleinerem_koeff = term2
+            term_mit_größerem_koeff = term1
+
+        # Extrahiere die Vorfaktoren
+        def extrahiere_vorfaktor(term, exp_factor):
+            if isinstance(term, sp.Mul):
+                # Baue einen neuen Term ohne den exp-Faktor
+                other_factors = [f for f in term.args if f != exp_factor]
+                if other_factors:
+                    return sp.Mul(*other_factors)
+                else:
+                    return sp.Integer(1)
+            else:
+                return sp.Integer(1)
+
+        vorfaktor1 = extrahiere_vorfaktor(
+            term_mit_kleinerem_koeff, exp1 if koeff1 == kleiner_koeff else exp2
+        )
+        vorfaktor2 = extrahiere_vorfaktor(
+            term_mit_größerem_koeff, exp2 if koeff2 > koeff1 else exp1
+        )
+
+        # Erstelle den gemeinsamen Exponential-Faktor
+        gemeinsamer_exp = sp.exp(kleiner_koeff * variable)
+
+        # Erstelle den Rest-Faktor
+        if diff_koeff > 0:
+            rest_exp = sp.exp(diff_koeff * variable)
+        else:
+            rest_exp = sp.exp(-diff_koeff * variable)
+
+        rest_faktor = vorfaktor1 + vorfaktor2 * rest_exp
+
+        return True, gemeinsamer_exp, rest_faktor
+
+    except Exception:
+        return False, expr, sp.Integer(1)
+
+
 def analysiere_funktionsstruktur(
     funktion: str | sp.Basic | Funktion,
 ) -> dict[str, Any]:
@@ -311,8 +426,18 @@ def analysiere_funktionsstruktur(
                         haupt_typ = FunktionsTyp.KONSTANTE  # Koeffizient
                         komponenten = [vereinfacht]
                 else:
-                    haupt_typ = FunktionsTyp.SUMME
-                    komponenten = list(expr_analyse.args)
+                    # Prüfe auf Exponential-Summen-Faktorisierung
+                    kann_faktorisiert, gemeinsamer_faktor, rest_faktor = (
+                        _faktorisiere_exponential_summe(expr_analyse, variable)
+                    )
+                    if kann_faktorisiert:
+                        # Exponential-Summe kann faktorisiert werden -> verwende Produktstruktur
+                        haupt_typ = FunktionsTyp.PRODUKT
+                        komponenten = [gemeinsamer_faktor, rest_faktor]
+                    else:
+                        # Normale Summe
+                        haupt_typ = FunktionsTyp.SUMME
+                        komponenten = list(expr_analyse.args)
             elif expr_analyse.func == sp.Mul:
                 haupt_typ = FunktionsTyp.PRODUKT
                 komponenten = list(expr_analyse.args)

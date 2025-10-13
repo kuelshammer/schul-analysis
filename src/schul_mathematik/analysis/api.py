@@ -116,8 +116,8 @@ def Nullstellen(
                         for n in result
                     ]
                 elif result and hasattr(result[0], "x"):
-                    # Convert Nullstelle objects to simple values if no rounding needed
-                    result = [float(n.x) for n in result]
+                    # Keep exact SymPy values when no rounding needed
+                    result = [n.x for n in result]
 
                 return result
         elif hasattr(funktion, "Nullstellen"):

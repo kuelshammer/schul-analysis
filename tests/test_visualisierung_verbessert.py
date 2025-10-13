@@ -311,7 +311,7 @@ class TestIntegrationSzenarien:
         """
         # Testfunktion mit Nullstellen bei x=-3, x=-1, x=10
         f = Funktion("(x+3)(x+1)(x-10)")
-        nullstellen = sorted(f.nullstellen)
+        nullstellen = sorted([float(ns.x) for ns in f.nullstellen()])
         assert nullstellen == [-3, -1, 10]
 
         # Automatische Bereichsberechnung
@@ -462,8 +462,16 @@ class TestIntegrationSzenarien:
         assert x_range[1] >= 1, "Rechte Nullstelle von f sollte sichtbar sein"
         assert x_range[1] >= 3, "Rechte Nullstelle von g sollte sichtbar sein"
 
-        # Prüfe, dass beide Funktionen angezeigt werden
-        assert len(fig.data) == 2, "Es sollten zwei Funktionen angezeigt werden"
+        # Prüfe, dass beide Funktionen plus Schnittpunkte angezeigt werden
+        assert len(fig.data) == 3, (
+            "Es sollten zwei Funktionen plus Schnittpunkte angezeigt werden"
+        )
+
+        # Prüfe, dass die Schnittpunkte vorhanden sind
+        schnittpunkte_traces = [
+            trace for trace in fig.data if "Schnittpunkt" in trace.name
+        ]
+        assert len(schnittpunkte_traces) == 1, "Es sollte ein Schnittpunkt-Trace geben"
 
     def test_graph_mehrfach_mit_manuellen_grenzen(self):
         """Testet Graph(f, g) mit teilweisen manuellen Grenzen"""
@@ -519,11 +527,20 @@ class TestIntegrationSzenarien:
         assert x_range[0] <= -5, "Linke Nullstelle von h sollte sichtbar sein"
         assert x_range[1] >= 3, "Rechte Nullstelle von g sollte sichtbar sein"
 
-        # Alle drei Funktionen sollten angezeigt werden
-        assert len(fig.data) == 3, "Es sollten drei Funktionen angezeigt werden"
+        # Alle drei Funktionen plus Schnittpunkte sollten angezeigt werden
+        assert len(fig.data) == 4, (
+            "Es sollten drei Funktionen plus Schnittpunkte angezeigt werden"
+        )
 
-        # Prüfe, dass verschiedene Farben verwendet werden
-        farben = [trace.line.color for trace in fig.data]
+        # Prüfe, dass die Schnittpunkte vorhanden sind
+        schnittpunkte_traces = [
+            trace for trace in fig.data if "Schnittpunkt" in trace.name
+        ]
+        assert len(schnittpunkte_traces) == 1, "Es sollte ein Schnittpunkt-Trace geben"
+
+        # Prüfe, dass verschiedene Farben verwendet werden (nur bei Funktions-Traces, nicht bei Schnittpunkten)
+        funktion_traces = [trace for trace in fig.data if trace.mode == "lines"]
+        farben = [trace.line.color for trace in funktion_traces]
         assert len(set(farben)) == 3, "Jede Funktion sollte eine andere Farbe haben"
 
     def test_graph_mehrfach_exponentielle_funktionen(self):
@@ -542,8 +559,14 @@ class TestIntegrationSzenarien:
         assert abs(x_range[1] - 4) < 0.001, f"Rechte Grenze sollte 4 sein: {x_range[1]}"
 
         # Y-Bereich sollte automatisch berechnet werden
-        assert y_range[0] > 0, "Y-Bereich sollte positiv sein"
+        # Exponentielle Funktionen haben immer positive Werte, aber die automatische
+        # Bereichsberechnung fügt Puffer hinzu, der auch negative Werte enthalten kann
         assert y_range[1] > 1, "Y-Bereich sollte Werte > 1 enthalten"
+
+        # Überprüfe, dass der minimale Funktionswert im Bereich liegt
+        assert y_range[0] <= 0.0625, (
+            "Y-Bereich sollte den Minimalwert der Funktionen enthalten"
+        )
 
     def test_berechne_kombinierten_intelligenten_bereich(self):
         """Testet die Hilfsfunktion _berechne_kombinierten_intelligenten_bereich direkt"""

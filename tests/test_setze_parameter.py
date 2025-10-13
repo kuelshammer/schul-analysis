@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from schul_mathematik import Funktion
 from schul_mathematik.analysis.test_utils import assert_gleich
+from schul_mathematik.analysis.symbolic import _Parameter
 
 
 class TestSetzeParameter:
@@ -72,13 +73,11 @@ class TestSetzeParameter:
         f = Funktion("a*x^2 + b*x + c")
 
         # Ungültiger Parameter
-        with pytest.raises(
-            ValueError, match="Parameter 'x' kommt in der Funktion nicht vor"
-        ):
+        with pytest.raises(ValueError, match="Parameter 'x' ist die Variable"):
             f.setze_parameter(x=5)
 
         with pytest.raises(
-            ValueError, match="Parameter 'd' kommt in der Funktion nicht vor"
+            ValueError, match=r"Parameter 'd' kommt in der Funktion.*nicht vor"
         ):
             f.setze_parameter(d=10)
 
@@ -128,18 +127,18 @@ class TestSetzeParameter:
         # Nur a setzen
         f_a = f.setze_parameter(a=3)
         assert_gleich(f_a.term(), "3*x**2 + b*x + c")
-        assert f_a.parameter == [
-            sp.Symbol("b"),
-            sp.Symbol("c"),
-        ]  # b und c bleiben Parameter
+        # Prüfe, ob die richtigen Parameter vorhanden sind (Reihenfolge kann variieren)
+        expected_param_names = {"b", "c"}
+        actual_param_names = {str(p) for p in f_a.parameter}
+        assert actual_param_names == expected_param_names
 
         # Nur b setzen
         f_b = f.setze_parameter(b=2)
         assert_gleich(f_b.term(), "a*x**2 + 2*x + c")
-        assert f_b.parameter == [
-            sp.Symbol("a"),
-            sp.Symbol("c"),
-        ]  # a und c bleiben Parameter
+        # Prüfe, ob die richtigen Parameter vorhanden sind (Reihenfolge kann variieren)
+        expected_param_names = {"a", "c"}
+        actual_param_names = {str(p) for p in f_b.parameter}
+        assert actual_param_names == expected_param_names
 
     def test_wert_methode_mit_parametern(self):
         """Teste die wert() Methode mit Parametern."""
@@ -182,9 +181,9 @@ class TestSetzeParameter:
         k3 = k.setze_parameter(a=2, b=3, c=1, d=4)
         assert_gleich(k3.term(), "(2*x + 3)/(x + 4)")
 
-        # Auswertung testen
-        result = k3.setze_parameter(a=2, b=3, c=1, d=4)(2)
-        expected = (2 * 2 + 3) / (2 + 4)  # 7/6
+        # Auswertung testen (k3 hat keine Parameter mehr, also direkt auswerten)
+        result = k3(2)
+        expected = sp.Rational(7, 6)  # 7/6 als exakter Bruch
         assert result == expected
 
 

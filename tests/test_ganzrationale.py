@@ -27,8 +27,8 @@ class TestGanzrationaleFunktionKonstruktoren:
         assert f.funktionstyp == "ganzrational"
 
     def test_string_konstruktor_latex(self):
-        """Test: LaTeX-Format String-Konstruktor"""
-        f = Funktion("$x^2+4x-2$")
+        """Test: LaTeX-ähnlicher String-Konstruktor (ohne $ Zeichen)"""
+        f = Funktion("x^2+4x-2")  # LaTeX ohne $ Zeichen
         assert f.term() == "x^2 + 4*x - 2"  # Aktuelles Format mit Vorzeichen
         assert f.funktionstyp == "ganzrational"
 
@@ -116,21 +116,21 @@ class TestGanzrationaleFunktionMethoden:
         assert f_doppelstrich.term() == "2"
 
     def test_nullstellen_property(self):
-        """Test: nullstellen als Property"""
+        """Test: nullstellen als Methode (konsistente API)"""
         # Quadratische Funktion mit zwei Nullstellen
-        nullstellen = self.f_quad.nullstellen
+        nullstellen = self.f_quad.nullstellen()  # Jetzt Methode mit ()
         assert len(nullstellen) == 2
         assert abs(float(nullstellen[0].x) - 3.0) < 1e-10  # Reihenfolge ist [3, 1]
         assert abs(float(nullstellen[1].x) - 1.0) < 1e-10
 
         # Lineare Funktion
-        nullstellen_linear = self.f_linear.nullstellen
+        nullstellen_linear = self.f_linear.nullstellen()  # Jetzt Methode mit ()
         assert len(nullstellen_linear) == 1
         assert abs(float(nullstellen_linear[0].x) - 0.5) < 1e-10
 
         # Funktion ohne reelle Nullstellen
         f_keine_null = Funktion("x^2+1")
-        nullstellen_keine = f_keine_null.nullstellen
+        nullstellen_keine = f_keine_null.nullstellen()  # Jetzt Methode mit ()
         assert len(nullstellen_keine) == 0
 
     def test_extremstellen_property(self):

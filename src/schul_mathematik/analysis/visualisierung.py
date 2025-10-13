@@ -533,34 +533,52 @@ def _sammle_interessante_punkte(funktion):
         # Nullstellen
         if hasattr(funktion, "nullstellen"):
             try:
-                nullstellen = funktion.nullstellen
+                # Prüfe, ob nullstellen eine Methode oder Property ist
+                nullstellen_attr = funktion.nullstellen
+                if callable(nullstellen_attr):
+                    # Es ist eine Methode - rufe sie auf
+                    nullstellen = nullstellen_attr()
+                else:
+                    # Es ist eine Property - verwende sie direkt
+                    nullstellen = nullstellen_attr
+
                 # Validiere, dass nullstellen iterierbar ist
                 if hasattr(nullstellen, "__iter__") and not isinstance(
                     nullstellen, (str, bytes)
                 ):
                     for ns in nullstellen:
                         try:
-                            x_val = _formatiere_float(ns)
-                            punkte["x_werte"].append(x_val)
-                            punkte["y_werte"].append(0.0)
-                            punkte["punkte_mit_koordinaten"].append(
-                                ("Nullstelle", x_val, 0.0)
-                            )
+                            # Nullstelle object has .x attribute
+                            x_val = _formatiere_float(ns.x)
+                            if x_val is not None:  # Nur gültige Float-Werte hinzufügen
+                                punkte["x_werte"].append(x_val)
+                                punkte["y_werte"].append(0.0)
+                                punkte["punkte_mit_koordinaten"].append(
+                                    ("Nullstelle", x_val, 0.0)
+                                )
                         except (ValueError, TypeError, Exception):
                             # Einzelne fehlerhafte Nullstelle überspringen
                             continue
                 else:
                     # nullstellen ist nicht iterierbar - Warnung ausgeben
                     print(
-                        f"Warnung: nullstellen Property gibt nicht-iterierbares Objekt zurück: {type(nullstellen)}"
+                        f"Warnung: nullstellen gibt nicht-iterierbares Objekt zurück: {type(nullstellen)}"
                     )
             except Exception as e:
-                print(f"Warnung: Fehler beim Zugriff auf nullstellen Property: {e}")
+                print(f"Warnung: Fehler beim Zugriff auf nullstellen: {e}")
 
         # Extremstellen
         if hasattr(funktion, "extremstellen"):
             try:
-                extremstellen = funktion.extremstellen
+                # Prüfe, ob extremstellen eine Methode oder Property ist
+                extremstellen_attr = funktion.extremstellen
+                if callable(extremstellen_attr):
+                    # Es ist eine Methode - rufe sie auf
+                    extremstellen = extremstellen_attr()
+                else:
+                    # Es ist eine Property - verwende sie direkt
+                    extremstellen = extremstellen_attr
+
                 # Validiere, dass extremstellen iterierbar ist
                 if hasattr(extremstellen, "__iter__") and not isinstance(
                     extremstellen, (str, bytes)
@@ -578,14 +596,24 @@ def _sammle_interessante_punkte(funktion):
                                         else 0.0
                                     )
 
-                                y_val = _formatiere_float(funktion.wert(x_val))
-                                art = es[1] if len(es) >= 2 else "Extremum"
+                                # 🔥 FIX: Erwarte (x, y, art) Format statt (x, art) 🔥
+                                if len(es) >= 3:
+                                    # Vollständiges Tupel (x, y, art)
+                                    y_val = _formatiere_float(es[1])
+                                    art = es[2]
+                                else:
+                                    # Legacy-Format (x, art) oder einzelner Wert
+                                    y_val = _formatiere_float(funktion.wert(x_val))
+                                    art = es[1] if len(es) >= 2 else "Extremum"
 
-                                punkte["x_werte"].append(x_val)
-                                punkte["y_werte"].append(y_val)
-                                punkte["punkte_mit_koordinaten"].append(
-                                    (art, x_val, y_val)
-                                )
+                                if (
+                                    x_val is not None and y_val is not None
+                                ):  # Nur gültige Werte hinzufügen
+                                    punkte["x_werte"].append(x_val)
+                                    punkte["y_werte"].append(y_val)
+                                    punkte["punkte_mit_koordinaten"].append(
+                                        (art, x_val, y_val)
+                                    )
                             else:
                                 # Einzelner Wert (x-Koordinate) - 🔥 SICHERER ZUGRIFF 🔥
                                 try:
@@ -612,15 +640,23 @@ def _sammle_interessante_punkte(funktion):
                 else:
                     # extremstellen ist nicht iterierbar - Warnung ausgeben
                     print(
-                        f"Warnung: extremstellen Property gibt nicht-iterierbares Objekt zurück: {type(extremstellen)}"
+                        f"Warnung: extremstellen gibt nicht-iterierbares Objekt zurück: {type(extremstellen)}"
                     )
             except Exception as e:
-                print(f"Warnung: Fehler beim Zugriff auf extremstellen Property: {e}")
+                print(f"Warnung: Fehler beim Zugriff auf extremstellen: {e}")
 
         # Wendepunkte
         if hasattr(funktion, "wendepunkte"):
             try:
-                wendepunkte = funktion.wendepunkte
+                # Prüfe, ob wendepunkte eine Methode oder Property ist
+                wendepunkte_attr = funktion.wendepunkte
+                if callable(wendepunkte_attr):
+                    # Es ist eine Methode - rufe sie auf
+                    wendepunkte = wendepunkte_attr()
+                else:
+                    # Es ist eine Property - verwende sie direkt
+                    wendepunkte = wendepunkte_attr
+
                 # Validiere, dass wendepunkte iterierbar ist
                 if hasattr(wendepunkte, "__iter__") and not isinstance(
                     wendepunkte, (str, bytes)
@@ -649,11 +685,14 @@ def _sammle_interessante_punkte(funktion):
 
                                 art = wp[2] if len(wp) >= 3 else "Wendepunkt"
 
-                                punkte["x_werte"].append(x_val)
-                                punkte["y_werte"].append(y_val)
-                                punkte["punkte_mit_koordinaten"].append(
-                                    (art, x_val, y_val)
-                                )
+                                if (
+                                    x_val is not None and y_val is not None
+                                ):  # Nur gültige Werte hinzufügen
+                                    punkte["x_werte"].append(x_val)
+                                    punkte["y_werte"].append(y_val)
+                                    punkte["punkte_mit_koordinaten"].append(
+                                        (art, x_val, y_val)
+                                    )
                             else:
                                 # 🔥 SICHERER ZUGRIFF FÜR NICHT-TUPEL WENDEPUNKTE 🔥
                                 try:
@@ -661,11 +700,14 @@ def _sammle_interessante_punkte(funktion):
                                     y_val = _formatiere_float(funktion.wert(x_val))
                                     art = "Wendepunkt"
 
-                                    punkte["x_werte"].append(x_val)
-                                    punkte["y_werte"].append(y_val)
-                                    punkte["punkte_mit_koordinaten"].append(
-                                        (art, x_val, y_val)
-                                    )
+                                    if (
+                                        x_val is not None and y_val is not None
+                                    ):  # Nur gültige Werte hinzufügen
+                                        punkte["x_werte"].append(x_val)
+                                        punkte["y_werte"].append(y_val)
+                                        punkte["punkte_mit_koordinaten"].append(
+                                            (art, x_val, y_val)
+                                        )
                                 except (ValueError, TypeError):
                                     continue
                         except (ValueError, TypeError, IndexError, Exception):
@@ -674,10 +716,10 @@ def _sammle_interessante_punkte(funktion):
                 else:
                     # wendepunkte ist nicht iterierbar - Warnung ausgeben
                     print(
-                        f"Warnung: wendepunkte Property gibt nicht-iterierbares Objekt zurück: {type(wendepunkte)}"
+                        f"Warnung: wendepunkte gibt nicht-iterierbares Objekt zurück: {type(wendepunkte)}"
                     )
             except Exception as e:
-                print(f"Warnung: Fehler beim Zugriff auf wendepunkte Property: {e}")
+                print(f"Warnung: Fehler beim Zugriff auf wendepunkte: {e}")
 
         # Polstellen (nur Y-Werte relevant für asymptotisches Verhalten)
         if hasattr(funktion, "polstellen"):
@@ -762,7 +804,7 @@ def _finde_interessante_punkte(funktion):
     """Sammelt alle interessanten Punkte einer Funktion für die automatische Skalierung
 
     Args:
-        funktion: GanzrationaleFunktion oder GebrochenRationaleFunktion
+        funktion: GanzrationaleFunktion oder QuotientFunktion
 
     Returns:
         dict: Dictionary mit x_koordinaten und punkten Listen
@@ -1948,7 +1990,7 @@ def Graph(*funktionen, x_min=None, x_max=None, y_min=None, y_max=None, **kwargs)
     """Erzeugt einen Graphen für eine oder mehrere Funktionen mit vereinfachter Bereichskontrolle
 
     Args:
-        *funktionen: Eine oder mehrere Funktionen (GanzrationaleFunktion, GebrochenRationaleFunktion)
+        *funktionen: Eine oder mehrere Funktionen (GanzrationaleFunktion, QuotientFunktion)
         x_min, x_max: Optionale x-Bereichsgrenzen (werden automatisch berechnet wenn nicht angegeben)
         y_min, y_max: Optionale y-Bereichsgrenzen (werden automatisch berechnet wenn nicht angegeben)
         **kwargs: Zusätzliche Optionen:

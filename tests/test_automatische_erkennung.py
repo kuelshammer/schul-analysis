@@ -13,7 +13,11 @@ from schul_mathematik.analysis.funktion import (
     erstelle_funktion_automatisch,
 )
 from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
-from schul_mathematik.analysis.strukturiert import QuotientFunktion, SummeFunktion
+from schul_mathematik.analysis.strukturiert import (
+    QuotientFunktion,
+    SummeFunktion,
+    ProduktFunktion,
+)
 from schul_mathematik.analysis.test_utils import assert_gleich
 
 
@@ -110,11 +114,12 @@ class TestAutomatischeFunktionserkennung:
         assert not f_ganz.ist_exponential_rational
 
         # Gebrochen-rationale Funktion (manuell erstellen für zuverlässigen Test)
-        from schul_mathematik.analysis.gebrochen_rationale import (
-            GebrochenRationaleFunktion,
+        # Nach Legacy Removal: Verwende QuotientFunktion statt GebrochenRationaleFunktion
+        from schul_mathematik.analysis.strukturiert import (
+            QuotientFunktion,
         )
 
-        f_gebrochen = GebrochenRationaleFunktion("(x+1)/(x-1)")
+        f_gebrochen = QuotientFunktion("(x+1)/(x-1)")
         assert not f_gebrochen.ist_ganzrational
         assert f_gebrochen.ist_gebrochen_rational
         assert not f_gebrochen.ist_exponential_rational
@@ -128,7 +133,7 @@ class TestAutomatischeFunktionserkennung:
         """Test, dass die erkannten Funktionen vollständig funktional sind."""
         # Teste ganzrationale Funktion
         f_ganz = erstelle_funktion_automatisch("x^2 - 4")
-        nullstellen = f_ganz.nullstellen
+        nullstellen = f_ganz.nullstellen()
         assert len(nullstellen) == 2
         assert -2.0 in [float(n.x) for n in nullstellen] or 2.0 in [
             float(n.x) for n in nullstellen
@@ -145,7 +150,7 @@ class TestAutomatischeFunktionserkennung:
         # Teste gebrochen-rationale Funktion
         f_gebrochen = erstelle_funktion_automatisch("(x^2-1)/(x-1)")
         polstellen = f_gebrochen.polstellen()
-        assert 1.0 in polstellen
+        assert any(abs(float(p.x) - 1.0) < 1e-10 for p in polstellen)
 
         # Teste Exponentialfunktion
         f_exp = erstelle_funktion_automatisch("exp(x) + 1")
@@ -183,7 +188,9 @@ class TestAutomatischeFunktionserkennung:
 
         # Komplexe Exponentialfunktion (mit unterschiedlichen Exponenten)
         f = erstelle_funktion_automatisch("exp(x) + exp(-x)")
-        assert isinstance(f, SummeFunktion)
+        assert isinstance(
+            f, ProduktFunktion
+        )  # Jetzt faktorisiert zu exp(-x)*(exp(2x)+1)
 
     def test_fallback_verhalten(self):
         """Test des Fallback-Verhaltens bei mehrdeutigen Eingaben."""

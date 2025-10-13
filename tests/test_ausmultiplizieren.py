@@ -181,11 +181,11 @@ class TestAusmultiplizierenFunktionseigenschaften:
         f = Funktion("(x+1)(x-2)")
 
         # Nullstellen vor dem Ausmultiplizieren
-        nullstellen_original = f.nullstellen
+        nullstellen_original = f.nullstellen()  # Methode mit ()
 
         # Ausmultiplizieren und Nullstellen vergleichen
         Ausmultiplizieren(f)  # Modifiziert f direkt
-        nullstellen_expandiert = f.nullstellen
+        nullstellen_expandiert = f.nullstellen()  # Methode mit ()
 
         # Nullstellen sollten gleich sein (eventuell in anderer Reihenfolge)
         assert set(nullstellen_original) == set(nullstellen_expandiert)

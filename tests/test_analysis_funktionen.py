@@ -9,7 +9,6 @@ from schul_mathematik import (
     FlaecheZweiFunktionen,
     Funktion,
     GanzrationaleFunktion,
-    GebrochenRationaleFunktion,
     Integral,
 )
 
@@ -30,7 +29,7 @@ def test_integral_funktion():
 
     # Test 2: Logarithmus
     print("\n📊 Test 2: Logarithmus-Integral")
-    g = GebrochenRationaleFunktion("1/x")
+    g = Funktion("1/x")
     ergebnis = Integral(g, 1, 2)
     erwartet = np.log(2)  # ∫1/xdx von 1 bis 2 = [ln|x|]₁² = ln(2)
     print(f"  ∫1/xdx von 1 bis 2 = {ergebnis}")

@@ -239,8 +239,8 @@ class ProduktFunktion(StrukturierteFunktion):
         alle_nullstellen = []
 
         for faktor in self.faktoren:
-            if hasattr(faktor, "nullstellen") and callable(faktor.nullstellen):
-                # Rufe nullstellen() des Faktors auf
+            if hasattr(faktor, "nullstellen"):
+                # Alle Klassen verwenden jetzt konsistent die nullstellen() Methode
                 faktor_nullstellen = faktor.nullstellen(real=real, runden=runden)
                 alle_nullstellen.extend(faktor_nullstellen)
 

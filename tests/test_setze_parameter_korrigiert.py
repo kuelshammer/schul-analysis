@@ -73,14 +73,12 @@ class TestSetzeParameterKorrigiert:
         f = Funktion("a*x^2 + b*x + c")
 
         # Teste, ob x als Parameter abgelehnt wird (x ist Variable)
-        with pytest.raises(
-            ValueError, match="Parameter 'x' kommt in der Funktion nicht vor"
-        ):
+        with pytest.raises(ValueError, match="Parameter 'x' ist die Variable"):
             f.setze_parameter(x=5)
 
         # Teste, ob nicht existierende Parameter abgelehnt werden
         with pytest.raises(
-            ValueError, match="Parameter 'd' kommt in der Funktion nicht vor"
+            ValueError, match=r"Parameter 'd' kommt in der Funktion.*nicht vor"
         ):
             f.setze_parameter(d=10)
 
@@ -188,9 +186,9 @@ class TestSetzeParameterKorrigiert:
         expected3 = Funktion("(2*x + 3)/(x + 4)")
         assert k3.term_sympy.equals(expected3.term_sympy)
 
-        # Auswertung testen
+        # Auswertung testen (k3 hat keine Parameter mehr, also direkt auswerten)
         result = k3(2)
-        expected = (2 * 2 + 3) / (2 + 4)  # 7/6
+        expected = sp.Rational(7, 6)  # 7/6 als exakter Bruch
         assert result == expected
 
 

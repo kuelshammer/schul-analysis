@@ -671,9 +671,19 @@ def validate_analysis_results(analysis_type: str):
                     )
             else:
                 # Standardbehandlung für andere Analyse-Typen
-                if not all(
-                    is_exact_sympy_expr(item) for item in result if hasattr(item, "x")
-                ):
+                def is_exact_item(item):
+                    """Hilfsfunktion zur Prüfung verschiedener Item-Typen auf Exaktheit"""
+                    if hasattr(item, "x"):
+                        # Nullstelle, Extremum, etc. mit .x Attribut
+                        return is_exact_sympy_expr(item.x)
+                    elif hasattr(item, "__getitem__") and len(item) >= 1:
+                        # Tupel-ähnliche Strukturen
+                        return is_exact_sympy_expr(item[0])
+                    else:
+                        # Direkte SymPy-Ausdrücke
+                        return is_exact_sympy_expr(item)
+
+                if not all(is_exact_item(item) for item in result):
                     raise ValueError(
                         f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "
                         f"aber es wurden approximative Ergebnisse gefunden"

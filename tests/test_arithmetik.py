@@ -9,7 +9,7 @@ sys.path.insert(0, "src")
 
 
 from schul_mathematik.analysis.ganzrationale import GanzrationaleFunktion
-from schul_mathematik.analysis.gebrochen_rationale import GebrochenRationaleFunktion
+
 from schul_mathematik.analysis.test_utils import assert_gleich
 
 
@@ -86,14 +86,12 @@ def test_arithmetische_operationen():
     # Funktion * Zahl
     ergebnis = g * 3
     print(f"g * 3 = {ergebnis.term()}")
-    assert ergebnis.term() == "3x+3", f"Erwartet: 3x+3, erhalten: {ergebnis.term()}"
+    assert_gleich(ergebnis.term(), "3*x + 3")
 
     # Zahl * Funktion (rechts)
     ergebnis = 2 * f
     print(f"2 * f = {ergebnis.term()}")
-    assert ergebnis.term() == "2x^2+4x+2", (
-        f"Erwartet: 2x²+4x+2, erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "2*x^2 + 4*x + 2")
 
     print("✅ Multiplikationstests erfolgreich\n")
 
@@ -103,15 +101,13 @@ def test_arithmetische_operationen():
     # Funktion / Funktion (exakt teilbar)
     ergebnis = f / g
     print(f"f / g = {ergebnis.term()}")
-    assert ergebnis.term() == "x+1", f"Erwartet: x+1, erhalten: {ergebnis.term()}"
+    assert_gleich(ergebnis.term(), "x+1")
 
     # Funktion / Funktion (nicht exakt teilbar - sollte gebrochen-rationale Funktion ergeben)
     ergebnis = g / h
     print(f"g / h = {ergebnis.term()}")
     assert ergebnis.ist_gebrochen_rational, "Sollte gebrochen-rationale Funktion sein"
-    assert ergebnis.term() == "1/(x-1)" or ergebnis.term() == "(1)/(x-1)", (
-        f"Erwartet: 1/(x-1), erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "1/(x-1)")
 
     # Funktion / Zahl
     ergebnis = f / 2
@@ -124,9 +120,7 @@ def test_arithmetische_operationen():
     ergebnis = 6 / g
     print(f"6 / g = {ergebnis.term()}")
     assert ergebnis.ist_gebrochen_rational, "Sollte gebrochen-rationale Funktion sein"
-    assert ergebnis.term() == "6/(x+1)", (
-        f"Erwartet: 6/(x+1), erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "6/(x+1)")
 
     print("✅ Divisionstests erfolgreich\n")
 
@@ -136,9 +130,7 @@ def test_arithmetische_operationen():
     # Funktion ** Ganzzahl
     ergebnis = g**3
     print(f"g ** 3 = {ergebnis.term()}")
-    assert ergebnis.term() == "x^3+3x^2+3x+1", (
-        f"Erwartet: (x+1)³, erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "x^3+3x^2+3x+1")
 
     # Funktion ** 0
     ergebnis = g**0
@@ -148,15 +140,13 @@ def test_arithmetische_operationen():
     # Funktion ** 1
     ergebnis = g**1
     print(f"g ** 1 = {ergebnis.term()}")
-    assert ergebnis.term() == "x+1", f"Erwartet: x+1, erhalten: {ergebnis.term()}"
+    assert_gleich(ergebnis.term(), "x+1")
 
     # Negativer Exponent - sollte gebrochen-rationale Funktion ergeben
     ergebnis = g ** (-1)
     print(f"g ** (-1) = {ergebnis.term()}")
     assert ergebnis.ist_gebrochen_rational, "Sollte gebrochen-rationale Funktion sein"
-    assert ergebnis.term() == "1/(x+1)", (
-        f"Erwartet: 1/(x+1), erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "1/(x+1)")
 
     print("✅ Potenzierungstests erfolgreich\n")
 
@@ -167,13 +157,13 @@ def test_arithmetische_operationen():
     f_copy = GanzrationaleFunktion("x^2+2x+1")
     f_copy += g
     print(f"f_copy += g = {f_copy.term()}")
-    assert f_copy.term() == "x^2+3x+2", f"Erwartet: x^2+3x+2, erhalten: {f_copy.term()}"
+    assert_gleich(f_copy.term(), "x^2+3x+2")
 
     # Test von *=
     g_copy = GanzrationaleFunktion("x+1")
     g_copy *= 2
     print(f"g_copy *= 2 = {g_copy.term()}")
-    assert g_copy.term() == "2x+2", f"Erwartet: 2x+2, erhalten: {g_copy.term()}"
+    assert_gleich(g_copy.term(), "2x+2")
 
     print("✅ In-Place Operationen erfolgreich\n")
 
@@ -183,16 +173,12 @@ def test_arithmetische_operationen():
     # Negation
     ergebnis = -f
     print(f"-f = {ergebnis.term()}")
-    assert ergebnis.term() == "-x^2-2x-1", (
-        f"Erwartet: -x^2-2x-1, erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "-x^2-2x-1")
 
     # Positiv
     ergebnis = +f
     print(f"+f = {ergebnis.term()}")
-    assert ergebnis.term() == "x^2+2x+1", (
-        f"Erwartet: x²+2x+1, erhalten: {ergebnis.term()}"
-    )
+    assert_gleich(ergebnis.term(), "x^2+2x+1")
 
     print("✅ Unäre Operationen erfolgreich\n")
 

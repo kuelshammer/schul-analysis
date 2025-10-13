@@ -55,7 +55,6 @@ __all__ = [
     # 🏗️ ANALYSIS: FUNKTIONSKLASSEN
     "Funktion",
     "GanzrationaleFunktion",
-    "GebrochenRationaleFunktion",
     "ExponentialFunktion",
     "TrigonometrischeFunktion",
     "StrukturierteFunktion",

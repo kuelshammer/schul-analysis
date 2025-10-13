@@ -56,7 +56,9 @@ class TestWrapperFunktionen:
         f = Funktion("x^2 - 4")
 
         null = Nullstellen(f)
-        assert sorted(null) == [-2, 2]  # Unabhängig von der Reihenfolge
+        # Extrahiere x-Werte aus Nullstelle-Objekten für den Vergleich
+        null_x_werte = sorted([float(ns.x) for ns in null])
+        assert null_x_werte == [-2, 2]  # Unabhängig von der Reihenfolge
 
     def test_ableitung_funktion(self):
         """Test: Ableitung() Wrapper-Funktion"""
