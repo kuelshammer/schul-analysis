@@ -38,7 +38,7 @@ class TestAbleitungCaching:
         assert hasattr(f, "_ableitung_cache")
         assert isinstance(f._ableitung_cache, dict)
         assert len(f._ableitung_cache) == 1
-        assert f._ableitung_cache_max_size == 10
+        assert f._ableitung_cache_max_size == 50
 
     def test_cache_hit_same_order(self):
         """Testet Cache-Hit bei gleicher Ableitungsordnung."""
@@ -83,11 +83,11 @@ class TestAbleitungCaching:
         """Testet LRU-Eviction wenn Cache voll ist."""
         f = Funktion("x^5")
 
-        # Setze sehr kleine Cache-Größe für Test
-        f._ableitung_cache_max_size = 2
-
-        # Manuelles Zurücksetzen des Caches
+        # Initialisiere Cache mit kleiner Größe für Test
         f._ableitung_cache = {}
+        f._ableitung_cache_max_size = 2
+        f._ableitung_cache_hits = 0
+        f._ableitung_cache_misses = 0
 
         # Fülle Cache über die Grenze
         f1 = f.ableitung(1)

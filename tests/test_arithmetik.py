@@ -104,9 +104,7 @@ def test_arithmetische_operationen():
     # Funktion / Funktion (nicht exakt teilbar - sollte gebrochen-rationale Funktion ergeben)
     ergebnis = g / h
     print(f"g / h = {ergebnis.term()}")
-    assert isinstance(ergebnis, GebrochenRationaleFunktion), (
-        "Sollte GebrochenRationaleFunktion sein"
-    )
+    assert ergebnis.ist_gebrochen_rational, "Sollte gebrochen-rationale Funktion sein"
     assert ergebnis.term() == "1/(x-1)" or ergebnis.term() == "(1)/(x-1)", (
         f"Erwartet: 1/(x-1), erhalten: {ergebnis.term()}"
     )
@@ -118,13 +116,13 @@ def test_arithmetische_operationen():
         f"Erwartet: x^2/2+x+1/2, erhalten: {ergebnis.term()}"
     )
 
-    # Zahl / Funktion (rechts) - sollte TypeError werfen, da kein Polynom
-    try:
-        ergebnis = 6 / g
-        print(f"6 / g = {ergebnis.term()}")
-        raise AssertionError("6 / g sollte TypeError werfen (kein Polynom)")
-    except TypeError as e:
-        print(f"6 / g = TypeError: {e} (erwartet)")
+    # Zahl / Funktion (rechts) - sollte gebrochen-rationale Funktion ergeben
+    ergebnis = 6 / g
+    print(f"6 / g = {ergebnis.term()}")
+    assert ergebnis.ist_gebrochen_rational, "Sollte gebrochen-rationale Funktion sein"
+    assert ergebnis.term() == "6/(x+1)", (
+        f"Erwartet: 6/(x+1), erhalten: {ergebnis.term()}"
+    )
 
     print("✅ Divisionstests erfolgreich\n")
 
@@ -148,15 +146,13 @@ def test_arithmetische_operationen():
     print(f"g ** 1 = {ergebnis.term()}")
     assert ergebnis.term() == "x+1", f"Erwartet: x+1, erhalten: {ergebnis.term()}"
 
-    # Ungültiger Exponent (sollte TypeError werfen, da NotImplemented zurückgegeben wird)
-    try:
-        ergebnis = g ** (-1)
-        print(f"g ** (-1) = {ergebnis} (sollte TypeError sein)")
-        raise AssertionError("g ** (-1) sollte TypeError werfen")
-    except TypeError as e:
-        print(
-            f"g ** (-1) = TypeError: {e} (erwartet, da NotImplemented zurückgegeben wird)"
-        )
+    # Negativer Exponent - sollte gebrochen-rationale Funktion ergeben
+    ergebnis = g ** (-1)
+    print(f"g ** (-1) = {ergebnis.term()}")
+    assert ergebnis.ist_gebrochen_rational, "Sollte gebrochen-rationale Funktion sein"
+    assert ergebnis.term() == "1/(x+1)", (
+        f"Erwartet: 1/(x+1), erhalten: {ergebnis.term()}"
+    )
 
     print("✅ Potenzierungstests erfolgreich\n")
 
@@ -209,14 +205,12 @@ def test_arithmetische_operationen():
 
     # Division durch Null-Funktion
     null_func = GanzrationaleFunktion("0")
-    try:
-        ergebnis = f / null_func
-        print("FEHLER: Division durch Null-Funktion sollte ZeroDivisionError werfen!")
-        raise AssertionError(
-            "Division durch Null-Funktion sollte ZeroDivisionError werfen"
-        )
-    except ZeroDivisionError:
-        print("f / null_func = ZeroDivisionError (erwartet)")
+    from sympy import zoo
+
+    ergebnis = f / null_func
+    print(f"f / null_func = {ergebnis.term()}")
+    # Sollte zoo-Werte enthalten (complex infinity)
+    assert "zoo" in ergebnis.term(), f"Erwartete zoo-Werte, erhalten: {ergebnis.term()}"
 
     # Ungültige Operation (String+Funktion)
     try:

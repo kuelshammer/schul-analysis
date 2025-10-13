@@ -78,20 +78,58 @@ def Nullstellen(
         Garantiert exakte symbolische Ergebnisse ohne numerische Approximation
     """
     try:
-        # Handle both property and method cases
-        if hasattr(funktion, "Nullstellen"):
+        # Handle both property and method cases (check lowercase first)
+        if hasattr(funktion, "nullstellen"):
             attr = funktion.nullstellen
             if callable(attr):
                 # It's a method - try with parameters first
                 try:
-                    result = funktion.Nullstellen(real=real, runden=runden)
+                    result = funktion.nullstellen(real=real, runden=runden)
                 except TypeError:
                     # Method doesn't accept parameters, call without them
-                    result = funktion.Nullstellen()
+                    result = funktion.nullstellen()
             else:
                 # It's a property - access it directly
                 result = funktion.nullstellen
+
                 # Apply filtering and rounding if needed
+                if real:
+                    # Keep only real nullstellen - filter out complex ones
+                    filtered_result = []
+                    for n in result:
+                        if hasattr(n, "x"):
+                            # It's a Nullstelle object
+                            x_val = n.x
+                            if hasattr(x_val, "is_real") and x_val.is_real:
+                                filtered_result.append(n)
+                        elif hasattr(n, "is_real") and n.is_real:
+                            # It's already a SymPy expression
+                            filtered_result.append(n)
+                    result = filtered_result
+
+                if runden is not None:
+                    # Convert to floats for rounding
+                    if result and hasattr(result[0], "x"):
+                        result = [float(n.x) for n in result]
+                    result = [
+                        round(float(n), runden) if hasattr(n, "__float__") else n
+                        for n in result
+                    ]
+                elif result and hasattr(result[0], "x"):
+                    # Convert Nullstelle objects to simple values if no rounding needed
+                    result = [float(n.x) for n in result]
+
+                return result
+        elif hasattr(funktion, "Nullstellen"):
+            # Fallback to uppercase for backward compatibility
+            attr = funktion.Nullstellen
+            if callable(attr):
+                try:
+                    result = funktion.Nullstellen(real=real, runden=runden)
+                except TypeError:
+                    result = funktion.Nullstellen()
+            else:
+                result = funktion.Nullstellen
                 if real:
                     result = [n for n in result if hasattr(n, "is_real") and n.is_real]
                 if runden is not None:
@@ -1029,10 +1067,14 @@ def _zeichne_einzelne_funktion(
         try:
             from .visualisierung import Graph
 
-            return Graph(funktion, x_min=x_bereich[0], x_max=x_bereich[1], **kwargs)
+            if x_bereich is not None:
+                return Graph(funktion, x_min=x_bereich[0], x_max=x_bereich[1], **kwargs)
+            else:
+                return Graph(funktion, **kwargs)
         except Exception as e:
             raise DatenpunktBerechnungsError(
-                f"Kann Datenpunkte für Funktion {getattr(funktion, '__name__', 'anonymous')} nicht berechnen: {str(e)}"
+                getattr(funktion, "__name__", "anonymous"),
+                f"Kann Datenpunkte nicht berechnen: {str(e)}",
             )
 
     else:
@@ -1360,10 +1402,23 @@ def Tangente(funktion: Funktionstyp, stelle: float) -> GanzrationaleFunktion:
         Die Tangente ist die beste lineare Näherung an eine Funktion an einer Stelle.
         Sie berührt die Funktion und hat die gleiche Steigung wie die Funktion an dieser Stelle.
     """
-    from .taylor import tangente
+    # Taylor-Modul wurde entfernt, implementiere Tangente direkt
+
+    # Implementiere Tangentenberechnung direkt
+    if not hasattr(funktion, "ableitung"):
+        raise SchulAnalysisError("Funktion hat keine Ableitungsmethode")
 
     try:
-        return tangente(funktion, stelle)
+        stelle_expr = sp.sympify(stelle)
+        y_wert = funktion.wert(stelle_expr)
+        ableitung = funktion.ableitung()
+        steigung = ableitung.wert(stelle_expr)
+
+        # Tangentengleichung: y = m(x - x₀) + y₀
+        x_sym = sp.Symbol("x")
+        tangentengleichung = steigung * (x_sym - stelle_expr) + y_wert
+
+        return Funktion(tangentengleichung)
     except Exception as e:
         raise SchulAnalysisError(
             f"Fehler bei der Tangentenberechnung: {str(e)}\n"
@@ -1397,10 +1452,32 @@ def Taylorpolynom(
         Taylorpolynome nähern Funktionen durch Polynome an.
         Je höher der Grad, desto besser die Näherung (in der Nähe des Entwicklungspunkts).
     """
-    from .taylor import taylorpolynom
+    # Taylor-Modul wurde entfernt, implementiere Taylorpolynom direkt
 
+    # Implementiere Taylorpolynom-Berechnung direkt
     try:
-        return taylorpolynom(funktion, grad, entwicklungspunkt)
+        entwicklungspunkt_expr = sp.sympify(entwicklungspunkt)
+        x_sym = sp.Symbol("x")
+
+        # Taylorpolynom: f(x₀) + f'(x₀)(x-x₀) + f''(x₀)/2!(x-x₀)² + ...
+        taylor_term = sp.Integer(0)
+
+        for n in range(grad + 1):
+            # n-te Ableitung berechnen
+            if n == 0:
+                # 0-te Ableitung = Funktion selbst
+                wert = funktion.wert(entwicklungspunkt_expr)
+            else:
+                ableitung = funktion.ableitung(n)
+                wert = ableitung.wert(entwicklungspunkt_expr)
+
+            # n! berechnen
+            n_fakultaet = sp.factorial(n)
+
+            # Term addieren: f⁽ⁿ⁾(x₀)/n! * (x-x₀)ⁿ
+            taylor_term += (wert / n_fakultaet) * (x_sym - entwicklungspunkt_expr) ** n
+
+        return Funktion(taylor_term)
     except Exception as e:
         raise SchulAnalysisError(
             f"Fehler bei der Taylorpolynom-Berechnung: {str(e)}\n"
@@ -1463,7 +1540,7 @@ __all__ = [
 
 def FlaecheZweiFunktionen(
     f1: Funktionstyp, f2: Funktionstyp, a: float, b: float, anzeigen: bool = False
-) -> float:
+) -> Any:
     """
     Berechnet die Fläche zwischen zwei Funktionen über dem Intervall [a, b].
 
@@ -1475,12 +1552,13 @@ def FlaecheZweiFunktionen(
         anzeigen: Ob die Visualisierung angezeigt werden soll
 
     Returns:
-        float: Fläche zwischen den Funktionen
+        Any: Plotly-Figure-Objekt mit Flächendarstellung (bei anzeigen=False)
+             oder zeigt den Graphen an (bei anzeigen=True)
 
     Examples:
         >>> f1 = GanzrationaleFunktion("x^2")
         >>> f2 = GanzrationaleFunktion("x")
-        >>> flaeche = FlaecheZweiFunktionen(f1, f2, 0, 1)
+        >>> fig = FlaecheZweiFunktionen(f1, f2, 0, 1, anzeigen=False)
     """
     import sympy as sp
 
@@ -1492,33 +1570,35 @@ def FlaecheZweiFunktionen(
     f2_expr = f2.term_sympy
     differenz = f1_expr - f2_expr
 
-    # Berechne Integral
-    ergebnis = sp.integrate(differenz, (x, a, b))
+    # Berechne Integral für numerischen Wert
+    flaechen_wert = sp.integrate(differenz, (x, a, b))
 
     # Konvertiere zu Float wenn möglich
     try:
-        ergebnis = float(ergebnis)
+        flaechen_wert = float(flaechen_wert)
     except (TypeError, ValueError):
         pass
 
+    # Erstelle Visualisierung mit korrekten Parametern (immer, wie bei Flaeche-Funktion)
+    bereich_erweiterung = (b - a) * 0.2
+    x_min = a - bereich_erweiterung
+    x_max = b + bereich_erweiterung
+
+    fig = VisualisierungsGraph(
+        f1,
+        f2,
+        x_min=x_min,
+        x_max=x_max,
+        flaeche_zwei_funktionen=True,
+        flaeche_grenzen=(a, b),
+        titel=f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}",
+    )
+
+    # Zeige den Graphen an, wenn gewünscht (wie bei Flaeche-Funktion)
     if anzeigen:
-        # Erstelle Visualisierung mit korrekten Parametern
-        bereich_erweiterung = (b - a) * 0.2
-        x_min = a - bereich_erweiterung
-        x_max = b + bereich_erweiterung
+        fig.show()
 
-        fig = VisualisierungsGraph(
-            f1,
-            f2,
-            x_min=x_min,
-            x_max=x_max,
-            flaeche_zwei_funktionen=True,
-            flaeche_grenzen=(a, b),
-            titel=f"Fläche zwischen f₁(x) und f₂(x) von {a} bis {b}",
-        )
-        return fig
-
-    return ergebnis
+    return fig
 
 
 # =============================================================================

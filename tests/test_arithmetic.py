@@ -235,7 +235,7 @@ class TestMagicFactoryVereinfachung:
         h = f**2 + g**2  # Sollte zu 1 vereinfachen
 
         # SymPy sollte sin(x)^2 + cos(x)^2 zu 1 vereinfachen
-        assert_gleich(h.term(), "1")
+        assert_gleich(h.term_sympy, 1)
         print(f"sin² + cos² = {h.term()}")
 
     def test_typerkennung_nach_vereinfachung(self):

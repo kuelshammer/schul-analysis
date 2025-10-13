@@ -33,8 +33,9 @@ def test_extremstellen_parametrisiert():
         f"Erwartete 1 Extremstelle, got {len(extremstellen)}"
     )
 
-    x_wert, art = extremstellen[0]
+    x_wert, y_wert, art = extremstellen[0]
     print(f"x_wert: {x_wert} (Typ: {type(x_wert)})")
+    print(f"y_wert: {y_wert} (Typ: {type(y_wert)})")
     print(f"Art: {art}")
 
     # Sollte symbolischer Ausdruck sein, kein Float
@@ -67,7 +68,7 @@ def test_extremstellen_numerisch_exakt():
         f"Erwartete 1 Extremstelle, got {len(extremstellen)}"
     )
 
-    x_wert, art = extremstellen[0]
+    x_wert, y_wert, art = extremstellen[0]
     print(f"x_wert: {x_wert} (Typ: {type(x_wert)})")
     print(f"Art: {art}")
 
@@ -94,7 +95,7 @@ def test_extremstellen_reine_zahl():
         f"Erwartete 1 Extremstelle, got {len(extremstellen)}"
     )
 
-    x_wert, art = extremstellen[0]
+    x_wert, y_wert, art = extremstellen[0]
     print(f"x_wert: {x_wert} (Typ: {type(x_wert)})")
     print(f"Art: {art}")
 
@@ -123,7 +124,7 @@ def test_extremstellen_komplex():
         f"Erwartete 1 Extremstelle, got {len(extremstellen)}"
     )
 
-    x_wert, art = extremstellen[0]
+    x_wert, y_wert, art = extremstellen[0]
     print(f"x_wert: {x_wert} (Typ: {type(x_wert)})")
     print(f"Art: {art}")
 
@@ -152,7 +153,7 @@ def test_extremstellen_mehrere_parameter():
         f"Erwartete 1 Extremstelle, got {len(extremstellen)}"
     )
 
-    x_wert, art = extremstellen[0]
+    x_wert, y_wert, art = extremstellen[0]
     print(f"x_wert: {x_wert} (Typ: {type(x_wert)})")
     print(f"Art: {art}")
 

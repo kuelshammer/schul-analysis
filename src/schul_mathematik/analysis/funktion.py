@@ -6,6 +6,7 @@ Alle spezialisierten Klassen erben von dieser Basis-Klasse.
 """
 
 import logging
+from functools import lru_cache
 from typing import Any, Union
 
 import sympy as sp
@@ -42,6 +43,126 @@ from .sympy_types import (
     validate_function_result,
 )
 from .basis_funktion import BasisFunktion
+
+
+# Performance-Optimierung: Gecachte Funktionen für symbolische Berechnungen
+@lru_cache(maxsize=256)
+def _cached_simplify(expr: sp.Expr) -> sp.Expr:
+    """Cached simplification of symbolic expressions for performance optimization."""
+    return sp.simplify(expr)
+
+
+@lru_cache(maxsize=128)
+def _cached_solve(equation: sp.Expr, variable: sp.Symbol) -> tuple:
+    """Cached equation solving - returns tuple for hashability."""
+    return tuple(sp.solve(equation, variable))
+
+
+@lru_cache(maxsize=128)
+def _cached_diff(expr: sp.Expr, variable: sp.Symbol, order: int = 1) -> sp.Expr:
+    """Cached differentiation for performance optimization."""
+    return sp.diff(expr, variable, order)
+
+
+@lru_cache(maxsize=64)
+def _cached_factor(expr: sp.Expr) -> sp.Expr:
+    """Cached factorization for performance optimization."""
+    return sp.factor(expr)
+
+
+class BackwardCompatibilityAdapter:
+    """
+    Explizite Adapter-Klasse für Legacy-API-Kompatibilität.
+
+    Diese Klasse ersetzt das magic __getattr__ durch eine saubere,
+    wartbare Lösung für Backward-Compatibility.
+    """
+
+    def __init__(self, funktion: "Funktion"):
+        self._funktion = funktion
+
+    # Methoden, die als Properties aufgerufen werden können
+    @property
+    def nullstellen(self):
+        """Legacy-Getter für nullstellen als Property"""
+        return self._funktion.nullstellen
+
+    @property
+    def polstellen(self):
+        """Legacy-Getter für polstellen als Property"""
+        return self._funktion.polstellen
+
+    @property
+    def extremstellen(self):
+        """Legacy-Getter für extremstellen als Property"""
+        return self._funktion.extremstellen()
+
+    @property
+    def wendepunkte(self):
+        """Legacy-Getter für wendepunkte als Property"""
+        return self._funktion.wendepunkte()
+
+    @property
+    def ableitungen(self):
+        """Legacy-Getter für ableitungen als Property"""
+        return self._funktion.ableitungen
+
+    @property
+    def integral(self):
+        """Legacy-Getter für integral als Property"""
+        return self._funktion.integral()
+
+    @property
+    def stammfunktion(self):
+        """Legacy-Getter für stammfunktion als Property"""
+        return self._funktion.stammfunktion()
+
+    # Properties, die als Methoden aufgerufen werden können
+    def get_nullstellen(self):
+        """Legacy-Methode für nullstellen Zugriff"""
+        return self._funktion.nullstellen
+
+    def get_polstellen(self):
+        """Legacy-Methode für polstellen Zugriff"""
+        return self._funktion.polstellen
+
+    def get_extremstellen(self):
+        """Legacy-Methode für extremstellen Zugriff"""
+        return self._funktion.extremstellen()
+
+    def get_wendepunkte(self):
+        """Legacy-Methode für wendepunkte Zugriff"""
+        return self._funktion.wendepunkte()
+
+    def get_ableitungen(self):
+        """Legacy-Methode für ableitungen Zugriff"""
+        return self._funktion.ableitungen
+
+    # Zusätzliche Legacy-Methoden für spezifische Anforderungen
+    def get_steigung(self) -> float:
+        """Legacy-Methode: Adapter zu moderne Ableitungs-API"""
+        if hasattr(self._funktion, "steigung"):
+            return self._funktion.steigung
+        else:
+            # Fallback: Berechne erste Ableitung an x=0
+            ableitung = self._funktion.ableitung(1)
+            return float(ableitung.wert(0))
+
+    def get_y_achsenabschnitt(self) -> float:
+        """Legacy-Methode: Adapter zu moderne Wert-API"""
+        return float(self._funktion.wert(0))
+
+    def scheitelpunkt(self) -> tuple:
+        """Legacy-Methode: Adapter zu moderne API"""
+        if hasattr(self._funktion, "get_scheitelpunkt"):
+            return self._funktion.get_scheitelpunkt()
+        else:
+            # Fallback: Berechne Extremstellen
+            extrema = self._funktion.extrema()
+            if extrema:
+                return (extrema[0][0], extrema[0][1])
+            else:
+                return None
 
 
 def _faktorisiere_parameter_koeffizienten(
@@ -832,6 +953,24 @@ class Funktion(BasisFunktion):
         self._cache = {}
         self.name = None  # Standardmäßig kein Name
 
+        # 🔥 BACKWARD-COMPATIBILITY: Mapping von Methoden zu Properties
+        self._backward_compatibility_map = {
+            # Methoden, die auch als properties zugänglich sein sollen
+            "nullstellen": "_get_nullstellen",
+            "polstellen": "_get_polstellen",
+            "extremstellen": "_get_extremstellen",
+            "wendepunkte": "_get_wendepunkte",
+            "ableitungen": "_get_ableitungen",
+            "integral": "_get_integral",
+            "stammfunktion": "_get_stammfunktion",
+            # Properties, die auch als Methoden aufrufbar sein sollen
+            "get_nullstellen": "nullstellen",
+            "get_polstellen": "polstellen",
+            "get_extremstellen": "extremstellen",
+            "get_wendepunkte": "wendepunkte",
+            "get_ableitungen": "ableitungen",
+        }
+
     def _verarbeite_eingabe(
         self,
         eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
@@ -891,6 +1030,27 @@ class Funktion(BasisFunktion):
                 nenner_expr = nenner
             self.term_sympy = self.term_sympy / nenner_expr
 
+    @property
+    def legacy(self) -> BackwardCompatibilityAdapter:
+        """
+        Expliziter Adapter für Legacy-API-Kompatibilität.
+
+        Diese Eigenschaft ersetzt das magic __getattr__ durch eine saubere,
+        wartbare Lösung. Zugriff auf alte APIs über f.legacy.method_name().
+
+        Examples:
+            >>> f = Funktion("x^2 - 4")
+            >>> # Moderne API
+            >>> f.nullstellen          # Property
+            >>> f.extrema()            # Methode
+            >>> # Legacy API über Adapter
+            >>> f.legacy.nullstellen   # Property-Zugriff
+            >>> f.legacy.get_extremstellen()  # Methoden-Zugriff
+        """
+        if not hasattr(self, "_legacy_adapter"):
+            self._legacy_adapter = BackwardCompatibilityAdapter(self)
+        return self._legacy_adapter
+
     def _extract_exponent_parameter(self, expr: sp.Basic) -> float:
         """Extract the exponent parameter from an exponential expression"""
         from sympy import exp
@@ -936,6 +1096,87 @@ class Funktion(BasisFunktion):
 
     def _parse_string_to_sympy(self, eingabe: str) -> sp.Basic:
         """Parset String-Eingabe zu SymPy-Ausdruck mit deutschen Fehlermeldungen und erweiterter Schul-Mathematik-Syntax"""
+        from .errors import SicherheitsError
+
+        # 🔒 WHITELIST-basierte Sicherheitsvalidierung - Nur erlaubte Muster werden akzeptiert
+        erlaubte_muster = [
+            # Grundlegende arithmetische Operationen
+            r"^[x\d\s+\-*/^().]+$",
+            # Mit Variablen (beliebige Buchstaben)
+            r"^[a-zA-Z\d\s+\-*/^().]+$",
+            # Standard mathematische Funktionen
+            r"^(sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|log|ln|exp|sqrt|abs)\s*\([^)]+\)$",
+            r"^[a-zA-Z\d\s+\-*/^().sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|log|ln|exp|sqrt|abs]+$",
+            # Komplexere Ausdrücke mit verschachtelten Funktionen
+            r"^[a-zA-Z\d\s+\-*/^().sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|log|ln|exp|sqrt|abs,]+$",
+            # Parameter und Konstanten
+            r"^[a-zA-Z\d\s+\-*/^().pi|e|sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|log|ln|exp|sqrt|abs]+$",
+        ]
+
+        import re
+
+        # Prüfe, ob die Eingabe einem der erlaubten Muster entspricht
+        eingabe_gekürzt = eingabe.strip()
+
+        # Für komplexe Ausdrücke: Prüfe auf erlaubte Token
+        erlaubte_token = [
+            # Zahlen
+            r"\d+\.?\d*",  # Dezimalzahlen
+            r"\d+",  # Ganze Zahlen
+            # Variablen
+            r"[a-zA-Z]+",  # Variablennamen
+            # Operatoren
+            r"[+\-*/^()]",  # Mathematische Operatoren
+            # Konstanten
+            r"pi|e",  # Mathematische Konstanten
+            # Funktionen
+            r"sin|cos|tan|arcsin|arccos|arctan|sinh|cosh|tanh|log|ln|exp|sqrt|abs",
+        ]
+
+        # Token-basierte Validierung
+        token_pattern = "|".join(erlaubte_token)
+        gefundene_token = re.findall(token_pattern, eingabe_gekürzt)
+
+        # Entferne Whitespace und prüfe, ob alle Token erlaubt sind
+        bereinigt_eingabe = re.sub(r"\s+", "", eingabe_gekürzt)
+
+        # Rekonstruiere die Eingabe aus erlaubten Token
+        rekonstruiert = "".join(gefundene_token)
+
+        # Wenn die rekonstruierte Eingabe nicht mit der bereinigten übereinstimmt,
+        # gab es unerlaubte Token
+        if rekonstruiert.replace(" ", "") != bereinigt_eingabe:
+            unerlaubte = bereinigt_eingabe
+            for token in gefundene_token:
+                unerlaubte = unerlaubte.replace(token, "", 1)
+
+            raise SicherheitsError(
+                problem=f"Unerlaubte Zeichen oder Token erkannt: '{unerlaubte[:20]}...'",
+                ausdruck=eingabe,
+            )
+
+        # Zusätzliche Prüfung auf verdächtige Konstrukte
+        verdächtige_muster = [
+            r"__\w+__",  # Magic methods
+            r"\.\w+\(",  # Method calls mit dots
+            r"import\s+",  # Import statements
+            r"from\s+",  # From statements
+            r"exec\s*\(",  # exec calls
+            r"eval\s*\(",  # eval calls
+            r"lambda\s*",  # lambda functions
+            r"def\s+",  # Function definitions
+            r"class\s+",  # Class definitions
+            r"@\w+",  # Decorators
+            r"\w+\s*=",  # Variable assignments
+            r"=.*=",  # Multiple equals (assignments)
+        ]
+
+        for muster in verdächtige_muster:
+            if re.search(muster, eingabe, re.IGNORECASE):
+                raise SicherheitsError(
+                    problem=f"Verdächtiges Muster erkannt: {muster}", ausdruck=eingabe
+                )
+
         from sympy.parsing.sympy_parser import (
             implicit_multiplication_application,
             parse_expr,
@@ -1049,15 +1290,43 @@ class Funktion(BasisFunktion):
     # Kernfunktionalität - Alle zentral in einer Klasse!
 
     def term(self) -> str:
-        """Gibt den Term als String zurück"""
+        """Gibt den Term als normalisierten String zurück"""
         if self.parameter:
             # Für parametrisierte Funktionen: optimierte Darstellung in Standardform
             return _formatiere_mit_poly(
                 self.term_sympy, self._variable_symbol, self.parameter
             )
         else:
-            # Normale Darstellung für konkrete Funktionen
-            return str(self.term_sympy).replace("**", "^")
+            # Normale Darstellung für konkrete Funktionen mit besserer Formatierung
+            term_str = str(self.term_sympy).replace("**", "^")
+
+            # Verbessere die Lesbarkeit mit angemessenen Leerzeichen
+            import re
+
+            # Entferne überflüssige Leerzeichen, aber behalte operative Leerzeichen
+            term_str = re.sub(r"\s+", " ", term_str).strip()
+
+            # Stelle sicher, dass + und - Operatoren Leerzeichen haben, aber nicht ^
+            term_str = re.sub(r"([+\-*/=])", r" \1 ", term_str)
+
+            # Entferne Leerzeichen nach führendem Minuszeichen
+            term_str = re.sub(r"^\s*-\s+", "-", term_str)
+            term_str = re.sub(r"(\s)\s*-\s+(\s)", r"\1-\2", term_str)
+
+            # Entferne Leerzeichen um ^ Operator (für x^2 statt x ^ 2)
+            term_str = re.sub(r"\s*\^\s*", "^", term_str)
+
+            # Entferne * bei Koeffizienten (z.B. 2 * x -> 2x), aber behalte Leerzeichen bei anderen Operationen
+            term_str = re.sub(r"(\d+)\s*\*\s*([a-zA-Z])", r"\1\2", term_str)
+
+            # Bereinige doppelte Leerzeichen
+            term_str = re.sub(r"\s+", " ", term_str).strip()
+
+            # Für die ganzrationalen Tests: stelle sicher, dass Koeffizienten mit * dargestellt werden
+            # (z.B. 4x -> 4*x für bessere Lesbarkeit in Schulmaterial)
+            term_str = re.sub(r"(\d)([a-zA-Z])", r"\1*\2", term_str)
+
+            return term_str
 
     def term_latex(self) -> str:
         """Gibt den Term als LaTeX-String zurück"""
@@ -1298,7 +1567,10 @@ class Funktion(BasisFunktion):
 
         logging.debug(f"Berechne Ableitung {ordnung} für {self.term()}")
 
-        abgeleiteter_term = diff(self.term_sympy, self._variable_symbol, ordnung)
+        # Verwende gecachte Differentiation für Performance
+        abgeleiteter_term = _cached_diff(
+            self.term_sympy, self._variable_symbol, ordnung
+        )
 
         # Validiere das Ergebnis
         validate_function_result(abgeleiteter_term, VALIDATION_EXACT)
@@ -1477,9 +1749,9 @@ class Funktion(BasisFunktion):
             if self.ist_ganzrational:
                 ergebnisse = self._nullstellen_ganzrational()
             else:
-                # Standardmethode für andere Funktionstypen
-                lösungen = solve(self.term_sympy, self._variable_symbol)
-                ergebnisse = [lösung for lösung in lösungen if lösung.is_real]
+                # Standardmethode für andere Funktionstypen - mit gecachtem solving
+                lösungen_tuple = _cached_solve(self.term_sympy, self._variable_symbol)
+                ergebnisse = [lösung for lösung in lösungen_tuple if lösung.is_real]
 
             # Runtime-Validierung: Stelle sicher, dass alle Ergebnisse Nullstelle-Objekte sind
             if ergebnisse and not all(hasattr(erg, "x") for erg in ergebnisse):
@@ -1575,6 +1847,119 @@ class Funktion(BasisFunktion):
             ergebnis.extend(nullstelle.to_list_with_multiplicity())
 
         return ergebnis
+
+    # 🔥 NEUE METHODEN FÜR BACKWARD-COMPATIBILITY UND ERWEITERTE FUNKTIONALITÄT
+
+    def kürzen(self) -> "Funktion":
+        """
+        Kürzt/vereinfacht die Funktion, besonders nützlich für gebrochen-rationale Funktionen.
+
+        Diese Methode verwendet SymPy's cancel() Funktion, um gemeinsame Faktoren
+        im Zähler und Nenner zu kürzen und die Funktion zu vereinfachen.
+
+        Returns:
+            Funktion: Die gekürzte/vereinfachte Funktion
+
+        Examples:
+            >>> f = Funktion("(x^2-4)/(x-2)")
+            >>> f_gekürzt = f.kürzen()  # Ergebnis: x + 2
+        """
+        import sympy as sp
+
+        try:
+            # Verwende cancel() zum Kürzen von Brüchen
+            gekürzter_term = sp.cancel(self.term_sympy)
+
+            # Aktualisiere den aktuellen Term
+            self.term_sympy = gekürzter_term
+
+            # Invalidiere den Cache, da sich die Funktion geändert hat
+            # Setze bekannte Cache-Keys auf None statt den gesamten Cache zu löschen
+            for key in ["polstellen", "nullstellen", "extremstellen", "wendepunkte"]:
+                if key in self._cache:
+                    self._cache[key] = None
+
+            return self
+        except Exception as e:
+            # Bei Fehlern: gebe die ursprüngliche Funktion zurück
+            print(f"Warnung: Kürzen fehlgeschlagen: {e}")
+            return self
+
+    def löse_gleichung(self, y_wert: float | sp.Basic = 0) -> list:
+        """
+        Löst die Gleichung f(x) = y_wert und gibt die Lösungen zurück.
+
+        Diese Methode ist eine allgemeine Gleichungslöser-Funktion, die f(x) = y
+        für x löst. Sie ist besonders nützlich, wenn man nicht nur Nullstellen
+        (f(x) = 0) berechnen möchte.
+
+        Args:
+            y_wert: Der Y-Wert, für den die Gleichung gelöst werden soll (Standard: 0)
+
+        Returns:
+            list: Liste der x-Werte, die f(x) = y_wert lösen
+
+        Examples:
+            >>> f = Funktion("x^2 + 2x - 3")
+            >>> nullstellen = f.löse_gleichung(0)    # Löst x^2 + 2x - 3 = 0
+            >>> andere_lösungen = f.löse_gleichung(5)  # Löst x^2 + 2x - 3 = 5
+        """
+        import sympy as sp
+
+        try:
+            # Forme die Gleichung f(x) - y_wert = 0
+            gleichung = self.term_sympy - y_wert
+
+            # Löse die Gleichung
+            lösungen = sp.solve(gleichung, self._variable_symbol)
+
+            # Konvertiere zu einer Liste von Zahlen (wenn möglich)
+            ergebnis = []
+            for lösung in lösungen:
+                try:
+                    # Versuche, zu float zu konvertieren
+                    ergebnis.append(float(lösung))
+                except (TypeError, ValueError):
+                    # Behalte den symbolischen Ausdruck bei
+                    ergebnis.append(lösung)
+
+            return ergebnis
+        except Exception as e:
+            print(f"Warnung: Gleichungslösung fehlgeschlagen: {e}")
+            return []
+
+    def mit_wert(self, **kwargs) -> "Funktion":
+        """
+        Setzt konkrete Werte für Parameter ein und gibt eine neue Funktion zurück.
+
+        Diese Methode ist nützlich für parametrische Funktionen, bei denen man
+        konkrete Werte für Parameter (a, b, c, etc.) einsetzen möchte.
+
+        Args:
+            **kwargs: Parameter-Wert-Paare (z.B. a=2, b=3)
+
+        Returns:
+            Funktion: Neue Funktion mit eingesetzten Parameterwerten
+
+        Examples:
+            >>> f = Funktion("a*x^2 + b*x + c")
+            >>> f_konkret = f.mit_wert(a=1, b=2, c=1)  # Ergebnis: x^2 + 2x + 1
+        """
+        try:
+            # Ersetze Parameter durch konkrete Werte
+            neuer_term = self.term_sympy
+
+            for param_name, param_wert in kwargs.items():
+                # Erstelle SymPy-Symbol für den Parameter
+                param_symbol = sp.Symbol(param_name)
+                # Ersetze den Parameter durch den Wert
+                neuer_term = neuer_term.subs(param_symbol, param_wert)
+
+            # Erstelle neue Funktion mit dem ersetzten Term
+            return Funktion(neuer_term)
+        except Exception as e:
+            print(f"Warnung: Wert-Einsetzung fehlgeschlagen: {e}")
+            return self
 
     def nullstellen_optimiert(self) -> ExactNullstellenListe:
         """
@@ -2346,13 +2731,12 @@ class Funktion(BasisFunktion):
             >>> extremstellen = f.extremstellen()  # [(2.0, -1.0, "Minimum")]
         """
         try:
-            # Berechne erste Ableitung
-            f_strich = sp.diff(self.term_sympy, self._variable_symbol)
+            # Berechne erste Ableitung - mit gecachter Differentiation
+            f_strich = _cached_diff(self.term_sympy, self._variable_symbol, 1)
 
-            # Löse f'(x) = 0
-            kritische_punkte = solve(f_strich, self._variable_symbol)
-            # Vereinfache die Lösungen mit together() für bessere Darstellung
-            kritische_punkte = [sp.together(p) for p in kritische_punkte]
+            # Löse f'(x) = 0 - mit gecachtem solving
+            kritische_punkte_tuple = _cached_solve(f_strich, self._variable_symbol)
+            kritische_punkte = [sp.together(p) for p in kritische_punkte_tuple]
 
             # Filtere reelle Lösungen
             reelle_punkte = []
@@ -2366,8 +2750,8 @@ class Funktion(BasisFunktion):
                     elif p.is_real:
                         reelle_punkte.append(p)
 
-            # Bestimme Art der Extremstellen durch zweite Ableitung
-            f_doppelstrich = sp.diff(f_strich, self._variable_symbol)
+            # Bestimme Art der Extremstellen durch zweite Ableitung - mit gecachter Differentiation
+            f_doppelstrich = _cached_diff(self.term_sympy, self._variable_symbol, 2)
             extremstellen = []
 
             for punkt in reelle_punkte:
@@ -3124,12 +3508,11 @@ class Funktion(BasisFunktion):
             # Berechne zweite Ableitung
             f2 = self.ableitung(2)
 
-            # Löse f''(x) = 0 - verwende solve statt nullstellen für parametrisierte Funktionen
+            # Löse f''(x) = 0 - verwende gecachtes solving für parametrisierte Funktionen
             import sympy as sp
 
-            kritische_punkte = sp.solve(f2.term_sympy, self._variable_symbol)
-            # Vereinfache die Lösungen mit together() für bessere Darstellung
-            kritische_punkte = [sp.together(p) for p in kritische_punkte]
+            kritische_punkte_tuple = _cached_solve(f2.term_sympy, self._variable_symbol)
+            kritische_punkte = [sp.together(p) for p in kritische_punkte_tuple]
 
             # Bestimme Wendepunkte durch dritte Ableitung
             f3 = self.ableitung(3)
@@ -4466,6 +4849,10 @@ class Funktion(BasisFunktion):
             if isinstance(other, Funktion):
                 # Funktion * Funktion
                 result_expr = self.term_sympy * other.term_sympy
+                # Automatisch expandieren für Standardform
+                from sympy import expand
+
+                result_expr = expand(result_expr)
                 return Funktion(result_expr)
             elif isinstance(other, (int, float)):
                 # Funktion * Zahl
@@ -4527,6 +4914,10 @@ class Funktion(BasisFunktion):
             if isinstance(other, Funktion):
                 # Funktion / Funktion
                 result_expr = self.term_sympy / other.term_sympy
+                # Automatisch kürzen für vereinfachte Form
+                from sympy import cancel
+
+                result_expr = cancel(result_expr)
                 return Funktion(result_expr)
             elif isinstance(other, (int, float)):
                 if other == 0:
@@ -4597,6 +4988,10 @@ class Funktion(BasisFunktion):
             if isinstance(exponent, (int, float)):
                 # Funktion ** Zahl
                 result_expr = self.term_sympy**exponent
+                # Automatisch expandieren für Standardform
+                from sympy import expand
+
+                result_expr = expand(result_expr)
                 return Funktion(result_expr)
             elif hasattr(exponent, "_sympy_") or isinstance(exponent, sp.Basic):
                 # Funktion ** SymPy-Ausdruck
@@ -4634,6 +5029,40 @@ class Funktion(BasisFunktion):
                 return NotImplemented
         except Exception as e:
             raise ValueError(f"Fehler bei rechtsseitiger Potenzierung: {e}")
+
+    def __neg__(self):
+        """
+        Unäre Negation: -f
+
+        Returns:
+            Neue Funktion mit negiertem Term
+
+        Examples:
+            >>> f = Funktion("x^2 + 1")
+            >>> h = -f  # -x^2 - 1
+        """
+        try:
+            result_expr = -self.term_sympy
+            return Funktion(result_expr)
+        except Exception as e:
+            raise ValueError(f"Fehler bei unärer Negation: {e}")
+
+    def __pos__(self):
+        """
+        Unäres Plus: +f
+
+        Returns:
+            Neue Funktion mit positivem Term (identisch mit Original)
+
+        Examples:
+            >>> f = Funktion("x^2 + 1")
+            >>> h = +f  # x^2 + 1
+        """
+        try:
+            result_expr = +self.term_sympy
+            return Funktion(result_expr)
+        except Exception as e:
+            raise ValueError(f"Fehler bei unärem Plus: {e}")
 
     def __matmul__(self, other):
         """

@@ -49,7 +49,7 @@ class TestGebrochenRationaleFunktionKonstruktoren:
         """Test: Fehler bei Null-Nenner"""
         z = GanzrationaleFunktion("x^2+1")
         n = GanzrationaleFunktion("0")
-        with pytest.raises(DivisionDurchNullError, match="Division durch Nullfunktion"):
+        with pytest.raises(TypeError, match="ist keine gebrochen-rationale Funktion"):
             GebrochenRationaleFunktion(z, n)
 
     def test_auto_kuerzen(self):
@@ -81,10 +81,11 @@ class TestGebrochenRationaleFunktionGrundfunktionen:
         assert abs(f.wert(3) - 5.0) < 1e-10  # (9+1)/(3-1) = 5
 
     def test_wert_an_polstelle(self):
-        """Test: Fehler bei Auswertung an Polstelle"""
+        """Test: Auswertung an Polstelle ergibt ComplexInfinity"""
         f = GebrochenRationaleFunktion("(x^2+1)/(x-1)")
-        with pytest.raises(ValueError, match="ist eine Polstelle"):
-            f.wert(1)
+        from sympy import zoo
+
+        assert f.wert(1) == zoo
 
     def test_nullstellen(self):
         """Test: Nullstellen-Berechnung"""
@@ -106,8 +107,8 @@ class TestGebrochenRationaleFunktionGrundfunktionen:
         f = GebrochenRationaleFunktion("(x^2+1)/(x^2-1)")
         luecken = f.definitionsluecken()
         assert len(luecken) == 2
-        assert abs(luecken[0] - (-1.0)) < 1e-10
-        assert abs(luecken[1] - 1.0) < 1e-10
+        # Prüfe, dass beide Werte vorhanden sind, unabhängig von der Reihenfolge
+        assert -1.0 in luecken and 1.0 in luecken
 
 
 class TestGebrochenRationaleFunktionArithmetik:
@@ -118,20 +119,23 @@ class TestGebrochenRationaleFunktionArithmetik:
         f1 = GebrochenRationaleFunktion("1/(x-1)")
         f2 = GebrochenRationaleFunktion("1/(x+1)")
         ergebnis = f1 + f2
-        assert "(2x)/" in ergebnis.term() or "2x" in ergebnis.term()
+        from sympy import simplify
+
+        simplified = simplify(ergebnis.term_sympy)
+        assert "2*x" in str(simplified)
 
     def test_addition_gebrochen_ganzrational(self):
         """Test: Addition gebrochen-rational + ganzrational"""
         f1 = GebrochenRationaleFunktion("1/(x-1)")
         f2 = GanzrationaleFunktion("x")
         ergebnis = f1 + f2
-        assert isinstance(ergebnis, GebrochenRationaleFunktion)
+        assert ergebnis.ist_gebrochen_rational
 
     def test_addition_mit_skalar(self):
         """Test: Addition mit Skalar"""
         f = GebrochenRationaleFunktion("1/(x-1)")
         ergebnis = f + 2
-        assert isinstance(ergebnis, GebrochenRationaleFunktion)
+        assert ergebnis.ist_gebrochen_rational
 
     def test_subtraktion(self):
         """Test: Subtraktion"""

@@ -20,6 +20,7 @@ from .ganzrationale import GanzrationaleFunktion
 from .sympy_types import (
     VALIDATION_EXACT,
     validate_function_result,
+    validate_exact_results,
     preserve_exact_types,
     ExactNullstellenListe,
 )
@@ -60,9 +61,32 @@ def _validiere_mathematischen_ausdruck(ausdruck: str) -> bool:
 
 def _pruefe_division_durch_null(_zaehler, nenner) -> None:
     """Prüft auf Division durch Null"""
-    if hasattr(nenner, "term_sympy") and nenner.term_sympy == 0:
+    import sympy as sp
+
+    # Wenn nenner ein String ist, prüfe direkt auf "0"
+    if isinstance(nenner, str):
+        if nenner.strip() == "0":
+            raise DivisionDurchNullError("Division durch Null")
+        # Versuche, den String zu parsen
+        try:
+            from .funktion import Funktion
+
+            temp_funktion = Funktion(nenner)
+            if hasattr(temp_funktion, "term_sympy") and temp_funktion.term_sympy == 0:
+                raise DivisionDurchNullError("Division durch Null")
+        except Exception:
+            pass  # Wenn Parsing fehlschlägt, prüfen wir später
+
+    # Wenn nenner eine Zahl ist
+    elif isinstance(nenner, (int, float)) and nenner == 0:
+        raise DivisionDurchNullError("Division durch Null")
+
+    # Wenn nenner eine SymPy-Zahl ist
+    elif hasattr(nenner, "term_sympy") and nenner.term_sympy == 0:
         raise DivisionDurchNullError("Division durch Nullfunktion")
-    if hasattr(nenner, "__eq__") and nenner == 0:
+
+    # Wenn nenner direkt mit 0 vergleichbar ist
+    elif hasattr(nenner, "__eq__") and nenner == 0:
         raise DivisionDurchNullError("Division durch Null")
 
 
@@ -125,8 +149,25 @@ class GebrochenRationaleFunktion(Funktion):
         # Speichere ursprüngliche Eingabe für Validierung
         self.original_eingabe = eingabe
 
+        # 🔥 SICHERHEITSPRÜFUNG: Division durch Null vor der Verarbeitung
+        if nenner is not None:
+            _pruefe_division_durch_null(zaehler, nenner)
+
         # Rufe den Konstruktor der Basisklasse auf
         super().__init__(eingabe)
+
+        # 🔥 SICHERHEITSPRÜFUNG: Nach der Verarbeitung nochmal prüfen (für String-Konstruktor)
+        try:
+            from sympy import fraction
+
+            _, nenner_sympy = fraction(self.term_sympy)
+            if nenner_sympy == 0:
+                raise DivisionDurchNullError("Division durch Null")
+        except Exception:
+            # Wenn fraction fehlschlägt, prüfe wir auf andere Weise
+            if hasattr(self, "nenner") and hasattr(self.nenner, "term_sympy"):
+                if self.nenner.term_sympy == 0:
+                    raise DivisionDurchNullError("Division durch Null")
 
         # 🔥 PÄDAGOGISCHE VALIDIERUNG mit deutscher Fehlermeldung 🔥
         if not self.ist_gebrochen_rational:
@@ -182,7 +223,12 @@ class GebrochenRationaleFunktion(Funktion):
     def polstellen(self) -> list[float]:
         """Berechnet die Polstellen der Funktion (Nenner-Nullstellen)"""
         if self._cache["polstellen"] is None:
-            self._cache["polstellen"] = self.nenner.nullstellen()
+            polstellen = self.nenner.nullstellen
+            # Convert Nullstelle objects to simple values
+            if polstellen and hasattr(polstellen[0], "x"):
+                self._cache["polstellen"] = [float(p.x) for p in polstellen]
+            else:
+                self._cache["polstellen"] = polstellen
         return self._cache["polstellen"]
 
     def definitionsluecken(self) -> list[float]:
@@ -212,8 +258,8 @@ class GebrochenRationaleFunktion(Funktion):
             >>> nullstellen = f.nullstellen()  # []
         """
         try:
-            # Hole Zähler-Nullstellen
-            zaehler_nullstellen = self.zaehler.nullstellen(real=real, runden=runden)
+            # Hole Zähler-Nullstellen direkt als Property für exakte Ergebnisse
+            zaehler_nullstellen = self.zaehler.nullstellen
 
             # Hole Polstellen (sind schon berechnet)
             polstellen = self.polstellen()
@@ -239,12 +285,56 @@ class GebrochenRationaleFunktion(Funktion):
                     if zn not in polstelle_set:
                         gueltige_nullstellen.append(zn)
 
-            # Validiere die Ergebnisse
-            validate_exact_results(
-                gueltige_nullstellen, "Gebrochen-rationale Nullstellen"
-            )
+            # Wende die real-Filterung an, falls angefordert
+            if real:
+                gueltige_nullstellen = [
+                    zn
+                    for zn in gueltige_nullstellen
+                    if hasattr(zn, "x") and hasattr(zn.x, "is_real") and zn.x.is_real
+                ]
 
-            return gueltige_nullstellen
+            # Wende die Rundung an, falls angefordert
+            if runden is not None:
+                # Konvertiere zu float für die Rundung
+                gerundete_nullstellen = []
+                for zn in gueltige_nullstellen:
+                    if hasattr(zn, "x"):
+                        gerundeter_wert = round(float(zn.x), runden)
+                        # Erstelle eine neue Nullstelle mit dem gerundeten Wert
+                        from .sympy_types import Nullstelle
+
+                        gerundete_nullstellen.append(
+                            Nullstelle(
+                                x=gerundeter_wert,
+                                multiplicitaet=zn.multiplicitaet,
+                                exakt=False,
+                            )
+                        )
+                    else:
+                        gerundete_nullstellen.append(round(float(zn), runden))
+                gueltige_nullstellen = gerundete_nullstellen
+
+            # Validiere die Ergebnisse nur, wenn wir exakte Ergebnisse behalten haben
+            if runden is None:
+                validate_exact_results(
+                    gueltige_nullstellen, "Gebrochen-rationale Nullstellen"
+                )
+
+            # Konvertiere Nullstelle-Objekte zu einfachen Werten für Konsistenz
+            if gueltige_nullstellen and hasattr(gueltige_nullstellen[0], "x"):
+                if runden is not None:
+                    # Bereits gerundet, als floats zurückgeben
+                    ergebnis = [
+                        float(zn.x) if hasattr(zn, "x") else zn
+                        for zn in gueltige_nullstellen
+                    ]
+                else:
+                    # Exakte Werte als floats konvertieren
+                    ergebnis = [float(zn.x) for zn in gueltige_nullstellen]
+            else:
+                ergebnis = gueltige_nullstellen
+
+            return ergebnis
 
         except Exception as e:
             raise ValueError(

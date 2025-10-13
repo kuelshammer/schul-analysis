@@ -170,7 +170,7 @@ class Wendestelle:
     """Präzise Typisierung für Wendestellen (x-Koordinaten) mit vollständigen Informationen."""
 
     x: T_Expr  # x-Koordinate der Wendestelle
-    typ: WendepunktTyp = field(default_factory=lambda: WendepunktTyp.WENDELPUNKT)
+    typ: WendepunktTyp = field(default_factory=lambda: WendepunktTyp("Wendepunkt"))
     exakt: bool = True  # Ob exakt berechnet wurde
 
     def __str__(self) -> str:
@@ -550,7 +550,14 @@ def validate_exact_results(results: list[Any], analysis_type: str) -> bool:
             )
     else:
         # Standardbehandlung für andere Analyse-Typen
-        validations = [is_exact_sympy_expr(result) for result in results]
+        validations = []
+        for result in results:
+            if hasattr(result, "x") and hasattr(result, "exakt"):
+                # Es ist ein Nullstelle-Objekt
+                validations.append(result.exakt and is_exact_sympy_expr(result.x))
+            else:
+                # Standard-SymPy-Objekt
+                validations.append(is_exact_sympy_expr(result))
         if not all(validations):
             raise ValueError(
                 f"Die {analysis_type}-Analyse sollte exakte Ergebnisse liefern, "

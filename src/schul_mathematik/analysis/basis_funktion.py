@@ -146,8 +146,9 @@ class BasisFunktion(ABC):
             UngueltigeFunktionError: Wenn die Funktion keine Parameter unterstützt
         """
         raise UngueltigeFunktionError(
+            "BasisFunktion",
             "Diese Funktion unterstützt keine Parameter. "
-            "Verwende parametrisierbare Funktionstypen für Parameter-Simulation."
+            "Verwende parametrisierbare Funktionstypen für Parameter-Simulation.",
         )
 
     def graph(self, **kwargs) -> Any:
@@ -164,8 +165,9 @@ class BasisFunktion(ABC):
             UngueltigeFunktionError: Wenn Visualisierung nicht unterstützt wird
         """
         raise UngueltigeFunktionError(
+            "BasisFunktion",
             "Diese Funktion unterstützt keine Visualisierung. "
-            "Installiere die optionalen Abhängigkeiten für Plotly-Unterstützung."
+            "Installiere die optionalen Abhängigkeiten für Plotly-Unterstützung.",
         )
 
     # === MAGIC METHODS ===

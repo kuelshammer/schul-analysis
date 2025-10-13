@@ -678,11 +678,16 @@ class QuotientFunktion(StrukturierteFunktion):
             if self.nenner is None:
                 raise ValueError("QuotientFunktion hat keinen gültigen Nenner")
 
-            # Wenn der Nenner bereits eine Funktion ist, rufe nullstellen() auf
-            if hasattr(self.nenner, "nullstellen") and callable(
-                self.nenner.nullstellen
-            ):
-                self._cache["polstellen"] = self.nenner.nullstellen()
+            # Wenn der Nenner bereits eine Funktion ist, hole nullstellen als Property
+            if hasattr(self.nenner, "nullstellen"):
+                if callable(self.nenner.nullstellen):
+                    self._cache["polstellen"] = self.nenner.nullstellen()
+                else:
+                    # nullstellen ist eine Property, konvertiere zu float-Werten
+                    nullstellen_objekte = self.nenner.nullstellen
+                    self._cache["polstellen"] = [
+                        float(n.x) for n in nullstellen_objekte
+                    ]
             else:
                 # Wenn der Nenner eine Liste von Nullstellen ist (bei einfacher Struktur)
                 try:

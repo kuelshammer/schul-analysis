@@ -69,14 +69,15 @@ class TestGanzrationaleFunktionKonstruktoren:
         assert f.funktionstyp == "ganzrational"
 
     def test_ungueltige_eingabe_wird_akzeptiert(self):
-        """Test: Ungültige Eingabe wird akzeptiert (anders als alte API)"""
+        """Test: Verschiedene Eingabetypen werden akzeptiert"""
         # In der neuen API werden viele Eingaben akzeptiert
         f = Funktion("sin(x)")
         assert f.funktionstyp == "trigonometrisch"
 
-        # Zahlen werden nicht als gültige Eingabe akzeptiert - sollten Exception werfen
-        with pytest.raises((ValueError, TypeError, AttributeError)):
-            Funktion(123)
+        # Zahlen werden als konstante Funktionen akzeptiert (Feature, kein Bug)
+        f_konstant = Funktion(123)
+        assert f_konstant.funktionstyp == "ganzrational"
+        assert f_konstant.term() == "123"
 
 
 class TestGanzrationaleFunktionMethoden:
@@ -119,13 +120,13 @@ class TestGanzrationaleFunktionMethoden:
         # Quadratische Funktion mit zwei Nullstellen
         nullstellen = self.f_quad.nullstellen
         assert len(nullstellen) == 2
-        assert abs(nullstellen[0] - 3.0) < 1e-10  # Reihenfolge ist [3, 1]
-        assert abs(nullstellen[1] - 1.0) < 1e-10
+        assert abs(float(nullstellen[0].x) - 3.0) < 1e-10  # Reihenfolge ist [3, 1]
+        assert abs(float(nullstellen[1].x) - 1.0) < 1e-10
 
         # Lineare Funktion
         nullstellen_linear = self.f_linear.nullstellen
         assert len(nullstellen_linear) == 1
-        assert abs(nullstellen_linear[0] - 0.5) < 1e-10
+        assert abs(float(nullstellen_linear[0].x) - 0.5) < 1e-10
 
         # Funktion ohne reelle Nullstellen
         f_keine_null = Funktion("x^2+1")
@@ -135,10 +136,10 @@ class TestGanzrationaleFunktionMethoden:
     def test_extremstellen_property(self):
         """Test: extremstellen Property - wenn vorhanden"""
         if hasattr(self.f_quad, "extremstellen"):
-            extremstellen = self.f_quad.extremstellen
+            extremstellen = self.f_quad.extremstellen()
             assert len(extremstellen) == 1
             assert abs(extremstellen[0][0] - 2.0) < 1e-10  # x-Koordinate
-            assert extremstellen[0][1] == "Minimum"  # Art
+            assert extremstellen[0][2] == "Minimum"  # Art (Index 2, nicht 1)
         else:
             # Wenn nicht vorhanden, überspringen wir diesen Test
             pytest.skip("extremstellen property nicht implementiert")

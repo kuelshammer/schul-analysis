@@ -55,7 +55,11 @@ def assert_gleich(
         differenz = expr1 - expr2
 
         # Spezialisierte Vereinfachung für trigonometrische Ausdrücke
-        if differenz.has(sp.sin, sp.cos, sp.tan, sp.cot, sp.sec, sp.csc):
+        # Prüfe auf trigonometrische Funktionen durch String-Matching, da .has() nicht immer funktioniert
+        trig_functions = ["sin", "cos", "tan", "cot", "sec", "csc"]
+        ausdruck_str = str(differenz)
+
+        if any(func in ausdruck_str.lower() for func in trig_functions):
             differenz = sp.trigsimp(differenz)
         else:
             differenz = sp.simplify(differenz)  # type: ignore
@@ -145,7 +149,11 @@ def _konvertiere_zu_sympy(
     elif isinstance(ausdruck, str):
         # Erweiterte Schul-Mathematik-Syntax-Unterstützung
         import re
-        from sympy.parsing.sympy_parser import parse_expr, standard_transformations
+        from sympy.parsing.sympy_parser import (
+            parse_expr,
+            standard_transformations,
+            implicit_multiplication_application,
+        )
 
         # Ersetze ^ mit ** für SymPy
         bereinigt = ausdruck.replace("^", "**")
@@ -158,27 +166,65 @@ def _konvertiere_zu_sympy(
         # (x+1)x -> (x+1)*x
         bereinigt = re.sub(r"(\))([a-zA-Z])", r"\1*\2", bereinigt)
 
+        # Ersetze spezielle trigonometrische Notationen
+        # sin²(x) -> sin(x)**2
+        bereinigt = re.sub(
+            r"(sin|cos|tan|cot|sec|csc)²\(([^)]+)\)", r"\1(\2)**2", bereinigt
+        )
+        bereinigt = re.sub(
+            r"(sin|cos|tan|cot|sec|csc)\^2\(([^)]+)\)", r"\1(\2)**2", bereinigt
+        )
+
         # x(x+1) -> x*(x+1) - aber nur für einfache Fälle, nicht für Funktionsaufrufe
         # Ersetze nur, wenn es sich nicht um bekannte Funktionsnamen handelt
-        bekannte_funktionen = ["sin", "cos", "tan", "exp", "log", "sqrt", "abs"]
+        bekannte_funktionen = [
+            "sin",
+            "cos",
+            "tan",
+            "exp",
+            "log",
+            "sqrt",
+            "abs",
+            "cot",
+            "sec",
+            "csc",
+        ]
+
+        # Schütze trigonometrische Funktionsaufrufe vor der Transformation
         for func in bekannte_funktionen:
-            # Schütze Funktionsaufrufe vor der Transformation
-            bereinigt = bereinigt.replace(f"{func}(", f"__{func}__(")
+            bereinigt = bereinigt.replace(f"{func}(", f"__PROTECTED_{func}__(")
 
         # Wende die Transformation an
         bereinigt = re.sub(r"([a-zA-Z])\(", r"\1*(", bereinigt)
 
         # Stelle Funktionsaufrufe wieder her
         for func in bekannte_funktionen:
-            bereinigt = bereinigt.replace(f"__{func}(", f"{func}(")
+            bereinigt = bereinigt.replace(f"__PROTECTED_{func}(", f"{func}(")
 
-        # Versuche, den Ausdruck zu parsen
+        # Versuche, den Ausdruck zu parsen mit erweiterten Transformationen
         try:
-            return parse_expr(bereinigt, transformations=standard_transformations)
+            transformations = standard_transformations + (
+                implicit_multiplication_application,
+            )
+            return parse_expr(bereinigt, transformations=transformations)
         except Exception as e:
-            # Fallback: Versuche mit standard sympify
+            # Fallback: Versuche mit standard sympify und expliziten trigonometrischen Funktionen
             try:
-                return sp.sympify(bereinigt, locals={variable: x})
+                # Ersetze deutsche Notation
+                locals_dict = {
+                    variable: sp.Symbol(variable),
+                    "sin": sp.sin,
+                    "cos": sp.cos,
+                    "tan": sp.tan,
+                    "cot": sp.cot,
+                    "sec": sp.sec,
+                    "csc": sp.csc,
+                    "exp": sp.exp,
+                    "log": sp.log,
+                    "sqrt": sp.sqrt,
+                    "abs": sp.Abs,
+                }
+                return sp.sympify(bereinigt, locals=locals_dict)
             except Exception:
                 # Letzter Versuch: ohne spezielle Locals
                 try:

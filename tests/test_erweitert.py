@@ -12,7 +12,7 @@ from schul_mathematik.analysis.test_utils import assert_gleich
 
 def test_sicherheit():
     """Teste Sicherheitsvalidierung"""
-    from schul_mathematik.errors import (
+    from schul_mathematik.analysis.errors import (
         DivisionDurchNullError,
         SicherheitsError,
     )
@@ -106,7 +106,7 @@ def test_performance():
 
 def test_fehlerbehandlung():
     """Teste umfassende Fehlerbehandlung"""
-    from schul_mathematik.errors import UngueltigerAusdruckError
+    from schul_mathematik.analysis.errors import UngueltigerAusdruckError
 
     # Teste ungültige Eingaben
     with pytest.raises(UngueltigerAusdruckError):
