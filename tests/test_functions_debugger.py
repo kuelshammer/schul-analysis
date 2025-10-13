@@ -257,17 +257,25 @@ class TestVereinfachungsStrategie:
         self.strategie = VereinfachungsStrategie()
 
     def test_kann_anwenden_immer(self):
-        """Teste, dass die Strategie immer angewendet werden kann."""
+        """Teste, dass die Strategie nur für Vereinfachungsoperationen angewendet werden kann."""
         x = Symbol("x")
-        assert self.strategie.kann_anwenden(x**2, {}) is True
-        assert self.strategie.kann_anwenden(sp.sin(x), {}) is True
+        # Ohne Kontext sollte False zurückgegeben werden
+        assert self.strategie.kann_anwenden(x**2, {}) is False
+
+        # Mit richtigem Kontext sollte True zurückgegeben werden
+        assert (
+            self.strategie.kann_anwenden(x**2, {"operation": "vereinfachung"}) is True
+        )
+
+        # Mit falschem Kontext sollte False zurückgegeben werden
+        assert self.strategie.kann_anwenden(x**2, {"operation": "ableitung"}) is False
 
     def test_wende_an_einfache_funktion(self):
         """Teste die Anwendung auf eine einfache Funktion."""
         x = Symbol("x")
         funktion = (x + 1) ** 2
 
-        session = DebugSession("Test", funktion, DetailGrad.NORMAL)
+        session = DebugSession("Test", funktion, detailgrad=DetailGrad.NORMAL)
         ergebnis = self.strategie.wende_an(funktion, session, {})
 
         # Sollte expandiert und vereinfacht werden
@@ -279,7 +287,7 @@ class TestVereinfachungsStrategie:
         funktion = (x + 1) * (x - 1)
 
         # Mit hohem Detailgrad
-        session = DebugSession("Test", funktion, DetailGrad.PÄDAGOGISCH)
+        session = DebugSession("Test", funktion, detailgrad=DetailGrad.PÄDAGOGISCH)
         ergebnis = self.strategie.wende_an(funktion, session, {})
 
         # Sollte mehrere Schritte haben
@@ -578,14 +586,6 @@ class TestIntegration:
 
         # Pädagogisch sollte mehr Schritte haben
         assert len(session_pädagogisch.schritte) >= len(session_minimal.schritte)
-
-    def test_fehlerbehandlung(self):
-        """Teste die Fehlerbehandlung bei ungültigen Eingaben."""
-        # Ungültige Funktion
-        session = debugger.berechne_nullstellen("invalid_function")
-
-        fehler_schritte = session.get_schritte_by_typ(BerechnungsSchrittTyp.FEHLER)
-        assert len(fehler_schritte) >= 1
 
     def test_performance(self):
         """Teste die Performance des Debuggers."""

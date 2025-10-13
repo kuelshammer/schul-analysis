@@ -189,8 +189,8 @@ class VereinfachungsStrategie(BerechnungsStrategie):
     """Strategie zur schrittweisen Vereinfachung von Ausdrücken."""
 
     def kann_anwenden(self, funktion: sp.Expr, kontext: Dict[str, Any]) -> bool:
-        """Kann immer auf Vereinfachungsoperationen angewendet werden."""
-        return True  # Vereinfachung ist immer möglich
+        """Kann nur auf Vereinfachungsoperationen angewendet werden."""
+        return kontext.get("operation") == "vereinfachung"
 
     def wende_an(
         self, funktion: sp.Expr, session: DebugSession, kontext: Dict[str, Any]
@@ -198,8 +198,12 @@ class VereinfachungsStrategie(BerechnungsStrategie):
         """Wende Vereinfachungsstrategien an."""
         aktueller_ausdruck = funktion
 
-        # Schritt 1: Ausmultiplizieren
-        if session.detailgrad in [DetailGrad.AUSFÜHRLICH, DetailGrad.PÄDAGOGISCH]:
+        # Schritt 1: Ausmultiplizieren (immer bei Produkten, auch bei NORMAL)
+        if session.detailgrad in [
+            DetailGrad.NORMAL,
+            DetailGrad.AUSFÜHRLICH,
+            DetailGrad.PÄDAGOGISCH,
+        ]:
             expandiert = expand(aktueller_ausdruck)
             if expandiert != aktueller_ausdruck:
                 session.add_schritt(
