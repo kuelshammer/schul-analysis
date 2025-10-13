@@ -858,24 +858,6 @@ class Funktion(BasisFunktion):
         self._cache = {}
         self.name = None  # Standardmäßig kein Name
 
-        # 🔥 BACKWARD-COMPATIBILITY: Mapping von Methoden zu Properties
-        self._backward_compatibility_map = {
-            # Methoden, die auch als properties zugänglich sein sollen
-            "nullstellen": "_get_nullstellen",
-            "polstellen": "_get_polstellen",
-            "extremstellen": "_get_extremstellen",
-            "wendepunkte": "_get_wendepunkte",
-            "ableitungen": "_get_ableitungen",
-            "integral": "_get_integral",
-            "stammfunktion": "_get_stammfunktion",
-            # Properties, die auch als Methoden aufrufbar sein sollen
-            "get_nullstellen": "nullstellen",
-            "get_polstellen": "polstellen",
-            "get_extremstellen": "extremstellen",
-            "get_wendepunkte": "wendepunkte",
-            "get_ableitungen": "ableitungen",
-        }
-
     def _verarbeite_eingabe(
         self,
         eingabe: Union[str, sp.Basic, "Funktion", tuple[str, str]],
