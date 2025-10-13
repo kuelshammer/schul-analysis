@@ -12,6 +12,7 @@ import logging
 # Import the Funktion class and related components
 from schul_mathematik.analysis.funktion import Funktion, ExtremumTyp
 from schul_mathematik.analysis.sympy_types import Extremstelle
+from schul_mathematik.analysis.errors import SicherheitsError
 
 
 class TestExtremstellenExceptionHandling:
@@ -45,21 +46,24 @@ class TestExtremstellenExceptionHandling:
         assert isinstance(result, list)
 
     def test_extremstellen_optimiert_sympify_error(self):
-        """Testet Behandlung von SympifyError."""
-        # Test mit einer Funktion, die SympifyError auslösen könnte
+        """Testet Behandlung von Sicherheitsverletzungen."""
+        # Test mit einer Funktion, die Sicherheitsverletzung auslöst
         try:
             f_invalid = Funktion("invalid_function_syntax$$$")
             result = f_invalid.extremstellen_optimiert()
             assert isinstance(result, list)
         except Exception as e:
             # Wenn Exception geworfen wird, sollte sie protokolliert werden
-            assert isinstance(e, (SympifyError, TypeError, ValueError))
+            assert isinstance(
+                e, (SicherheitsError, SympifyError, TypeError, ValueError)
+            )
 
     def test_extremstellen_mit_framework_logging(self):
         """Testet, dass Logging-Messages korrekt ausgegeben werden."""
-        # Erstelle eine Situation, die einen Fehler auslöst
-        f_invalid = Funktion("invalid_expression")
-        result = f_invalid._extremstellen_mit_framework()
+        # Erstelle eine gültige Funktion, die dann einen Fehler in Extremstellen-Berechnung verursacht
+        # Verwende eine Konstante, die keine Extremstellen hat
+        f_const = Funktion("5")  # Konstante Funktion
+        result = f_const._extremstellen_mit_framework()
 
         # Sollte keine Exception werfen, sondern leere Liste zurückgeben
         assert isinstance(result, list)

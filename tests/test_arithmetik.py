@@ -55,17 +55,21 @@ def test_arithmetische_operationen():
     # Funktion - Funktion
     ergebnis = f - g
     print(f"f - g = {ergebnis.term()}")
-    assert ergebnis.term() == "x^2+x", f"Erwartet: x^2+x, erhalten: {ergebnis.term()}"
+    assert ergebnis.term() == "x^2 + x", (
+        f"Erwartet: x^2 + x, erhalten: {ergebnis.term()}"
+    )
 
     # Funktion - Zahl
     ergebnis = f - 1
     print(f"f - 1 = {ergebnis.term()}")
-    assert ergebnis.term() == "x^2+2x", f"Erwartet: x^2+2x, erhalten: {ergebnis.term()}"
+    assert ergebnis.term() == "x^2 + 2*x", (
+        f"Erwartet: x^2 + 2*x, erhalten: {ergebnis.term()}"
+    )
 
     # Zahl - Funktion (rechts)
     ergebnis = 5 - g
     print(f"5 - g = {ergebnis.term()}")
-    assert ergebnis.term() == "4-x", f"Erwartet: 4-x, erhalten: {ergebnis.term()}"
+    assert ergebnis.term() == "4 - x", f"Erwartet: 4 - x, erhalten: {ergebnis.term()}"
 
     print("✅ Subtraktionstests erfolgreich\n")
 
@@ -75,7 +79,7 @@ def test_arithmetische_operationen():
     # Funktion * Funktion
     ergebnis = f * g
     print(f"f * g = {ergebnis.term()}")
-    assert ergebnis.term() == "x^3+3x^2+3x+1", (
+    assert ergebnis.term() == "x^3 + 3*x^2 + 3*x + 1", (
         f"Erwartet: (x+1)³, erhalten: {ergebnis.term()}"
     )
 

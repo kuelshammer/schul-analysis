@@ -35,9 +35,18 @@ def test_flaeche_funktion():
     f1 = Funktion("x^2")
     f2 = Funktion("2*x")
 
-    fig2 = FlaecheZweiFunktionen(f1, f2, 0, 2, anzeigen=False)
-    print(f"  ✅ Plotly-Figure erstellt: {type(fig2)}")
-    print(f"  ✅ Titel: {fig2.layout.title.text}")
+    flaechen_wert = FlaecheZweiFunktionen(f1, f2, 0, 2, anzeigen=False)
+    print(f"  ✅ Flächenwert berechnet: {flaechen_wert}")
+    print(f"  ✅ Typ: {type(flaechen_wert)}")
+
+    # Erwarteter Wert: ∫[0,2] (x² - 2x) dx = [x³/3 - x²]₀² = (8/3 - 4) - 0 = -4/3
+    erwartet = -4 / 3
+    print(f"  ✅ Erwartet: {erwartet}")
+    print(f"  ✅ Korrekt: {abs(flaechen_wert - erwartet) < 1e-10}")
+
+    # Test mit Visualisierung
+    fig2_visual = FlaecheZweiFunktionen(f1, f2, 0, 2, anzeigen=True)
+    print(f"  ✅ Visualisierung angezeigt (Rückgabewert: {type(fig2_visual)})")
 
     # Test 3: Benutzerdefinierte Farben
     print("\n🎨 Test 3: Benutzerdefinierte Fläche-Farbe")
