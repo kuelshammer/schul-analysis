@@ -40,9 +40,11 @@ def test_flaeche_funktion():
     print(f"  ✅ Typ: {type(flaechen_wert)}")
 
     # Erwarteter Wert: ∫[0,2] (x² - 2x) dx = [x³/3 - x²]₀² = (8/3 - 4) - 0 = -4/3
-    erwartet = -4 / 3
+    from sympy import Rational
+
+    erwartet = Rational(-4, 3)
     print(f"  ✅ Erwartet: {erwartet}")
-    print(f"  ✅ Korrekt: {abs(flaechen_wert - erwartet) < 1e-10}")
+    print(f"  ✅ Korrekt: {flaechen_wert == erwartet}")
 
     # Test mit Visualisierung
     fig2_visual = FlaecheZweiFunktionen(f1, f2, 0, 2, anzeigen=True)

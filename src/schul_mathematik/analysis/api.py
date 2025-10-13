@@ -1574,11 +1574,8 @@ def FlaecheZweiFunktionen(
     # Berechne Integral für numerischen Wert
     flaechen_wert = sp.integrate(differenz, (x, a, b))
 
-    # Konvertiere zu Float wenn möglich
-    try:
-        flaechen_wert = float(flaechen_wert)
-    except (TypeError, ValueError):
-        pass
+    # Behalte exaktes SymPy-Ergebnis bei - wichtig für pädagogische Exaktheit!
+    # KEINE Konvertierung zu float, um Brüche wie 1/3 exakt zu erhalten
 
     # Wenn nur der Wert berechnet werden soll, gib ihn zurück
     if not anzeigen:
