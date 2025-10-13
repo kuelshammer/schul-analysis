@@ -70,101 +70,6 @@ def _cached_factor(expr: sp.Expr) -> sp.Expr:
     return sp.factor(expr)
 
 
-class BackwardCompatibilityAdapter:
-    """
-    Explizite Adapter-Klasse für Legacy-API-Kompatibilität.
-
-    Diese Klasse ersetzt das magic __getattr__ durch eine saubere,
-    wartbare Lösung für Backward-Compatibility.
-    """
-
-    def __init__(self, funktion: "Funktion"):
-        self._funktion = funktion
-
-    # Methoden, die als Properties aufgerufen werden können
-    @property
-    def nullstellen(self):
-        """Legacy-Getter für nullstellen als Property"""
-        return self._funktion.nullstellen
-
-    @property
-    def polstellen(self):
-        """Legacy-Getter für polstellen als Property"""
-        return self._funktion.polstellen
-
-    @property
-    def extremstellen(self):
-        """Legacy-Getter für extremstellen als Property"""
-        return self._funktion.extremstellen()
-
-    @property
-    def wendepunkte(self):
-        """Legacy-Getter für wendepunkte als Property"""
-        return self._funktion.wendepunkte()
-
-    @property
-    def ableitungen(self):
-        """Legacy-Getter für ableitungen als Property"""
-        return self._funktion.ableitungen
-
-    @property
-    def integral(self):
-        """Legacy-Getter für integral als Property"""
-        return self._funktion.integral()
-
-    @property
-    def stammfunktion(self):
-        """Legacy-Getter für stammfunktion als Property"""
-        return self._funktion.stammfunktion()
-
-    # Properties, die als Methoden aufgerufen werden können
-    def get_nullstellen(self):
-        """Legacy-Methode für nullstellen Zugriff"""
-        return self._funktion.nullstellen
-
-    def get_polstellen(self):
-        """Legacy-Methode für polstellen Zugriff"""
-        return self._funktion.polstellen
-
-    def get_extremstellen(self):
-        """Legacy-Methode für extremstellen Zugriff"""
-        return self._funktion.extremstellen()
-
-    def get_wendepunkte(self):
-        """Legacy-Methode für wendepunkte Zugriff"""
-        return self._funktion.wendepunkte()
-
-    def get_ableitungen(self):
-        """Legacy-Methode für ableitungen Zugriff"""
-        return self._funktion.ableitungen
-
-    # Zusätzliche Legacy-Methoden für spezifische Anforderungen
-    def get_steigung(self) -> float:
-        """Legacy-Methode: Adapter zu moderne Ableitungs-API"""
-        if hasattr(self._funktion, "steigung"):
-            return self._funktion.steigung
-        else:
-            # Fallback: Berechne erste Ableitung an x=0
-            ableitung = self._funktion.ableitung(1)
-            return float(ableitung.wert(0))
-
-    def get_y_achsenabschnitt(self) -> float:
-        """Legacy-Methode: Adapter zu moderne Wert-API"""
-        return float(self._funktion.wert(0))
-
-    def scheitelpunkt(self) -> tuple:
-        """Legacy-Methode: Adapter zu moderne API"""
-        if hasattr(self._funktion, "get_scheitelpunkt"):
-            return self._funktion.get_scheitelpunkt()
-        else:
-            # Fallback: Berechne Extremstellen
-            extrema = self._funktion.extrema()
-            if extrema:
-                return (extrema[0][0], extrema[0][1])
-            else:
-                return None
-
-
 def _faktorisiere_parameter_koeffizienten(
     expr: sp.Basic, parameter_liste: list[_Parameter]
 ) -> sp.Basic:
@@ -1031,26 +936,6 @@ class Funktion(BasisFunktion):
             self.term_sympy = self.term_sympy / nenner_expr
 
     @property
-    def legacy(self) -> BackwardCompatibilityAdapter:
-        """
-        Expliziter Adapter für Legacy-API-Kompatibilität.
-
-        Diese Eigenschaft ersetzt das magic __getattr__ durch eine saubere,
-        wartbare Lösung. Zugriff auf alte APIs über f.legacy.method_name().
-
-        Examples:
-            >>> f = Funktion("x^2 - 4")
-            >>> # Moderne API
-            >>> f.nullstellen          # Property
-            >>> f.extrema()            # Methode
-            >>> # Legacy API über Adapter
-            >>> f.legacy.nullstellen   # Property-Zugriff
-            >>> f.legacy.get_extremstellen()  # Methoden-Zugriff
-        """
-        if not hasattr(self, "_legacy_adapter"):
-            self._legacy_adapter = BackwardCompatibilityAdapter(self)
-        return self._legacy_adapter
-
     def _extract_exponent_parameter(self, expr: sp.Basic) -> float:
         """Extract the exponent parameter from an exponential expression"""
         from sympy import exp
