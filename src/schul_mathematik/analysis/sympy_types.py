@@ -762,5 +762,424 @@ Dieses Typ-System bietet:
 
 Die Typen sind speziell auf die Bedürfnisse des Mathematikunterrichts zugeschnitten
 und unterstützen sowohl die exakte symbolische Berechnung als auch die pädagogische
+Verständlichkeit durch deutsche Fachbegriffe und strukturierte Ergebnisse.
+"""
+
+
+# =============================================================================
+# 🔥 PROTOCOL CLASSES FÜR STÄRKERE TYP-SICHERHEIT 🔥
+# =============================================================================
+
+
+class MathematischeFunktion(Protocol):
+    """
+    Protocol für alle mathematischen Funktionen im Schul-Analysis Framework.
+
+    Definiert das minimale Interface, das jede Funktionsklasse implementieren muss.
+    Stellt Konsistenz across aller Funktionstypen sicher.
+    """
+
+    @property
+    def term_sympy(self) -> sp.Expr:
+        """Der SymPy-Ausdruck der Funktion."""
+        ...
+
+    @property
+    def term(self) -> str:
+        """Die String-Repräsentation der Funktion."""
+        ...
+
+    def wert(self, x_wert: float) -> float:
+        """Berechnet den Funktionswert an einer Stelle."""
+        ...
+
+    def ableitung(self, ordnung: int = 1) -> "MathematischeFunktion":
+        """Berechnet die Ableitung gegebener Ordnung."""
+        ...
+
+    def nullstellen(self) -> list[Nullstelle]:
+        """Berechnet die Nullstellen der Funktion."""
+        ...
+
+    def extremstellen(self) -> list[Extremstelle]:
+        """Berechnet die Extremstellen der Funktion."""
+        ...
+
+    def ist_ganzrational(self) -> bool:
+        """Prüft, ob die Funktion ganzrational ist."""
+        ...
+
+    def funktionstyp(self) -> str:
+        """Gibt den Funktionstyp zurück."""
+        ...
+
+
+class ParametrisierteFunktion(Protocol):
+    """
+    Protocol für Funktionen mit Parametern.
+
+    Erweitert das grundlegende Funktions-Interface um Parameter-Handling.
+    """
+
+    @property
+    def parameter(self) -> list[sp.Symbol]:
+        """Liste der Parameter in der Funktion."""
+        ...
+
+    def setze_parameter(self, **kwargs) -> "ParametrisierteFunktion":
+        """Setzt Parameter auf konkrete Werte."""
+        ...
+
+    def mit_wert(self, **kwargs) -> "ParametrisierteFunktion":
+        """Alternative Methode zum Setzen von Parametern."""
+        ...
+
+
+class VisualisierbareFunktion(Protocol):
+    """
+    Protocol für Funktionen, die visualisiert werden können.
+
+    Definiert das Interface für Plotting und graphische Darstellung.
+    """
+
+    def graph(
+        self,
+        x_min: float = None,
+        x_max: float = None,
+        y_min: float = None,
+        y_max: float = None,
+        **kwargs,
+    ) -> Any:
+        """Erzeugt einen Graphen der Funktion."""
+        ...
+
+    def zeige_funktion_plotly(self, x_bereich: tuple = None, **kwargs) -> Any:
+        """Zeigt die Funktion mit Plotly an."""
+        ...
+
+
+class AbleitbareFunktion(Protocol):
+    """
+    Protocol für Funktionen mit erweiterten Ableitungsfähigkeiten.
+
+    Stellt sicher, dass höhere Ableitungen und Extremstellen-Analyse
+    konsistent implementiert sind.
+    """
+
+    def integral(self, ordnung: int = 1) -> "AbleitbareFunktion":
+        """Berechnet das Integral gegebener Ordnung."""
+        ...
+
+    def wendestellen(self) -> list[Wendestelle]:
+        """Berechnet die Wendestellen der Funktion."""
+        ...
+
+    def krümmung(self, x_wert: float) -> float:
+        """Berechnet die Krümmung an einer gegebenen Stelle."""
+        ...
+
+
+class NullstellenBerechenbareFunktion(Protocol):
+    """
+    Protocol für Funktionen mit fortgeschrittenen Nullstellen-Berechnungen.
+
+    Stellt spezielle Methoden für Nullstellen-Analyse bereit.
+    """
+
+    def nullstellen_mit_wiederholungen(self) -> list:
+        """Berechnet Nullstellen mit Vielfachheit."""
+        ...
+
+    def _berechne_vielfachheit(self, x_wert: float) -> int:
+        """Berechnet die Vielfachheit einer Nullstelle."""
+        ...
+
+    def löse_gleichung(self, y_wert: float = 0) -> list:
+        """Löst die Gleichung f(x) = y_wert."""
+        ...
+
+
+class StetigeFunktion(Protocol):
+    """
+    Protocol für stetige Funktionen mit Definitionsbereich-Analyse.
+    """
+
+    def definitionsbereich(self) -> str:
+        """Gibt den Definitionsbereich zurück."""
+        ...
+
+    def polstellen(self) -> list:
+        """Berechnet die Polstellen der Funktion."""
+        ...
+
+    def ist_stetig(self) -> bool:
+        """Prüft, ob die Funktion auf ihrem Definitionsbereich stetig ist."""
+        ...
+
+
+class SymmetrischeFunktion(Protocol):
+    """
+    Protocol für Funktionen mit Symmetrie-Eigenschaften.
+    """
+
+    def ist_gerade(self) -> bool:
+        """Prüft, ob die Funktion gerade ist (f(-x) = f(x))."""
+        ...
+
+    def ist_ungerade(self) -> bool:
+        """Prüft, ob die Funktion ungerade ist (f(-x) = -f(x))."""
+        ...
+
+    def achsensymmetrie(self) -> str:
+        """Gibt die Art der Achsensymmetrie zurück."""
+        ...
+
+
+class GrenzwertBerechenbareFunktion(Protocol):
+    """
+    Protocol für Funktionen mit Grenzwert-Berechnungen.
+    """
+
+    def grenzwert(self, stelle: float, richtung: str = "beidseitig") -> float:
+        """Berechnet den Grenzwert an einer Stelle."""
+        ...
+
+    def asymptoten(self) -> list:
+        """Berechnet die Asymptoten der Funktion."""
+        ...
+
+
+class VergleichbareFunktion(Protocol):
+    """
+    Protocol für Funktionen, die miteinander verglichen werden können.
+    """
+
+    def __eq__(self, other: Any) -> bool:
+        """Vergleicht zwei Funktionen auf symbolische Gleichheit."""
+        ...
+
+    def schnittpunkte(
+        self, andere_funktion: "VergleichbareFunktion"
+    ) -> list[Schnittpunkt]:
+        """Berechnet die Schnittpunkte mit einer anderen Funktion."""
+        ...
+
+
+class KombinierbareFunktion(Protocol):
+    """
+    Protocol für Funktionen, die miteinander kombiniert werden können.
+    """
+
+    def __add__(self, other: Any) -> "KombinierbareFunktion":
+        """Addition von Funktionen."""
+        ...
+
+    def __sub__(self, other: Any) -> "KombinierbareFunktion":
+        """Subtraktion von Funktionen."""
+        ...
+
+    def __mul__(self, other: Any) -> "KombinierbareFunktion":
+        """Multiplikation von Funktionen."""
+        ...
+
+    def __truediv__(self, other: Any) -> "KombinierbareFunktion":
+        """Division von Funktionen."""
+        ...
+
+
+# =============================================================================
+# 🔥 GENERISCHE TYPE CONSTRAINTS FÜR FUNKTIONSTYPEN 🔥
+# =============================================================================
+
+from typing import Literal
+
+T_Funktionstyp = Literal[
+    "ganzrational",
+    "gebrochen_rational",
+    "exponential_rational",
+    "exponentiell",
+    "trigonometrisch",
+    "gemischt",
+    "linear",
+    "quadratisch",
+    "kubisch",
+    "unbekannt",
+]
+
+T_AnalyseOperation = Literal[
+    "ableitung",
+    "integral",
+    "nullstellen",
+    "extremstellen",
+    "wendestellen",
+    "grenzwerte",
+    "asymptoten",
+    "definitionsbereich",
+]
+
+T_ValidierungsTyp = Literal["exact", "symbolic", "numeric", "inexact"]
+
+
+# =============================================================================
+# 🔥 STÄRKERE TYPE GUARDS FÜR RUNTIME-VALIDIERUNG 🔥
+# =============================================================================
+
+
+def ist_mathematische_funktion(obj: Any) -> TypeGuard[MathematischeFunktion]:
+    """
+    Type Guard zur Überprüfung, ob ein Objekt das MathematischeFunktion-Protocol erfüllt.
+    """
+    return (
+        hasattr(obj, "term_sympy")
+        and hasattr(obj, "term")
+        and hasattr(obj, "wert")
+        and hasattr(obj, "ableitung")
+        and hasattr(obj, "nullstellen")
+        and callable(obj.wert)
+        and callable(obj.ableitung)
+    )
+
+
+def ist_parametrisierte_funktion(obj: Any) -> TypeGuard[ParametrisierteFunktion]:
+    """
+    Type Guard zur Überprüfung, ob ein Objekt das ParametrisierteFunktion-Protocol erfüllt.
+    """
+    return (
+        ist_mathematische_funktion(obj)
+        and hasattr(obj, "parameter")
+        and hasattr(obj, "setze_parameter")
+        and callable(obj.setze_parameter)
+    )
+
+
+def ist_visualisierbare_funktion(obj: Any) -> TypeGuard[VisualisierbareFunktion]:
+    """
+    Type Guard zur Überprüfung, ob ein Objekt das VisualisierbareFunktion-Protocol erfüllt.
+    """
+    return (
+        ist_mathematische_funktion(obj)
+        and hasattr(obj, "graph")
+        and callable(obj.graph)
+    )
+
+
+def ist_ableitbare_funktion(obj: Any) -> TypeGuard[AbleitbareFunktion]:
+    """
+    Type Guard zur Überprüfung, ob ein Objekt das AbleitbareFunktion-Protocol erfüllt.
+    """
+    return (
+        ist_mathematische_funktion(obj)
+        and hasattr(obj, "integral")
+        and hasattr(obj, "wendestellen")
+        and callable(obj.integral)
+    )
+
+
+def ist_ganzrationale_funktion(obj: Any) -> bool:
+    """
+    Type Guard zur Überprüfung, ob es sich um eine ganzrationale Funktion handelt.
+    Kombiniert Typ-Check mit der methode ist_ganzrational().
+    """
+    return (
+        ist_mathematische_funktion(obj)
+        and hasattr(obj, "ist_ganzrational")
+        and callable(obj.ist_ganzrational)
+        and obj.ist_ganzrational()
+    )
+
+
+def hat_exakte_typen(obj: Any) -> TypeGuard[MathematischeFunktion]:
+    """
+    Überprüft, ob ein Objekt exakte Typen garantiert.
+    Wichtig für die @preserve_exact_types Decorator-Validierung.
+    """
+    return (
+        ist_mathematische_funktion(obj)
+        and hasattr(obj, "term_sympy")
+        and is_exact_sympy_expr(obj.term_sympy)
+    )
+
+
+# =============================================================================
+# 🔥 VALIDIERUNGS-DECORATORS MIT ERWEITERTEN TYPE CONSTRAINTS 🔥
+# =============================================================================
+
+from functools import wraps
+
+
+def erfordert_funktionstyp(erwarteter_typ: T_Funktionstyp):
+    """
+    Decorator, der sicherstellt, dass eine Funktion nur für bestimmte Funktionstypen
+    aufgerufen werden kann.
+
+    Args:
+        erwarteter_typ: Der erwartete Funktionstyp
+
+    Beispiel:
+        @erfordert_funktionstyp("ganzrational")
+        def spezialisierte_operation(funktion: GanzrationaleFunktion):
+            pass
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(funktion, *args, **kwargs):
+            if not hasattr(funktion, "funktionstyp"):
+                raise TypeError(f"Objekt {funktion} hat keine funktionstyp-Methode")
+
+            if funktion.funktionstyp() != erwarteter_typ:
+                raise TypeError(
+                    f"Operation {func.__name__} nur für {erwarteter_typ}-Funktionen, "
+                    f"aber {funktion.funktionstyp()} gegeben"
+                )
+
+            return func(funktion, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+def validiere_domain(domain: str):
+    """
+    Decorator, der sicherstellt, dass eine Funktion nur für bestimmte
+    Definitionsbereiche aufgerufen wird.
+
+    Args:
+        domain: Der erwartete Definitionsbereich
+
+    Beispiel:
+        @validiere_domain("ℝ")
+        def operation_für_reelle_funktionen(funktion):
+            pass
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(funktion, *args, **kwargs):
+            if not hasattr(funktion, "definitionsbereich"):
+                raise TypeError(
+                    f"Objekt {funktion} hat keine definitionsbereich-Methode"
+                )
+
+            if funktion.definitionsbereich() != domain:
+                raise TypeError(
+                    f"Operation {func.__name__} nur für Funktionen mit "
+                    f"Definitionsbereich {domain}, aber {funktion.definitionsbereich()} gegeben"
+                )
+
+            return func(funktion, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
+
+
+# ============================================================================
+# ENHANCED TYPE HINTS MODULE - Integration und Tests
+# ============================================================================
+
+"""
+Integration und Test-Suite für die erweiterten Type Hints.
 Vermittlung mathematischer Konzepte.
 """

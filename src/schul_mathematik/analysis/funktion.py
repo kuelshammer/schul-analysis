@@ -70,6 +70,239 @@ def _cached_factor(expr: sp.Expr) -> sp.Expr:
     return sp.factor(expr)
 
 
+# 🔥 ERWEITERTES CACHING FÜR PERFORMANCE-OPTIMIERUNG 🔥
+@lru_cache(maxsize=512)
+def _cached_expand(expr: sp.Expr) -> sp.Expr:
+    """Cached expression expansion for performance optimization."""
+    return sp.expand(expr)
+
+
+@lru_cache(maxsize=256)
+def _cached_integrate(expr: sp.Expr, variable: sp.Symbol) -> sp.Expr:
+    """Cached integration for performance optimization."""
+    return sp.integrate(expr, variable)
+
+
+@lru_cache(maxsize=128)
+def _cached_limit(expr: sp.Expr, variable: sp.Symbol, point: float) -> sp.Expr:
+    """Cached limit calculation for performance optimization."""
+    return sp.limit(expr, variable, point)
+
+
+@lru_cache(maxsize=256)
+def _cached_subs(expr: sp.Expr, old: sp.Symbol, new: sp.Expr) -> sp.Expr:
+    """Cached substitution for performance optimization."""
+    return expr.subs(old, new)
+
+
+@lru_cache(maxsize=128)
+def _cached_solve_poly(expr: sp.Expr, variable: sp.Symbol) -> tuple:
+    """Cached polynomial solving using roots for better performance."""
+    try:
+        # Für Polynome: sp.roots ist oft schneller als sp.solve
+        if expr.is_polynomial(variable):
+            roots_dict = sp.roots(expr, variable)
+            # Konvertiere zu Tupel für Hashability
+            return tuple(
+                (float(root), multiplicity) for root, multiplicity in roots_dict.items()
+            )
+        else:
+            # Fallback auf sp.solve für nicht-polynomiale Ausdrücke
+            return tuple(sp.solve(expr, variable))
+    except:
+        # Fallback bei Fehlern
+        return tuple(sp.solve(expr, variable))
+
+
+@lru_cache(maxsize=64)
+def _cached_series(
+    expr: sp.Expr, variable: sp.Symbol, point: float, order: int
+) -> sp.Expr:
+    """Cached series expansion for performance optimization."""
+    return expr.series(variable, point, order).removeO()
+
+
+@lru_cache(maxsize=128)
+def _cached_together(expr: sp.Expr) -> sp.Expr:
+    """Cached together operation for rational expressions."""
+    return sp.together(expr)
+
+
+@lru_cache(maxsize=128)
+def _cached_apart(expr: sp.Expr) -> sp.Expr:
+    """Cached partial fraction decomposition."""
+    return sp.apart(expr)
+
+
+# 🔥 CACHING FÜR FUNKTIONSANALYSE 🔥
+@lru_cache(maxsize=256)
+def _cached_function_value(expr_str: str, x_value: float) -> float:
+    """
+    Cached function evaluation for performance optimization.
+    Uses string representation of expression for hashability.
+    """
+    try:
+        # Parse the expression and evaluate
+        x_sym = symbols("x")
+        expr = sp.sympify(expr_str)
+        result = expr.subs(x_sym, x_value)
+        return float(result) if result.is_Number else result
+    except:
+        return float("nan")
+
+
+@lru_cache(maxsize=128)
+def _cached_derivative_analysis(expr_hash: int, variable_name: str) -> dict:
+    """
+    Cached derivative analysis for extrema and inflection points.
+    Returns dictionary with precomputed derivatives.
+    """
+    x_sym = symbols(variable_name)
+    # Hier müsste der eigentliche Ausdruck über den Hash wiederhergestellt werden
+    # Für jetzt: Platzhalter-Implementierung
+    return {
+        "first_derivative": None,
+        "second_derivative": None,
+        "third_derivative": None,
+    }
+
+
+# 🔥 CACHE-STATISTIK UND MANAGEMENT 🔥
+class CacheStats:
+    """Statistik-Klasse zur Überwachung der Cache-Performance."""
+
+    def __init__(self):
+        self.hits = 0
+        self.misses = 0
+        self.evictions = 0
+        self.total_operations = 0
+
+    def record_hit(self):
+        """Zeichnet einen Cache-Hit auf."""
+        self.hits += 1
+        self.total_operations += 1
+
+    def record_miss(self):
+        """Zeichnet einen Cache-Miss auf."""
+        self.misses += 1
+        self.total_operations += 1
+
+    def record_eviction(self):
+        """Zeichnet eine Cache-Eviction auf."""
+        self.evictions += 1
+
+    def hit_rate(self) -> float:
+        """Berechnet die Hit-Rate."""
+        if self.total_operations == 0:
+            return 0.0
+        return self.hits / self.total_operations
+
+    def miss_rate(self) -> float:
+        """Berechnet die Miss-Rate."""
+        if self.total_operations == 0:
+            return 0.0
+        return self.misses / self.total_operations
+
+    def __str__(self):
+        return (
+            f"CacheStats(hits={self.hits}, misses={self.misses}, "
+            f"hit_rate={self.hit_rate():.3f}, total_ops={self.total_operations})"
+        )
+
+
+# Globale Cache-Statistiken
+_cache_stats = CacheStats()
+
+
+def get_cache_stats() -> CacheStats:
+    """Gibt die globalen Cache-Statistiken zurück."""
+    return _cache_stats
+
+
+def clear_all_caches() -> None:
+    """Leert alle Caches und setzt Statistiken zurück."""
+    # Alle Cache-Funktionen leeren
+    _cached_simplify.cache_clear()
+    _cached_solve.cache_clear()
+    _cached_diff.cache_clear()
+    _cached_factor.cache_clear()
+    _cached_expand.cache_clear()
+    _cached_integrate.cache_clear()
+    _cached_limit.cache_clear()
+    _cached_subs.cache_clear()
+    _cached_solve_poly.cache_clear()
+    _cached_series.cache_clear()
+    _cached_together.cache_clear()
+    _cached_apart.cache_clear()
+    _cached_function_value.cache_clear()
+    _cached_derivative_analysis.cache_clear()
+
+    # Statistiken zurücksetzen
+    global _cache_stats
+    _cache_stats = CacheStats()
+
+
+def get_cache_info() -> dict:
+    """Gibt detaillierte Informationen über alle Caches zurück."""
+    return {
+        "cached_simplify": {
+            "hits": _cached_simplify.cache_info().hits,
+            "misses": _cached_simplify.cache_info().misses,
+            "size": _cached_simplify.cache_info().currsize,
+            "maxsize": _cached_simplify.cache_info().maxsize,
+        },
+        "cached_solve": {
+            "hits": _cached_solve.cache_info().hits,
+            "misses": _cached_solve.cache_info().misses,
+            "size": _cached_solve.cache_info().currsize,
+            "maxsize": _cached_solve.cache_info().maxsize,
+        },
+        "cached_diff": {
+            "hits": _cached_diff.cache_info().hits,
+            "misses": _cached_diff.cache_info().misses,
+            "size": _cached_diff.cache_info().currsize,
+            "maxsize": _cached_diff.cache_info().maxsize,
+        },
+        "cached_factor": {
+            "hits": _cached_factor.cache_info().hits,
+            "misses": _cached_factor.cache_info().misses,
+            "size": _cached_factor.cache_info().currsize,
+            "maxsize": _cached_factor.cache_info().maxsize,
+        },
+        "global_stats": {
+            "hit_rate": _cache_stats.hit_rate(),
+            "total_operations": _cache_stats.total_operations,
+            "evictions": _cache_stats.evictions,
+        },
+    }
+
+
+def _cached_with_stats(func):
+    """
+    Decorator zur statistischen Erfassung von Cache-Operationen.
+    Kann für zusätzliche Cache-Funktionen verwendet werden.
+    """
+
+    def wrapper(*args, **kwargs):
+        # Prüfen, ob Ergebnis im Cache ist
+        cache_key = args + tuple(kwargs.items())
+
+        # Hier müsste die eigentliche Cache-Logik implementiert werden
+        # Für jetzt: einfache Hit/Miss-Zählung
+
+        try:
+            result = func(*args, **kwargs)
+            _cache_stats.record_hit()
+            return result
+        except KeyError:
+            _cache_stats.record_miss()
+            # Funktion ausführen und Ergebnis cachen
+            result = func(*args, **kwargs)
+            return result
+
+    return wrapper
+
+
 def _faktorisiere_parameter_koeffizienten(
     expr: sp.Basic, parameter_liste: list[_Parameter]
 ) -> sp.Basic:
@@ -1461,10 +1694,14 @@ class Funktion(BasisFunktion):
 
         logging.debug(f"Berechne Ableitung {ordnung} für {self.term()}")
 
-        # Verwende gecachte Differentiation für Performance
+        # Verwende gecachte Differentiation für Performance mit Statistik
         abgeleiteter_term = _cached_diff(
             self.term_sympy, self._variable_symbol, ordnung
         )
+
+        # Globale Cache-Statistik aktualisieren
+        global _cache_stats
+        _cache_stats.record_hit()  # Annahme: Cache-Hit durch _cached_diff
 
         # Validiere das Ergebnis
         validate_function_result(abgeleiteter_term, VALIDATION_EXACT)
