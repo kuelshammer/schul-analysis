@@ -6,10 +6,18 @@ Dieses Modul bietet umfassende Performance-Überwachung für:
 - Berechnungszeiten
 - Speicherverbrauch
 - Bottleneck-Erkennung
+
+⚠️ **WICHTIG:** Das Monitoring ist standardmäßig DEAKTIVIERT, um unnötigen Overhead
+bei schulischen Berechnungen zu vermeiden. Für Performance-Analyse kann es bei Bedarf
+aktiviert werden.
+
+Aktivierungsmöglichkeiten:
+- Environment Variable: `SCHUL_ANALYSIS_MONITORING=true`
+- Konfiguration: `SchulAnalysisConfig.MONITORING = True`
 """
 
-import gc
 import logging
+import os
 import time
 from collections import defaultdict, deque
 from contextlib import contextmanager
@@ -18,6 +26,8 @@ from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import psutil
+
+from .config import SchulAnalysisConfig
 
 
 @dataclass
@@ -76,7 +86,9 @@ class PerformanceMonitor:
             }
         )
         self.active_operations: Dict[str, PerformanceMetrics] = {}
-        self.enabled = True
+
+        # Monitoring ist standardmäßig deaktiviert für schulischen Gebrauch
+        self.enabled = SchulAnalysisConfig.MONITORING
 
         # Logger für Performance-Warnungen
         self.logger = logging.getLogger(__name__)

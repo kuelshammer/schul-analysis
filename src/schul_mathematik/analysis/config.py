@@ -46,6 +46,7 @@ class SchulAnalysisConfig:
     # 🔧 Debug-Konfiguration
     DEBUG: bool = os.getenv("SCHUL_ANALYSIS_DEBUG", "false").lower() == "true"
     LOG_LEVEL: str = "INFO"
+    MONITORING: bool = os.getenv("SCHUL_ANALYSIS_MONITORING", "false").lower() == "true"
 
     @classmethod
     def get_plot_config(cls) -> dict[str, Any]:
